@@ -5,8 +5,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../hooks/useAuth"; // We'll create this hook
 
 export default function Index() {
-  const { isAuthenticated, isLoading } = useAuth();
-
+  // const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = {
+    isAuthenticated: false,
+    isLoading: false,
+  }; // Mocked for demonstration
   if (isLoading) {
     return (
       <View
@@ -22,7 +25,7 @@ export default function Index() {
   }
 
   if (isAuthenticated) {
-    return <Redirect href="/(tabs)" />;
+    return <Redirect href="/register" />;
   } else {
     return <Redirect href="/login" />;
   }
