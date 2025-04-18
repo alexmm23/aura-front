@@ -7,13 +7,21 @@ import {
   Image,
   StyleSheet,
   ScrollView,
+  Appearance,
+  SafeAreaView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useAuth } from "@/hooks/useAuth";
+import FormInput from "../../components/FormInput";
+import PrimaryButton from "../../components/PrimaryButton";
 import { Colors } from "@/constants/Colors";
+import Link from "../../components/Link";
 
 export default function Register() {
+  const theme = Appearance.getColorScheme();
+  const Container = ScrollView; // Revisar por que no jala SafeArea View
   const router = useRouter();
   const { login } = useAuth();
   const [formData, setFormData] = useState({
@@ -83,7 +91,7 @@ export default function Register() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <Container contentContainerStyle={styles.container}>
       <StatusBar style="light" />
 
       <View style={styles.header}>
@@ -97,70 +105,59 @@ export default function Register() {
       <View style={styles.card}>
         <Text style={styles.title}>Registrate</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Nombre(s)"
+        <FormInput
+          label="Nombre: "
+          placeholder="Nombre"
           value={formData.nombre}
           onChangeText={(text) => handleChange("nombre", text)}
+          errorMessage={errors.nombre}
         />
-        {errors.nombre && <Text style={styles.errorText}>{errors.nombre}</Text>}
 
-        <TextInput
-          style={styles.input}
-          placeholder="Apellidos"
+        <FormInput
+          label="Apellidos: "
+          placeholder="Apellido(s)"
           value={formData.apellidos}
           onChangeText={(text) => handleChange("apellidos", text)}
+          errorMessage={errors.apellidos}
         />
-        {errors.apellidos && (
-          <Text style={styles.errorText}>{errors.apellidos}</Text>
-        )}
 
-        <TextInput
-          style={styles.input}
+        <FormInput
+          label="Correo Electrónico: "
           placeholder="Correo Electrónico"
           value={formData.email}
           onChangeText={(text) => handleChange("email", text)}
-          keyboardType="email-address"
-          autoCapitalize="none"
+          errorMessage={errors.email}
         />
-        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-        <TextInput
-          style={styles.input}
+        <FormInput
+          label="Contraseña: "
           placeholder="Contraseña"
           value={formData.password}
           onChangeText={(text) => handleChange("password", text)}
           secureTextEntry
+          errorMessage={errors.password}
         />
-        {errors.password && (
-          <Text style={styles.errorText}>{errors.password}</Text>
-        )}
 
-        <TextInput
-          style={styles.input}
-          placeholder="Comprueba la contraseña"
+        <FormInput
+          label="Confirmar Contraseña: "
+          placeholder="Confirmar Contraseña"
           value={formData.confirmPassword}
           onChangeText={(text) => handleChange("confirmPassword", text)}
           secureTextEntry
+          errorMessage={errors.confirmPassword}
         />
-        {errors.confirmPassword && (
-          <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-        )}
+        <PrimaryButton
+          title="Registrarse"
+          onPress={handleSubmit}
+          disabled={Object.keys(errors).length > 0}
+        />
 
-        <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-          <Text style={styles.buttonText}>Registrarme</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.linkContainer}
+        <Link
+          title="¿Ya tienes una cuenta? Inicia sesión"
           onPress={() => router.replace("/(auth)/login")}
-        >
-          <Text style={styles.linkText}>
-            ¿Ya tienes una cuenta? Inicia sesión
-          </Text>
-        </TouchableOpacity>
+        />
       </View>
-    </ScrollView>
+    </Container>
   );
 }
 
@@ -198,39 +195,5 @@ const styles = StyleSheet.create({
     color: "#d987ba", // Pink color for the title
     marginBottom: 20,
     textAlign: "center",
-  },
-  input: {
-    backgroundColor: "#e4d7c2", // Beige input background
-    borderRadius: 8,
-    padding: 12,
-    marginVertical: 8,
-    fontSize: 16,
-  },
-  errorText: {
-    color: "red",
-    fontSize: 12,
-    marginLeft: 4,
-    marginTop: -6,
-    marginBottom: 6,
-  },
-  button: {
-    backgroundColor: "#f5b764", // Orange button
-    borderRadius: 8,
-    padding: 14,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "white",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  linkContainer: {
-    marginTop: 16,
-    alignItems: "center",
-  },
-  linkText: {
-    color: "#9068d9", // Purple link text
-    fontSize: 14,
   },
 });
