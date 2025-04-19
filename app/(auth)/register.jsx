@@ -102,17 +102,18 @@ export default function Register() {
   );
 }
 
+// Dentro del componente PortraitHeader, actualiza el Path:
 const PortraitHeader = ({ colors, styles }) => (
   <View style={styles.backgroundContainer}>
     <Svg
       width="100%"
-      height="180"
+      height="500"
       preserveAspectRatio="none"
-      viewBox="0 0 100 100"
+      viewBox="0 0 349 371"
       style={styles.svg}
     >
       <Path
-        d="M0,0 L100,0 L100,60 Q75,80 50,65 Q25,50 0,70 L0,0 Z"
+        d="M419 42C51.0001 115 326.5 164.5 163 305.5C79.5 368 -15 408.336 -15 315C-15 221.664 -246.583 -43 -148 -43C-49.4172 -43 419 -51.3361 419 42Z"
         fill={colors.purple}
       />
     </Svg>
@@ -203,6 +204,7 @@ const createStyles = (theme, isLandscape) => {
     headerImage: {
       width: "80%",
       height: 120,
+      marginBottom: 20,
     },
     headerImageLandscape: {
       width: "80%",
