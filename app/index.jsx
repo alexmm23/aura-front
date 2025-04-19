@@ -23,6 +23,11 @@ export default function Index() {
       router.push("/login");
     }
   }, [isLoading, isAuthenticated]);
+
+  if (!isLoading && !isAuthenticated) {
+    return null; // o una pantalla de carga
+  }
+
   /**
    * Desarrollar una landing page que muestre un mensaje de bienvenida y un botón para iniciar sesión o registrarse.
    *
@@ -35,7 +40,7 @@ export default function Index() {
         {isLoading ? (
           <Text>Loading...</Text>
         ) : (
-          <Link title="Go to Login" onPress={router.replace("/login")} />
+          <Link title="Go to Login" onPress={() => router.replace("/login")} />
         )}
       </View>
     </Container>
