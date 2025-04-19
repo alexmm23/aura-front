@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { Text, View } from "react-native";
-import { Redirect } from "expo-router";
+import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../hooks/useAuth"; // We'll create this hook
+import { useAuthRedirect } from "../hooks/useAuthRedirect"; // We'll create this hook
 
 export default function Index() {
   // const { isAuthenticated, isLoading } = useAuth();
@@ -10,23 +11,22 @@ export default function Index() {
     isAuthenticated: false,
     isLoading: false,
   }; // Mocked for demonstration
-  if (isLoading) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <Text>Cargando...</Text>
-      </View>
-    );
-  }
+  useAuthRedirect(isAuthenticated);
 
-  if (isAuthenticated) {
-    return <Redirect href="/register" />;
-  } else {
-    return <Redirect href="/login" />;
-  }
+  /**
+   * Desarrollar una landing page que muestre un mensaje de bienvenida y un botón para iniciar sesión o registrarse.
+   *
+   *
+   */
+
+  return (
+    <View>
+      <Text>Welcome to the app!</Text>
+      {isLoading ? (
+        <Text>Loading...</Text>
+      ) : (
+        <Text>{isAuthenticated ? "Logged In" : "Not Logged In"}</Text>
+      )}
+    </View>
+  );
 }
