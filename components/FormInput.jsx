@@ -2,6 +2,7 @@ import { Text, TextInput } from "react-native";
 import { StyleSheet } from "react-native";
 import { Colors } from "@/constants/Colors"; // Adjust the import path as necessary
 import React, { forwardRef } from "react";
+import { AuraText } from "./AuraText"; // Adjust the import path as necessary
 
 const FormInput = React.forwardRef(
   (
@@ -35,7 +36,13 @@ const FormInput = React.forwardRef(
           returnKeyType={returnKeyType} // Set the return key type
           onSubmitEditing={onSubmitEditing} // Handle moving to the next input
         />
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {error ? (
+          <AuraText
+            style={styles.errorText}
+            text={error}
+            fontFamily="fredoka-light"
+          />
+        ) : null}
       </>
     );
   }
@@ -49,6 +56,7 @@ function createStyles(theme) {
       fontSize: 16,
       color: theme.label,
       marginBottom: 3,
+      fontFamily: "fredoka-regular",
     },
     input: {
       backgroundColor: theme.beige, // Beige input background
@@ -56,6 +64,7 @@ function createStyles(theme) {
       padding: 12,
       marginVertical: 4,
       fontSize: 16,
+      fontFamily: "fredoka-regular",
     },
     errorText: {
       color: "red",

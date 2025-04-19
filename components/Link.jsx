@@ -1,10 +1,11 @@
-import { TouchableOpacity, Text, StyleSheet } from "react-native";
+import { TouchableOpacity, StyleSheet } from "react-native";
+import { AuraText } from "./AuraText"; // Adjust the import path as necessary
 
 export default function Link({ title, onPress }) {
   const styles = createStyles();
   return (
     <TouchableOpacity onPress={onPress} style={styles.linkContainer}>
-      <Text style={styles.linkText}>{title}</Text>
+      <AuraText style={styles.linkText} text={title} />
     </TouchableOpacity>
   );
 }
