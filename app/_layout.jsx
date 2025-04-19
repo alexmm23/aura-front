@@ -8,10 +8,10 @@ export default function RootLayout() {
         contentStyle: { backgroundColor: "#fff" },
       }}
     >
-      <Stack.Sreen name="index" />
+      <Stack.Screen name="index" />
       <Stack.Screen name="(auth)/login" />
       <Stack.Screen name="(auth)/register" />
-      <Stack.Screen name="(auth)/forgot-password" />
+      <Stack.Screen name="(auth)/forgotPwassword" />
     </Stack>
   );
 }
