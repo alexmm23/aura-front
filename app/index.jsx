@@ -3,9 +3,7 @@ import { ScrollView, Text, View, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../hooks/useAuth"; // We'll create this hook
-import { useAuthRedirect } from "../hooks/useAuthRedirect"; // We'll create this hook
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Link } from "../components/Link"; // We'll create this component
+import PrimaryButton from "@/components/PrimaryButton"; // Adjust the import path as necessary
 
 export default function Index() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -13,8 +11,7 @@ export default function Index() {
   //   isAuthenticated: false,
   //   isLoading: false,
   // }; // Mocked for demonstration
-
-  const Container = Platform.OS === "web" ? ScrollView : SafeAreaView;
+  const Container = ScrollView;
 
   const router = useRouter();
 
@@ -40,7 +37,10 @@ export default function Index() {
         {isLoading ? (
           <Text>Loading...</Text>
         ) : (
-          <Link title="Go to Login" onPress={() => router.replace("/login")} />
+          <PrimaryButton
+            title="Go to Login"
+            onPress={() => router.replace("/login")}
+          />
         )}
       </View>
     </Container>

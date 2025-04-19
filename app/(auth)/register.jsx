@@ -14,8 +14,9 @@ import Svg, { Path } from "react-native-svg";
 import { StatusBar } from "expo-status-bar";
 import { useAuth } from "@/hooks/useAuth";
 import { Colors } from "@/constants/Colors";
-import FormRegister from "../../components/FormRegister";
+import FormRegister from "@/components/FormRegister";
 import { useRouter } from "expo-router";
+import { AuraText } from "@/components/AuraText"; // Adjust the import path as necessary
 export default function Register() {
   const Container = Platform.OS === "web" ? ScrollView : SafeAreaView;
   const { height, width } = useWindowDimensions();
@@ -87,7 +88,7 @@ export default function Register() {
       )}
 
       <View style={styles.card}>
-        <Text style={styles.title}>Registrate</Text>
+        <AuraText style={styles.title} text="Registrate" />
 
         <FormRegister
           formData={formData}
@@ -225,9 +226,9 @@ const createStyles = (theme, isLandscape) => {
       flex: isLandscape ? 1 : undefined, // En horizontal, la tarjeta debe ocupar el espacio disponible
     },
     title: {
-      fontSize: 24,
-      fontWeight: "600",
-      color: theme.purple,
+      fontSize: 36,
+      fontWeight: "300",
+      color: theme.pink,
       marginBottom: 20,
       textAlign: "center",
     },
