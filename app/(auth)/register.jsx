@@ -2,28 +2,30 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   Image,
   StyleSheet,
   ScrollView,
-  Appearance,
   SafeAreaView,
   Platform,
+  Dimensions,
+  useWindowDimensions,
 } from "react-native";
-import { useRouter } from "expo-router";
+import Svg, { Path } from "react-native-svg";
 import { StatusBar } from "expo-status-bar";
 import { useAuth } from "@/hooks/useAuth";
-import FormInput from "../../components/FormInput";
-import PrimaryButton from "../../components/PrimaryButton";
 import { Colors } from "@/constants/Colors";
-import Link from "../../components/Link";
-
+import FormRegister from "../../components/FormRegister";
+import { useRouter } from "expo-router";
 export default function Register() {
-  const theme = Appearance.getColorScheme();
-  const Container = ScrollView; // Revisar por que no jala SafeArea View
+  const Container = Platform.OS === "web" ? ScrollView : SafeAreaView;
+  const { height, width } = useWindowDimensions();
+  const isLandscape = width > height;
+
   const router = useRouter();
   const { login } = useAuth();
+  const colors = Colors.light;
+  const styles = createStyles(colors, isLandscape);
+
   const [formData, setFormData] = useState({
     nombre: "",
     apellidos: "",
@@ -33,167 +35,201 @@ export default function Register() {
   });
 
   const [errors, setErrors] = useState({});
-
-  const handleChange = (field, value) => {
-    setFormData({
-      ...formData,
-      [field]: value,
-    });
-  };
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validate = () => {
     const newErrors = {};
-
-    if (!formData.nombre) newErrors.nombre = "El nombre es obligatorio";
-    if (!formData.apellidos)
-      newErrors.apellidos = "Los apellidos son obligatorios";
-
-    if (!formData.email) {
-      newErrors.email = "El correo electrónico es obligatorio";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "El correo electrónico no es válido";
-    }
-
-    if (!formData.password) {
-      newErrors.password = "La contraseña es obligatoria";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "La contraseña debe tener al menos 6 caracteres";
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Las contraseñas no coinciden";
-    }
+    Object.values(formData).forEach((value, index) => {
+      if (!value) {
+        const fieldName = Object.keys(formData)[index];
+        newErrors[fieldName] = "Este campo es obligatorio";
+      }
+    });
 
     return newErrors;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const formErrors = validate();
-
     if (Object.keys(formErrors).length > 0) {
       setErrors(formErrors);
       return;
     }
 
-    // TODO: Implementar el registro con la API
-    console.log("Form submitted:", formData);
+    setIsSubmitting(true);
+    try {
+      // Lógica de registro...
+      const token = "demo-token";
+      const user = {
+        email: formData.email,
+        nombre: formData.nombre,
+        apellidos: formData.apellidos,
+      };
 
-    // Simulate successful registration and login
-    const token = "demo-token"; // Replace with actual token from API
-    const user = {
-      email: formData.email,
-      nombre: formData.nombre,
-      apellidos: formData.apellidos,
-    };
-
-    login(token, user);
-    router.replace("/(auth)/login");
+      login(token, user);
+      router.replace("/(auth)/login");
+    } catch (error) {
+      console.error("Error registering:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Container contentContainerStyle={styles.container}>
       <StatusBar style="light" />
 
-      <View style={styles.header}>
-        <Image
-          source={require("../../assets/images/books-illustration.png")}
-          style={styles.headerImage}
-          resizeMode="contain"
-        />
-      </View>
+      {/* Header con SVG */}
+      {isLandscape ? (
+        <LandscapeHeader colors={colors} styles={styles} />
+      ) : (
+        <PortraitHeader colors={colors} styles={styles} />
+      )}
 
       <View style={styles.card}>
         <Text style={styles.title}>Registrate</Text>
 
-        <FormInput
-          label="Nombre: "
-          placeholder="Nombre"
-          value={formData.nombre}
-          onChangeText={(text) => handleChange("nombre", text)}
-          errorMessage={errors.nombre}
-        />
-
-        <FormInput
-          label="Apellidos: "
-          placeholder="Apellido(s)"
-          value={formData.apellidos}
-          onChangeText={(text) => handleChange("apellidos", text)}
-          errorMessage={errors.apellidos}
-        />
-
-        <FormInput
-          label="Correo Electrónico: "
-          placeholder="Correo Electrónico"
-          value={formData.email}
-          onChangeText={(text) => handleChange("email", text)}
-          errorMessage={errors.email}
-        />
-
-        <FormInput
-          label="Contraseña: "
-          placeholder="Contraseña"
-          value={formData.password}
-          onChangeText={(text) => handleChange("password", text)}
-          secureTextEntry
-          errorMessage={errors.password}
-        />
-
-        <FormInput
-          label="Confirmar Contraseña: "
-          placeholder="Confirmar Contraseña"
-          value={formData.confirmPassword}
-          onChangeText={(text) => handleChange("confirmPassword", text)}
-          secureTextEntry
-          errorMessage={errors.confirmPassword}
-        />
-        <PrimaryButton
-          title="Registrarse"
-          onPress={handleSubmit}
-          disabled={Object.keys(errors).length > 0}
-        />
-
-        <Link
-          title="¿Ya tienes una cuenta? Inicia sesión"
-          onPress={() => router.replace("/(auth)/login")}
+        <FormRegister
+          formData={formData}
+          setFormData={setFormData}
+          errors={errors}
+          handleSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
         />
       </View>
     </Container>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    backgroundColor: "#e4d7c2", // Beige background as shown in image
-  },
-  header: {
-    backgroundColor: "#9068d9", // Purple background for the header
-    height: 180,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: 20,
-  },
-  headerImage: {
-    width: "80%",
-    height: 120,
-  },
-  card: {
-    backgroundColor: "white",
-    borderRadius: 20,
-    padding: 20,
-    margin: 20,
-    marginTop: -20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "600",
-    color: "#d987ba", // Pink color for the title
-    marginBottom: 20,
-    textAlign: "center",
-  },
-});
+const PortraitHeader = ({ colors, styles }) => (
+  <View style={styles.backgroundContainer}>
+    <Svg
+      width="100%"
+      height="180"
+      preserveAspectRatio="none"
+      viewBox="0 0 100 100"
+      style={styles.svg}
+    >
+      <Path
+        d="M0,0 L100,0 L100,60 Q75,80 50,65 Q25,50 0,70 L0,0 Z"
+        fill={colors.purple}
+      />
+    </Svg>
+
+    <View style={styles.headerContent}>
+      <Image
+        source={require("../../assets/images/books-illustration.png")}
+        style={styles.headerImage}
+        resizeMode="contain"
+      />
+    </View>
+  </View>
+);
+
+// Componente de encabezado para orientación horizontal
+const LandscapeHeader = ({ colors, styles }) => (
+  <View style={styles.backgroundContainerLandscape}>
+    <Svg
+      width="100%"
+      height="100%"
+      preserveAspectRatio="none"
+      viewBox="0 0 100 100"
+      style={styles.svg}
+    >
+      <Path
+        d="M0,0 L30,0 Q50,50 70,0 L100,0 L100,100 L0,100 Z"
+        fill={colors.purple}
+      />
+    </Svg>
+
+    <View style={styles.headerContentLandscape}>
+      <Image
+        source={require("../../assets/images/books-illustration.png")}
+        style={styles.headerImageLandscape}
+        resizeMode="contain"
+      />
+    </View>
+  </View>
+);
+
+const createStyles = (theme, isLandscape) => {
+  return StyleSheet.create({
+    container: {
+      flexGrow: 1,
+      backgroundColor: theme.beige,
+    },
+    // Estilos para modo vertical
+    backgroundContainer: {
+      height: 180,
+      width: "100%",
+      position: "relative",
+    },
+    // Estilos para modo horizontal
+    backgroundContainerLandscape: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      bottom: 0,
+      width: "30%", // El header ocupa solo una parte del ancho en modo horizontal
+      height: "100%",
+    },
+    svg: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    headerContent: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 180,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingTop: 20,
+    },
+    headerContentLandscape: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    headerImage: {
+      width: "80%",
+      height: 120,
+    },
+    headerImageLandscape: {
+      width: "80%",
+      height: "50%",
+    },
+    // Ajusta la tarjeta según la orientación
+    card: {
+      backgroundColor: theme.white,
+      borderRadius: 20,
+      padding: 20,
+      margin: isLandscape ? 10 : 20,
+      marginLeft: isLandscape ? "35%" : 20, // En horizontal, la tarjeta comienza después del header
+      marginTop: isLandscape ? 10 : -20,
+      marginBottom: isLandscape ? 10 : 20,
+      alignItems: "center",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+      flex: isLandscape ? 1 : undefined, // En horizontal, la tarjeta debe ocupar el espacio disponible
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: "600",
+      color: theme.purple,
+      marginBottom: 20,
+      textAlign: "center",
+    },
+  });
+};

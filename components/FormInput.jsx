@@ -1,34 +1,47 @@
-import { Text, TextInput, Appearance } from "react-native";
+import { Text, TextInput } from "react-native";
 import { StyleSheet } from "react-native";
+import { Colors } from "@/constants/Colors"; // Adjust the import path as necessary
+import React, { forwardRef } from "react";
 
-export default function FormInput({
-  label,
-  placeholder,
-  value,
-  onChangeText,
-  secureTextEntry = false,
-  errorMessage = "",
-}) {
-  const colorScheme = Appearance.getColorScheme();
-  const theme = colorScheme === "dark";
-  const styles = createStyles(theme);
+const FormInput = React.forwardRef(
+  (
+    {
+      label,
+      placeholder,
+      value,
+      onChangeText,
+      secureTextEntry = false,
+      error = "",
+      onSubmitEditing,
+      returnKeyType = "next",
+    },
+    ref
+  ) => {
+    const theme = Colors.light;
+    const styles = createStyles(theme);
+    console.log("Error message:", error);
 
-  return (
-    <>
-      <TextInput
-        style={styles.input}
-        placeholder={placeholder}
-        value={value}
-        onChangeText={onChangeText}
-        secureTextEntry={secureTextEntry}
-        placeholderTextColor="#a0a0a0" // Light gray placeholder text
-      />
-      {errorMessage ? (
-        <Text style={styles.errorText}>{errorMessage}</Text>
-      ) : null}
-    </>
-  );
-}
+    return (
+      <>
+        {/* {label ? <Text style={styles.label}>{label}</Text> : null} */}
+        <TextInput
+          ref={ref}
+          style={styles.input}
+          placeholder={placeholder}
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={secureTextEntry}
+          placeholderTextColor="#a0a0a0" // Light gray placeholder text
+          returnKeyType={returnKeyType} // Set the return key type
+          onSubmitEditing={onSubmitEditing} // Handle moving to the next input
+        />
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      </>
+    );
+  }
+);
+
+export default FormInput;
 
 function createStyles(theme) {
   return StyleSheet.create({
@@ -38,7 +51,7 @@ function createStyles(theme) {
       marginBottom: 3,
     },
     input: {
-      backgroundColor: "#e4d7c2", // Beige input background
+      backgroundColor: theme.beige, // Beige input background
       borderRadius: 8,
       padding: 12,
       marginVertical: 4,

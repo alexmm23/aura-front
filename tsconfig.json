@@ -14,6 +14,7 @@
     "app/(auth)/_layout.jsx",
     "app/_layout.jsx",
     "app/(auth)/login.jsx",
-    "app/index.jsx"
+    "app/index.jsx",
+    "constants/Colors.js"
   ]
 }
