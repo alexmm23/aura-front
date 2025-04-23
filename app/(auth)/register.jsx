@@ -40,14 +40,46 @@ export default function Register() {
 
   const validate = () => {
     const newErrors = {};
-    Object.values(formData).forEach((value, index) => {
+
+    // Validación de campos vacíos
+    Object.entries(formData).forEach(([key, value]) => {
       if (!value) {
-        const fieldName = Object.keys(formData)[index];
-        newErrors[fieldName] = "Este campo es obligatorio";
+        newErrors[key] = "Este campo es obligatorio";
       }
     });
 
+    // Validación de email
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = "Email no válido";
+    }
+
+    // Validación de contraseña
+    if (formData.password && formData.password.length < 6) {
+      newErrors.password = "La contraseña debe tener al menos 6 caracteres";
+    }
+
+    // Validación de confirmación de contraseña
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Las contraseñas no coinciden";
+    }
+
     return newErrors;
+  };
+  const registerUser = async (user) => {
+    // Hacer una funcion general de fetch que muestre los errores y los maneje
+    const response = await fetch("http://localhost:3000/api/users/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(user),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error);
+    }
+    const data = await response.json();
+    return data;
   };
 
   const handleSubmit = async () => {
@@ -59,18 +91,21 @@ export default function Register() {
 
     setIsSubmitting(true);
     try {
-      // Lógica de registro...
-      const token = "demo-token";
       const user = {
         email: formData.email,
-        nombre: formData.nombre,
-        apellidos: formData.apellidos,
+        name: formData.nombre,
+        lastname: formData.apellidos,
+        password: formData.password,
+        role_id: 2,
       };
+      const response = await registerUser(user);
+      console.log("Response:", response); // Verifica la respuesta del servidor
 
-      login(token, user);
-      router.replace("/(auth)/login");
+      // // login(token, ukser);
+      // router.replace("/(auth)/login");
     } catch (error) {
-      console.error("Error registering:", error);
+      console.error("Error:", error.message); // Manejo de errores
+      setErrors({ general: error.message, ...formErrors });
     } finally {
       setIsSubmitting(false);
     }

@@ -20,7 +20,6 @@ const FormInput = React.forwardRef(
   ) => {
     const theme = Colors.light;
     const styles = createStyles(theme);
-    console.log("Error message:", error);
 
     return (
       <>

@@ -4,6 +4,7 @@ import {
   StyleSheet,
   Dimensions,
   useWindowDimensions,
+  Text,
 } from "react-native";
 import FormInput from "./FormInput";
 import PrimaryButton from "./PrimaryButton";
@@ -87,6 +88,11 @@ const PortraitForm = ({
 
   return (
     <View style={styles.formContainer}>
+      {errors.general && (
+        <Text style={{ color: "red", fontSize: 16, marginBottom: 10 }}>
+          {errors.general}
+        </Text>
+      )}
       <FormInput
         placeholder="Nombre: "
         value={formData.nombre}
@@ -235,6 +241,14 @@ const LandscapeForm = ({
             onPress={() => router.replace("/(auth)/login")}
           />
         </View>
+
+        {errors.general && (
+          <View style={{ marginTop: 10 }}>
+            <Text style={{ color: "red", fontSize: 16, marginBottom: 10 }}>
+              {errors.general}
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
