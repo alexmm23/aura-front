@@ -15,8 +15,8 @@ import { StatusBar } from "expo-status-bar";
 import { useAuth } from "@/hooks/useAuth";
 import { Colors } from "@/constants/Colors";
 import Svg, { Path } from "react-native-svg";
-import { AuraText } from "@/components/AuraText"; // Adjust the import path as necessary
-import { AuraTextInput } from "@/components/AuraTextInput"; // Adjust the import path as necessary
+import { AuraText } from "@/components/AuraText"; 
+import { AuraTextInput } from "@/components/AuraTextInput";
 
 
 export default function Login() {
@@ -39,7 +39,7 @@ export default function Login() {
   };
 
   const handleSubmit = async () => {
-    router.replace('/indexUser');
+    router.replace('/homeScreen');
 
     /* Basic validation
     const newErrors = {};
