@@ -130,8 +130,7 @@ export default function Login() {
 
         <TouchableOpacity
           style={styles.linkContainer}
-          //</View>onPress={() => router.replace("/(auth)/register")}>
-          >
+          onPress={() => router.replace("/(auth)/forgotPassword")}>
           <AuraText style={styles.linkTextContraseña} text="Olvide mi contraseña"></AuraText>
         </TouchableOpacity>
 
