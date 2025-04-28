@@ -39,7 +39,9 @@ export default function Login() {
   };
 
   const handleSubmit = async () => {
-    // Basic validation
+    router.replace('/indexUser');
+
+    /* Basic validation
     const newErrors = {};
     if (!formData.email)
       newErrors.email = "El correo electrónico es obligatorio";
@@ -50,6 +52,7 @@ export default function Login() {
       return;
     }
 
+    
     try {
       // TODO: Replace with your actual API call
       // const response = await fetch('your-api-url/login', {
@@ -82,7 +85,7 @@ export default function Login() {
     } catch (error) {
       console.error("Login error:", error);
       setErrors({ form: "Error de conexión" });
-    }
+    }*/
   };
 
   return (
