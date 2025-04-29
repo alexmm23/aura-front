@@ -13,6 +13,8 @@ import { Colors } from "@/constants/Colors";
 import Svg, { Path } from "react-native-svg";
 import { AuraText } from "@/components/AuraText";
 import { AuraTextInput } from "@/components/AuraTextInput";
+import { Image } from "react-native";
+
 
 export default function ForgotPassword() {
   const router = useRouter();
@@ -126,7 +128,11 @@ const LandscapeHeader = ({ colors, styles }) => (
     </Svg>
 
     <View style={styles.headerContentLandscape}>
-      
+      <Image
+        source={require("../../assets/images/books_Forgot.png")}
+        style={styles.headerImageLandscape}
+        resizeMode="contain"
+      />
     </View>
   </View>
 );
@@ -145,6 +151,14 @@ const PortraitHeader = ({ colors, styles }) => (
         fill={colors.purple}
       />
     </Svg>
+
+    <View style={styles.headerContent}>
+      <Image
+        source={require("../../assets/images/books_Forgot.png")}
+        style={styles.headerImageLandscape}
+        resizeMode="contain"
+      />
+    </View>
   </View>
 );
 
@@ -159,7 +173,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     margin: 20,
-    marginTop: "-20%",
+    marginTop: "-60%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -264,5 +278,58 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "80%",
     maxHeight: 500,
+  },
+  // Estilos para modo vertical
+  backgroundContainer: {
+    height: 600,                //AUMENTE PARA DAR ESPACIO
+    width: "100%",
+    position: "relative",
+  },
+  // Estilos para modo horizontal
+  backgroundContainerLandscape: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: "40%", // El header ocupa solo una parte del ancho en modo horizontal
+    height: "100%",
+  },
+  svg: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  headerContent: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 350,              // igual que el contenedor
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 40,          //mas espacio arriba
+  },
+  headerContentLandscape: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 30             // mas espacio al rededor
+  },
+  headerImage: {
+    width: "90%",
+    height: 250,            //altura aumentada
+    marginBottom: 20,
+    marginTop:15,
+  },
+  headerImageLandscape: {
+    width: "100%", // Ocupa todo el ancho disponible
+    height: "80%", // Ocupa más altura
+    maxHeight: 500, // Límite para pantallas grandes
   },
 });
