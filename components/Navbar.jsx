@@ -1,57 +1,48 @@
 // Navbar.js
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons } from '@expo/vector-icons';
+import { View, StyleSheet } from "react-native";
+
 import { useRouter } from "expo-router";
 
+import NavbarItem from "./NavbarItem";
+
+import { Colors } from "@/constants/Colors";
 
 export default function Navbar() {
   const router = useRouter();
+  const ITEMS = [
+    { icon: "home", text: "Inicio", route: "/(tabs)/home" },
+    { icon: "document-text", text: "Notas", route: "/(tabs)/notes" },
+    { icon: "school", text: "Clases", route: "/(tabs)/classes" },
+    { icon: "chatbubbles", text: "Chats", route: "/(tabs)/chats" },
+    { icon: "person", text: "Perfil", route: "/(auth)/profile" },
+  ];
+
+  const onPressItem = (route) => {
+    router.replace(route);
+  };
+
   return (
     <View style={styles.navbar}>
-      <TouchableOpacity style={styles.navItem}>
-        <Ionicons name="home" size={24} color="white" />
-        <Text style={styles.navText}>Inicio</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.navItem}>
-        <Ionicons name="document-text" size={24} color="white" />
-        <Text style={styles.navText}>Notas</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.navItem}>
-        <Ionicons name="school" size={24} color="white" />
-        <Text style={styles.navText}>Clases</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.navItem}>
-        <Ionicons name="chatbubbles" size={24} color="white" />
-        <Text style={styles.navText}>Chats</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.navItem} onPress={() => router.replace("/(auth)/profile")}>
-        <Ionicons name="person" size={24} color="white" />
-        <Text style={styles.navText}>Perfil</Text>
-      </TouchableOpacity>
+      {ITEMS.map((item, index) => (
+        <NavbarItem
+          key={index}
+          icon={item.icon}
+          text={item.text}
+          onPress={() => onPressItem(item.route)}
+        />
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   navbar: {
-    flexDirection: 'row',
-    backgroundColor: '#7752CC',
+    flexDirection: "row",
+    backgroundColor: Colors.light.purple,
     paddingVertical: 10,
-    justifyContent: 'space-around',
-    alignItems: 'center',
+    justifyContent: "space-around",
+    alignItems: "center",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-  },
-  navItem: {
-    alignItems: 'center',
-  },
-  navText: {
-    color: 'white',
-    fontSize: 12,
-    marginTop: 2,
   },
 });
