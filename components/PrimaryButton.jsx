@@ -3,11 +3,17 @@ import { StyleSheet, Appearance } from "react-native";
 import { Colors } from "@/constants/Colors";
 import { AuraText } from "./AuraText"; // Adjust the import path as necessary
 
-export default function PrimaryButton({ title, onPress, disabled = false }) {
+export default function PrimaryButton({
+  title,
+  onPress,
+  disabled = false,
+  style,
+}) {
   const colorScheme = Appearance.getColorScheme();
   const colors = Colors[colorScheme] || Colors.light;
-  const styles = createStyles(colors);
-
+  console.log("styles", style);
+  const styles = style != null ? style : createStyles(colors);
+  console.log("styles created", styles);
   return (
     <TouchableOpacity
       style={[styles.button, disabled ? styles.disabledButton : styles.button]}
