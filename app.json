@@ -18,6 +18,8 @@
       }
     },
     "web": {
+      "name": "AURA - Organiza, Estudia y Aprende",
+      "shortName": "AURA",
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png"
@@ -33,7 +35,8 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-head"
     ],
     "experiments": {
       "typedRoutes": true
