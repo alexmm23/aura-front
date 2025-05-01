@@ -2,15 +2,14 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   Image,
   StyleSheet,
   ScrollView,
   useWindowDimensions,
-  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
+import Head from "expo-router/head";
 import { StatusBar } from "expo-status-bar";
 import { useAuth } from "@/hooks/useAuth";
 import { Colors } from "@/constants/Colors";
@@ -18,7 +17,7 @@ import Svg, { Path } from "react-native-svg";
 import { AuraText } from "@/components/AuraText";
 import { AuraTextInput } from "@/components/AuraTextInput";
 import PrimaryButton from "@/components/PrimaryButton";
-import { GoogleIconSvg } from "@/components/LinkIcons"; // Adjust the import path as necessary
+import { GoogleIconSvg } from "@/components/LinkIcons";
 export default function Login() {
   const router = useRouter();
   const { height, width } = useWindowDimensions();
@@ -90,80 +89,86 @@ export default function Login() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <StatusBar style="light" />
+    <>
+      <Head>
+        <title>AURA - Iniciar Sesión</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </Head>
+      <ScrollView contentContainerStyle={styles.container}>
+        <StatusBar style="light" />
 
-      {/* Header con SVG */}
-      {isLandscape ? (
-        <LandscapeHeader colors={colors} styles={styles} />
-      ) : (
-        <PortraitHeader colors={colors} styles={styles} />
-      )}
-
-      <View style={styles.card}>
-        <AuraText style={styles.title} text="Inicia Sesion" />
-        <AuraText style={styles.subtitle} text="Organiza, Estudia, Aprende" />
-
-        {errors.form && (
-          <Text style={[styles.errorText, styles.formError]}>
-            {errors.form}
-          </Text>
+        {/* Header con SVG */}
+        {isLandscape ? (
+          <LandscapeHeader colors={colors} styles={styles} />
+        ) : (
+          <PortraitHeader colors={colors} styles={styles} />
         )}
 
-        <AuraTextInput
-          style={styles.input}
-          placeholder="Correo Electrónico"
-          value={formData.email}
-          onChangeText={(text) => handleChange("email", text)}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+        <View style={styles.card}>
+          <AuraText style={styles.title} text="Inicia Sesion" />
+          <AuraText style={styles.subtitle} text="Organiza, Estudia, Aprende" />
 
-        <AuraTextInput
-          style={styles.input}
-          placeholder="Contraseña"
-          value={formData.password}
-          onChangeText={(text) => handleChange("password", text)}
-          secureTextEntry
-        />
-        {errors.password && (
-          <Text style={styles.errorText}>{errors.password}</Text>
-        )}
+          {errors.form && (
+            <Text style={[styles.errorText, styles.formError]}>
+              {errors.form}
+            </Text>
+          )}
 
-        <TouchableOpacity
-          style={styles.linkContainer}
-          onPress={() => router.replace("/(auth)/forgotPassword")}
-        >
-          <AuraText
-            style={styles.linkTextContraseña}
-            text="Olvide mi contraseña"
-          ></AuraText>
-        </TouchableOpacity>
+          <AuraTextInput
+            style={styles.input}
+            placeholder="Correo Electrónico"
+            value={formData.email}
+            onChangeText={(text) => handleChange("email", text)}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-        <PrimaryButton
-          title="Ingresar"
-          onPress={handleSubmit}
-          disabled={false}
-          style={styles}
-        />
+          <AuraTextInput
+            style={styles.input}
+            placeholder="Contraseña"
+            value={formData.password}
+            onChangeText={(text) => handleChange("password", text)}
+            secureTextEntry
+          />
+          {errors.password && (
+            <Text style={styles.errorText}>{errors.password}</Text>
+          )}
 
-        <GoogleIconSvg
-          styles={styles}
-          onPress={() => console.log("Google icon pressed")}
-        />
+          <TouchableOpacity
+            style={styles.linkContainer}
+            onPress={() => router.replace("/(auth)/forgotPassword")}
+          >
+            <AuraText
+              style={styles.linkTextContraseña}
+              text="Olvide mi contraseña"
+            ></AuraText>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.linkContainer}
-          onPress={() => router.replace("/(auth)/register")}
-        >
-          <AuraText
-            style={styles.linkText}
-            text="¿No tienes una cuenta? Regístrate"
-          ></AuraText>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          <PrimaryButton
+            title="Ingresar"
+            onPress={handleSubmit}
+            disabled={false}
+            style={styles}
+          />
+
+          <GoogleIconSvg
+            styles={styles}
+            onPress={() => console.log("Google icon pressed")}
+          />
+
+          <TouchableOpacity
+            style={styles.linkContainer}
+            onPress={() => router.replace("/(auth)/register")}
+          >
+            <AuraText
+              style={styles.linkText}
+              text="¿No tienes una cuenta? Regístrate"
+            ></AuraText>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </>
   );
 }
 
