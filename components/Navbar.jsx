@@ -1,8 +1,11 @@
 // Navbar.js
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from "expo-router";
+
 
 export default function Navbar() {
+  const router = useRouter();
   return (
     <View style={styles.navbar}>
       <TouchableOpacity style={styles.navItem}>
@@ -25,7 +28,7 @@ export default function Navbar() {
         <Text style={styles.navText}>Chats</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.navItem}>
+      <TouchableOpacity style={styles.navItem} onPress={() => router.replace("/(auth)/profile")}>
         <Ionicons name="person" size={24} color="white" />
         <Text style={styles.navText}>Perfil</Text>
       </TouchableOpacity>
