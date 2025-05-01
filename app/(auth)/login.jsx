@@ -244,8 +244,10 @@ const createStyles = (theme) => {
       backgroundColor: "white",
       borderRadius: 20,
       padding: 20,
-      margin: 20,
-      marginTop: "-60%",
+      width: "90%",
+      marginTop: -100,
+      alignSelf: "center",
+      marginBottom: 50,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
@@ -320,7 +322,7 @@ const createStyles = (theme) => {
     },
     // Estilos para modo vertical
     backgroundContainer: {
-      height: 600, //AUMENTE PARA DAR ESPACIO
+      height: 400,
       width: "100%",
       position: "relative",
     },
@@ -348,7 +350,7 @@ const createStyles = (theme) => {
       height: 350, // igual que el contenedor
       justifyContent: "center",
       alignItems: "center",
-      paddingTop: 40, //mas espacio arriba
+      paddingTop: 0, //mas espacio arriba
     },
     headerContentLandscape: {
       position: "absolute",
@@ -363,8 +365,6 @@ const createStyles = (theme) => {
     headerImage: {
       width: "90%",
       height: 250, //altura aumentada
-      marginBottom: 20,
-      marginTop: 15,
     },
     headerImageLandscape: {
       width: "100%", // Ocupa todo el ancho disponible
