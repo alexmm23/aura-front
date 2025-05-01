@@ -4,6 +4,8 @@ import { AuraText } from "@/components/AuraText";
 import Navbar from "@/components/Navbar";
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from "react-native-svg";
+import { LinearGradient } from 'expo-linear-gradient';
+
 
 export default function PerfilUsuario() {
   const { height, width } = useWindowDimensions();
@@ -15,11 +17,17 @@ export default function PerfilUsuario() {
       <PortraitHeader />
 
       {/* Header con botón atrás */}
-      <View style={styles.cardheader}>
-        <TouchableOpacity style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <LinearGradient
+            colors={['#B065C4', '#F4A45B']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.cardheader}
+        >
+            <TouchableOpacity style={styles.backButton}>
+                <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+        </LinearGradient>
+
 
       {/* Imagen de perfil superpuesta */}
       <View style={styles.profileImageContainer}>
@@ -65,17 +73,34 @@ export default function PerfilUsuario() {
 
 // Componente PortraitHeader
 const PortraitHeader = () => (
-    <View style={portraitStyles.backgroundContainer}>
+    <View style={styles.backgroundContainer}>
       <Svg
         width="100%"
-        height="180%"
+        height="280%"
         preserveAspectRatio="none"
         viewBox="0 0 349 371"
-        style={portraitStyles.svg}
+        style={styles.svg}
       >
         <Path
           d="M371.479 427.891C362.161 435.719 355.808 440.571 351.601 442.854C349.484 444.003 347.996 444.451 346.986 444.377C346.5 444.341 346.135 444.185 345.85 443.932C345.559 443.672 345.317 443.281 345.138 442.72C344.774 441.584 344.706 439.879 344.88 437.597C345.053 435.328 345.461 432.547 346.008 429.29C347.099 422.789 348.743 414.406 350.138 404.564C355.724 365.153 357.362 302.043 304.209 238.776C277.606 207.111 248.002 194.749 217.716 188.959C202.584 186.066 187.278 184.814 172.107 183.61C156.928 182.405 141.886 181.251 127.236 178.559C97.9607 173.182 70.2773 161.675 46.3861 131.38C22.5031 101.095 2.37702 51.9925 -11.6946 -28.6441C6.91648 -44.1965 40.9355 -62.1664 83.2065 -78.4257C125.632 -94.7445 176.326 -109.325 228.003 -118.009C279.683 -126.693 332.324 -129.476 378.652 -122.214C424.981 -114.952 464.947 -97.6536 491.354 -66.2215C517.762 -34.7886 528.166 7.86949 527.714 55.2181C527.262 102.564 515.957 154.548 499.004 204.568C482.051 254.585 459.46 302.617 436.454 342.051C413.441 381.497 390.039 412.298 371.479 427.891Z"
           fill="#D1A8D2"
+        />
+      </Svg>
+    </View>
+  );
+
+  const LandscapeHeader = ({ colors, styles }) => (
+    <View style={styles.backgroundContainerLandscape}>
+      <Svg
+        width="100%"
+        height="100%"
+        preserveAspectRatio="xMidYMid slice"
+        viewBox="0 0 100 100"
+        style={styles.svg}
+      >
+        <Path
+          d="M285.812 156.109C136.142 156.109 172.653 353.184 -85 214.631C-85 132.862 33.4293 -130 183.099 -130C332.768 -130 457 132.862 457 214.631C457 296.401 435.481 156.109 285.812 156.109Z"
+          fill={colors.purple}
         />
       </Svg>
     </View>
@@ -89,7 +114,7 @@ const styles = StyleSheet.create({
   cardheader: {
     marginLeft: 20,
     borderRadius: 30,
-    marginTop: 20,
+    marginTop: 30,
     marginRight: 20,
     height: "30%",
     backgroundColor: 'linear-gradient(90deg, #B065C4 0%, #F4A45B 100%)',
@@ -170,21 +195,90 @@ const styles = StyleSheet.create({
     color: '#822C7D',
     textAlign: 'center',
   },
+  backgroundContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: 220, 
+  },
+  svg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  backgroundContainerLandscape: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: "40%",
+    height: "100%",
+  },
+  headerContentLandscape: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 30,
+  },
+  headerImageLandscape: {
+    width: "100%",
+    height: "80%",
+    maxHeight: 500,
+  },
+  // Estilos para modo horizontal
+  backgroundContainerLandscape: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: "40%", // El header ocupa solo una parte del ancho en modo horizontal
+    height: "100%",
+  },
+  svg: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  headerContent: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 350,              // igual que el contenedor
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 40,          //mas espacio arriba
+  },
+  headerContentLandscape: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 30             // mas espacio al rededor
+  },
+  headerImage: {
+    width: "90%",
+    height: 250,            //altura aumentada
+    marginBottom: 20,
+    marginTop:15,
+  },
+  headerImageLandscape: {
+    width: "100%", // Ocupa todo el ancho disponible
+    height: "80%", // Ocupa más altura
+    maxHeight: 500, // Límite para pantallas grandes
+  },
 });
 
-const portraitStyles = StyleSheet.create({
-    backgroundContainer: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: 220, // ajusta según sea necesario
-      zIndex: -1, // Asegura que quede detrás del resto
-    },
-    svg: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-    },
-  });
+
+
   

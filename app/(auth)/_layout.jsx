@@ -31,6 +31,12 @@ export default function AuthLayout() {
             title: "Recuperar Contraseña",
           }}
         />
+        <Stack.Screen
+          name="profile"
+          options={{
+            title: "Perfil",
+          }}
+        />
       </Stack>
     </>
   );
