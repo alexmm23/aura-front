@@ -11,9 +11,7 @@ export default function PrimaryButton({
 }) {
   const colorScheme = Appearance.getColorScheme();
   const colors = Colors[colorScheme] || Colors.light;
-  console.log("styles", style);
   const styles = style != null ? style : createStyles(colors);
-  console.log("styles created", styles);
   return (
     <TouchableOpacity
       style={[styles.button, disabled ? styles.disabledButton : styles.button]}
