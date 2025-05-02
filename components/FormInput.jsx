@@ -61,7 +61,7 @@ function createStyles(theme) {
       backgroundColor: theme.beige, // Beige input background
       borderRadius: 8,
       padding: 12,
-      marginVertical: 4,
+      marginVertical: 10,
       fontSize: 16,
       fontFamily: "fredoka-regular",
     },
