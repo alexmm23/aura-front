@@ -3,13 +3,11 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
-  Image,
   useWindowDimensions,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { AuraText } from "@/components/AuraText";
-import { Platform } from "react-native";
+import Head from "expo-router/head";
 import Svg, { Path } from "react-native-svg";
 import { Colors } from "@/constants/Colors";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -20,91 +18,97 @@ export default function HomeScreen() {
   const isLandscape = width > height;
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.container} edges={["right", "left", "top"]}>
-        {/* Header con SVG */}
-        {isLandscape ? (
-          <LandscapeHeader colors={colors} styles={styles} />
-        ) : (
-          <PortraitHeader colors={colors} styles={styles} />
-        )}
+    <>
+      <Head>
+        <title>Inicio - AURA </title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </Head>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.container} edges={["right", "left", "top"]}>
+          {/* Header con SVG */}
+          {isLandscape ? (
+            <LandscapeHeader colors={colors} styles={styles} />
+          ) : (
+            <PortraitHeader colors={colors} styles={styles} />
+          )}
 
-        {/* Contenido scrollable */}
-        <ScrollView
-          contentContainerStyle={styles.contentContainer}
-          style={styles.scrollView}
-        >
-          {/* Mis notas */}
-          <View style={styles.card}>
-            <AuraText style={styles.title} text="Mis Notas"></AuraText>
-            <View style={styles.noteCard}>
-              <AuraText style={styles.noteTitle} text="Nota #1"></AuraText>
-              <AuraText
-                style={styles.noteText}
-                text="Lorem Ipsum is simply dummy text of the printing and typesetting industry."
-              ></AuraText>
-            </View>
-            <View style={styles.noteCard}>
-              <AuraText style={styles.noteTitle} text="Nota #2"></AuraText>
-              <AuraText
-                style={styles.noteText}
-                text="Lorem Ipsum is simply dummy text of the printing and typesetting industry."
-              ></AuraText>
-            </View>
-          </View>
-
-          {/* Mis Tareas */}
-          <View style={styles.card}>
-            <AuraText style={styles.title} text="Mis Tareas"></AuraText>
-
-            <View style={styles.taskCard}>
-              <View>
-                <Text style={styles.taskSubject}>Matemáticas</Text>
-                <Text style={styles.taskDescription}>Descripción</Text>
-                <Text style={styles.taskDueDate}>Fecha de entrega</Text>
+          {/* Contenido scrollable */}
+          <ScrollView
+            contentContainerStyle={styles.contentContainer}
+            style={styles.scrollView}
+          >
+            {/* Mis notas */}
+            <View style={styles.card}>
+              <AuraText style={styles.title} text="Mis Notas"></AuraText>
+              <View style={styles.noteCard}>
+                <AuraText style={styles.noteTitle} text="Nota #1"></AuraText>
+                <AuraText
+                  style={styles.noteText}
+                  text="Lorem Ipsum is simply dummy text of the printing and typesetting industry."
+                ></AuraText>
               </View>
-              <Ionicons name="people" size={40} color="#4CAF50" />
+              <View style={styles.noteCard}>
+                <AuraText style={styles.noteTitle} text="Nota #2"></AuraText>
+                <AuraText
+                  style={styles.noteText}
+                  text="Lorem Ipsum is simply dummy text of the printing and typesetting industry."
+                ></AuraText>
+              </View>
             </View>
 
-            <View style={styles.taskCard}>
-              <View>
-                <Text style={styles.taskSubject}>Inglés</Text>
-                <Text style={styles.taskDescription}>Descripción</Text>
-                <Text style={styles.taskDueDate}>Fecha de entrega</Text>
-              </View>
-              <MaterialCommunityIcons
-                name="mortar-board"
-                size={40}
-                color="#FF9800"
-              />
-            </View>
+            {/* Mis Tareas */}
+            <View style={styles.card}>
+              <AuraText style={styles.title} text="Mis Tareas"></AuraText>
 
-            <View style={styles.taskCard}>
-              <View>
-                <Text style={styles.taskSubject}>Análisis de Datos</Text>
-                <Text style={styles.taskDescription}>Descripción</Text>
-                <Text style={styles.taskDueDate}>Fecha de entrega</Text>
+              <View style={styles.taskCard}>
+                <View>
+                  <Text style={styles.taskSubject}>Matemáticas</Text>
+                  <Text style={styles.taskDescription}>Descripción</Text>
+                  <Text style={styles.taskDueDate}>Fecha de entrega</Text>
+                </View>
+                <Ionicons name="people" size={40} color="#4CAF50" />
               </View>
-              <MaterialCommunityIcons
-                name="microsoft-teams"
-                size={40}
-                color="#3F51B5"
-              />
-            </View>
 
-            {/* Añado algunas tarjetas más para demostrar el scroll */}
-            <View style={styles.taskCard}>
-              <View>
-                <Text style={styles.taskSubject}>Ciencias</Text>
-                <Text style={styles.taskDescription}>Descripción</Text>
-                <Text style={styles.taskDueDate}>Fecha de entrega</Text>
+              <View style={styles.taskCard}>
+                <View>
+                  <Text style={styles.taskSubject}>Inglés</Text>
+                  <Text style={styles.taskDescription}>Descripción</Text>
+                  <Text style={styles.taskDueDate}>Fecha de entrega</Text>
+                </View>
+                <MaterialCommunityIcons
+                  name="mortar-board"
+                  size={40}
+                  color="#FF9800"
+                />
               </View>
-              <Ionicons name="flask" size={40} color="#E91E63" />
+
+              <View style={styles.taskCard}>
+                <View>
+                  <Text style={styles.taskSubject}>Análisis de Datos</Text>
+                  <Text style={styles.taskDescription}>Descripción</Text>
+                  <Text style={styles.taskDueDate}>Fecha de entrega</Text>
+                </View>
+                <MaterialCommunityIcons
+                  name="microsoft-teams"
+                  size={40}
+                  color="#3F51B5"
+                />
+              </View>
+
+              {/* Añado algunas tarjetas más para demostrar el scroll */}
+              <View style={styles.taskCard}>
+                <View>
+                  <Text style={styles.taskSubject}>Ciencias</Text>
+                  <Text style={styles.taskDescription}>Descripción</Text>
+                  <Text style={styles.taskDueDate}>Fecha de entrega</Text>
+                </View>
+                <Ionicons name="flask" size={40} color="#E91E63" />
+              </View>
             </View>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </SafeAreaProvider>
+          </ScrollView>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    </>
   );
 }
 

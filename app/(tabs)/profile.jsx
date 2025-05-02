@@ -7,6 +7,7 @@ import {
   useWindowDimensions,
   TouchableOpacity,
 } from "react-native";
+import Head from "expo-router/head";
 import { AuraText } from "@/components/AuraText";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
@@ -17,72 +18,78 @@ export default function PerfilUsuario() {
   const isLandscape = width > height;
 
   return (
-    <View style={styles.container}>
-      {/* Fondo con PortraitHeader */}
-      <PortraitHeader />
+    <>
+      <Head>
+        <title>Mi Perfil - AURA </title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </Head>
+      <View style={styles.container}>
+        {/* Fondo con PortraitHeader */}
+        <PortraitHeader />
 
-      {/* Header con botón atrás */}
-      <LinearGradient
-        colors={["#B065C4", "#F4A45B"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.cardheader}
-      >
-        <TouchableOpacity style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-      </LinearGradient>
-
-      {/* Imagen de perfil superpuesta */}
-      <View style={styles.profileImageContainer}>
-        <Image
-          source={require("@/assets/images/icon.png")}
-          style={styles.profileImage}
-        />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Card principal */}
-        <View style={styles.card}>
-          <AuraText style={styles.title} text="Mi Perfil" />
-
-          {/* Íconos de plataformas */}
-          <View style={styles.iconRow}>
-            <Image
-              source={require("@/assets/images/classroom.png")}
-              style={styles.icon}
-            />
-            <Image
-              source={require("@/assets/images/moodle.png")}
-              style={styles.icon}
-            />
-            <Image
-              source={require("@/assets/images/teams.png")}
-              style={styles.icon}
-            />
-          </View>
-
-          {/* Botones */}
-          <TouchableOpacity style={styles.button}>
-            <AuraText style={styles.buttonText} text="Editar Perfil" />
+        {/* Header con botón atrás */}
+        <LinearGradient
+          colors={["#B065C4", "#F4A45B"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.cardheader}
+        >
+          <TouchableOpacity style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
+        </LinearGradient>
 
-          <TouchableOpacity style={styles.button}>
-            <AuraText
-              style={styles.buttonText}
-              text="Administrar Suscripción"
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.button, styles.logoutButton]}>
-            <AuraText style={styles.logoutText} text="Cerrar Sesión" />
-          </TouchableOpacity>
+        {/* Imagen de perfil superpuesta */}
+        <View style={styles.profileImageContainer}>
+          <Image
+            source={require("@/assets/images/icon.png")}
+            style={styles.profileImage}
+          />
         </View>
-      </ScrollView>
 
-      {/* Navbar persistente */}
-      {/* <Navbar /> */}
-    </View>
+        <ScrollView contentContainerStyle={styles.content}>
+          {/* Card principal */}
+          <View style={styles.card}>
+            <AuraText style={styles.title} text="Mi Perfil" />
+
+            {/* Íconos de plataformas */}
+            <View style={styles.iconRow}>
+              <Image
+                source={require("@/assets/images/classroom.png")}
+                style={styles.icon}
+              />
+              <Image
+                source={require("@/assets/images/moodle.png")}
+                style={styles.icon}
+              />
+              <Image
+                source={require("@/assets/images/teams.png")}
+                style={styles.icon}
+              />
+            </View>
+
+            {/* Botones */}
+            <TouchableOpacity style={styles.button}>
+              <AuraText style={styles.buttonText} text="Editar Perfil" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.button}>
+              <AuraText
+                style={styles.buttonText}
+                text="Administrar Suscripción"
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.button, styles.logoutButton]}>
+              <AuraText style={styles.logoutText} text="Cerrar Sesión" />
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+
+        {/* Navbar persistente */}
+        {/* <Navbar /> */}
+      </View>
+    </>
   );
 }
 
