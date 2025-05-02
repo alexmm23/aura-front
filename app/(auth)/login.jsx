@@ -39,7 +39,7 @@ export default function Login() {
   };
 
   const handleSubmit = async () => {
-    router.replace("/homeScreen");
+    router.replace("/home");
 
     /* Basic validation
     const newErrors = {};
@@ -293,7 +293,7 @@ const createStyles = (theme) => {
     button: {
       backgroundColor: "#f5b764",
       borderRadius: 8,
-      padding: 14,
+      padding: 15,
       alignItems: "center",
       marginTop: 10,
       width: "90%",
