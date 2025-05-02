@@ -22,7 +22,7 @@ export default function Login() {
   const router = useRouter();
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const colors = Colors.light;
   const styles = createStyles(colors, isLandscape);
   const [formData, setFormData] = useState({
@@ -39,9 +39,7 @@ export default function Login() {
   };
 
   const handleSubmit = async () => {
-    router.replace("/home");
-
-    /* Basic validation
+    // Basic validation
     const newErrors = {};
     if (!formData.email)
       newErrors.email = "El correo electrónico es obligatorio";
@@ -52,40 +50,32 @@ export default function Login() {
       return;
     }
 
-    
     try {
-      // TODO: Replace with your actual API call
-      // const response = await fetch('your-api-url/login', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({
-      //     email: formData.email,
-      //     password: formData.password,
-      //   }),
-      // });
-
-      // const data = await response.json();
-
-      // if (response.ok) {
-      //   // Store token and user data
-      //   await login(data.token, data.user);
-      //   router.replace('/(tabs)');
-      // } else {
-      //   setErrors({ form: data.message || 'Credenciales inválidas' });
-      // }
-
-      // For demo purposes, simulate successful login
-      await login("demo-token", {
-        email: formData.email,
-        name: "Usuario Demo",
+      //TODO: Replace with your actual API call
+      const response = await fetch("http://localhost:3000/api/users/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
       });
-      router.replace("/(tabs)");
+      const data = await response.json();
+      if (response.ok) {
+        const { token, refreshToken } = data;
+        await login(token, refreshToken);
+        router.replace("/home");
+      } else {
+        const { error } = data;
+        console.error("Login error:", error);
+        setErrors({ form: error });
+      }
     } catch (error) {
-      console.error("Login error:", error);
       setErrors({ form: "Error de conexión" });
-    }*/
+      logout();
+    }
   };
 
   return (

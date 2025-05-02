@@ -12,11 +12,17 @@ import { AuraText } from "@/components/AuraText";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
+import { useAuth } from "@/hooks/useAuth"; // Hook para manejar la autenticación
+import { router } from "expo-router";
 
-export default function PerfilUsuario() {
+export default function Profile() {
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
+  const { logout, isAuthenticated } = useAuth(); // Hook para manejar la autenticación
 
+  if (!isAuthenticated) {
+    router.replace("/login"); // Redirige a la pantalla de inicio de sesión
+  }
   return (
     <>
       <Head>
@@ -80,7 +86,10 @@ export default function PerfilUsuario() {
               />
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.button, styles.logoutButton]}>
+            <TouchableOpacity
+              style={[styles.button, styles.logoutButton]}
+              onPress={() => logout()}
+            >
               <AuraText style={styles.logoutText} text="Cerrar Sesión" />
             </TouchableOpacity>
           </View>
