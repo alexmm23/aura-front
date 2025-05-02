@@ -1,15 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
-import {
-  View,
-  StyleSheet,
-  Dimensions,
-  useWindowDimensions,
-  Text,
-} from "react-native";
+import { View, StyleSheet, useWindowDimensions, Text } from "react-native";
 import FormInput from "./FormInput";
 import PrimaryButton from "./PrimaryButton";
 import Link from "./Link";
 import { useRouter } from "expo-router";
+import ProgressBar from "./ProgressBar";
 
 const FormRegister = ({
   formData,
@@ -34,25 +29,11 @@ const FormRegister = ({
       [field]: value,
     });
   };
+  const Container = isLandscape ? LandscapeForm : PortraitForm;
 
   // Renderizado condicional basado en la orientación
-  return isLandscape ? (
-    <LandscapeForm
-      formData={formData}
-      handleChange={handleChange}
-      errors={errors}
-      handleSubmit={handleSubmit}
-      isSubmitting={isSubmitting}
-      refs={{
-        apellidosInputRef,
-        emailInputRef,
-        passwordInputRef,
-        confirmPasswordInputRef,
-      }}
-      router={router}
-    />
-  ) : (
-    <PortraitForm
+  return (
+    <Container
       formData={formData}
       handleChange={handleChange}
       errors={errors}
@@ -85,6 +66,8 @@ const PortraitForm = ({
     passwordInputRef,
     confirmPasswordInputRef,
   } = refs;
+
+  const [passwordStrength, setPasswordStrength] = useState(0);
 
   return (
     <View style={styles.formContainer}>
@@ -125,12 +108,24 @@ const PortraitForm = ({
       <FormInput
         placeholder="Contraseña: "
         value={formData.password}
-        onChangeText={(text) => handleChange("password", text)}
+        onChangeText={(text) => {
+          handleChange("password", text);
+          setPasswordStrength(checkPasswordStrength(text));
+        }}
         onSubmitEditing={() => confirmPasswordInputRef.current?.focus()}
         secureTextEntry
         ref={passwordInputRef}
         error={errors.password}
       />
+
+      {/* Barra de progreso de la contraseña */}
+
+      {formData.password.length > 0 && (
+        <ProgressBar
+          passwordStrength={passwordStrength} // Cambia esto por el valor real de la fuerza de la contraseña
+          progress={passwordStrength} // Cambia esto por el valor real de la fuerza de la contraseña
+        />
+      )}
 
       <FormInput
         placeholder="Confirmar Contraseña: "
@@ -266,5 +261,29 @@ const styles = StyleSheet.create({
     width: "48%", // Deja un pequeño espacio entre columnas
   },
 });
+
+const checkPasswordStrength = (password) => {
+  const lengthCriteria = password.length >= 8 ? 1 : 0;
+  const numberCriteria = /\d/.test(password) ? 1 : 0;
+  const specialCharCriteria = /[!@#$%^&*(),.?":{}|<>]/.test(password) ? 1 : 0;
+  const uppercaseCriteria = /[A-Z]/.test(password) ? 1 : 0;
+
+  const totalCriteria =
+    lengthCriteria + numberCriteria + specialCharCriteria + uppercaseCriteria;
+
+  return totalCriteria / 4; // Devuelve un valor entre 0 y 1
+};
+
+const passwordStrengthColor = (strength) => {
+  if (strength < 0.5) return "red";
+  if (strength < 0.8) return "orange";
+  return "green";
+};
+
+const passwordStrengthText = (strength) => {
+  if (strength < 0.5) return "Contraseña débil";
+  if (strength < 0.8) return "Contraseña media";
+  return "Contraseña fuerte";
+};
 
 export default FormRegister;
