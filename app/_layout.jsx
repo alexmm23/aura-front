@@ -2,6 +2,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 
 SplashScreen.preventAutoHideAsync();
@@ -24,14 +25,17 @@ export default function RootLayout() {
     return null;
   }
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: "#fff" },
-      }}
-    >
-      <Stack.Screen name="index" />
-      <Stack name="(auth)"></Stack>
-    </Stack>
+    <>
+      <StatusBar style="auto" />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Stack.Screen name="index" />
+        <Stack name="(auth)"></Stack>
+        <Stack.Screen name="(tabs)" screenOptions={{ headerShown: false }} />
+      </Stack>
+    </>
   );
 }
