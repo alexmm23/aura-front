@@ -1,9 +1,14 @@
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/Colors";
+import { useAuth } from "@/hooks/useAuth"; // Hook para manejar la autenticación
+import { useEffect } from "react";
 
 export default function TabsLayout() {
   const colors = Colors.light;
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth(); // Verifica si el usuario está autenticado
+
   const MENU_ITEMS = [
     { name: "home", icon: "home", text: "Inicio", route: "/(tabs)/home" },
     {
@@ -31,6 +36,20 @@ export default function TabsLayout() {
       route: "/(auth)/profile",
     },
   ];
+
+  // Redirige al usuario a la pantalla de inicio de sesión si no está autenticado
+  useEffect(() => {
+    console.log("isLoading", isLoading);
+    console.log("isAuthenticated", isAuthenticated);
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/(auth)/login");
+    }
+  }, [isAuthenticated, isLoading]);
+
+  // Muestra una pantalla de carga mientras se verifica la autenticación
+  if (isLoading) {
+    return null; // O puedes mostrar un spinner o una pantalla de carga
+  }
 
   return (
     <Tabs

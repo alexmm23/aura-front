@@ -1,25 +1,66 @@
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import jwtDecode from 'jwt-decode';
 
 export function useAuth() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [user, setUser] = useState(null);
 
+    // Verifica si el token ha expirado
+    const isTokenExpired = (token) => {
+        try {
+            const decoded = jwtDecode(token);
+            const currentTime = Math.floor(Date.now() / 1000); // Tiempo actual en segundos
+            return decoded.exp < currentTime; // Retorna true si el token ha expirado
+        } catch (error) {
+            return true; // Si no se puede decodificar, considera el token como expirado
+        }
+    };
+
+    // Solicita un nuevo access token usando el refresh token
+    const refreshAccessToken = async (refreshToken) => {
+        try {
+            const response = await fetch('http://localhost:3000/api/users/token/refresh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refreshToken }),
+            });
+
+            if (!response.ok) {
+                throw new Error('No se pudo renovar el token');
+            }
+
+            const data = await response.json();
+            return data.accessToken;
+        } catch (error) {
+            console.error('Error al renovar el token:', error);
+            return null;
+        }
+    };
+
+    // Verifica el estado de autenticación al montar el componente
     useEffect(() => {
-        // Check if the user is authenticated on component mount
         const checkAuthStatus = async () => {
             try {
-                // Check if token exists in AsyncStorage
                 const token = await AsyncStorage.getItem('userToken');
-                const userData = await AsyncStorage.getItem('userData');
+                const refreshToken = await AsyncStorage.getItem('refreshToken');
 
-                if (token) {
+                if (token && !isTokenExpired(token)) {
+                    // Si el access token es válido
                     setIsAuthenticated(true);
-                    setUser(userData ? JSON.parse(userData) : null);
+                } else if (refreshToken) {
+                    // Si el access token ha expirado, intenta renovarlo
+                    const newAccessToken = await refreshAccessToken(refreshToken);
+                    if (newAccessToken) {
+                        await AsyncStorage.setItem('userToken', newAccessToken);
+                        setIsAuthenticated(true);
+                    } else {
+                        // Si no se puede renovar el token, cerrar sesión
+                        setIsAuthenticated(false);
+                    }
                 } else {
+                    // Si no hay tokens, el usuario no está autenticado
                     setIsAuthenticated(false);
-                    setUser(null);
                 }
             } catch (error) {
                 console.error('Error checking auth status:', error);
@@ -32,23 +73,23 @@ export function useAuth() {
         checkAuthStatus();
     }, []);
 
-    const login = async (token, userData) => {
+    // Maneja el inicio de sesión
+    const login = async (token, refreshToken) => {
         try {
             await AsyncStorage.setItem('userToken', token);
-            await AsyncStorage.setItem('userData', JSON.stringify(userData));
+            await AsyncStorage.setItem('refreshToken', refreshToken);
             setIsAuthenticated(true);
-            setUser(userData);
         } catch (error) {
             console.error('Error storing auth data:', error);
         }
     };
 
+    // Maneja el cierre de sesión
     const logout = async () => {
         try {
             await AsyncStorage.removeItem('userToken');
-            await AsyncStorage.removeItem('userData');
+            await AsyncStorage.removeItem('refreshToken');
             setIsAuthenticated(false);
-            setUser(null);
         } catch (error) {
             console.error('Error removing auth data:', error);
         }
@@ -57,7 +98,6 @@ export function useAuth() {
     return {
         isAuthenticated,
         isLoading,
-        user,
         login,
         logout,
     };
