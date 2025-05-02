@@ -39,16 +39,14 @@ export default function TabsLayout() {
 
   // Redirige al usuario a la pantalla de inicio de sesión si no está autenticado
   useEffect(() => {
-    console.log("isLoading", isLoading);
-    console.log("isAuthenticated", isAuthenticated);
     if (!isLoading && !isAuthenticated) {
-      router.replace("/(auth)/login");
+      router.replace("/login"); // Redirige a la pantalla de inicio de sesión
     }
   }, [isAuthenticated, isLoading]);
 
   // Muestra una pantalla de carga mientras se verifica la autenticación
   if (isLoading) {
-    return null; // O puedes mostrar un spinner o una pantalla de carga
+    return null;
   }
 
   return (
