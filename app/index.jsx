@@ -11,7 +11,7 @@ export default function Index() {
   //   isAuthenticated: false,
   //   isLoading: false,
   // }; // Mocked for demonstration
-  const Container = ScrollView;
+  const Container = Platform.OS === "web" ? ScrollView : View;
 
   const router = useRouter();
 
@@ -31,7 +31,7 @@ export default function Index() {
    *
    */
   return (
-    <Container style={{ flex: 1 }}>
+    <Container style={{ flex: 1, marginHorizontal: 0, marginVertical: "auto" }}>
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <Text>Welcome to the app!</Text>
         {isLoading ? (
