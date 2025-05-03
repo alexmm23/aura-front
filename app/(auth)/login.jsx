@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { KeyboardAvoidingView, Platform } from "react-native";
+
 import {
   View,
   Text,
@@ -37,6 +39,8 @@ export default function Login() {
       [field]: value,
     });
   };
+
+  const isLargeScreen = width >= 928;
 
   const handleSubmit = async () => {
     // Basic validation
@@ -78,7 +82,74 @@ export default function Login() {
     }
   };
 
+  const formularioCompleto = (
+    <View style={styles.card}>
+            <AuraText style={styles.title} text="Inicia Sesion" />
+            <AuraText style={styles.subtitle} text="Organiza, Estudia, Aprende" />
+  
+            {errors.form && (
+              <Text style={[styles.errorText, styles.formError]}>
+                {errors.form}
+              </Text>
+            )}
+  
+            <AuraTextInput
+              style={styles.input}
+              placeholder="Correo Electrónico"
+              value={formData.email}
+              onChangeText={(text) => handleChange("email", text)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+  
+            <AuraTextInput
+              style={styles.input}
+              placeholder="Contraseña"
+              value={formData.password}
+              onChangeText={(text) => handleChange("password", text)}
+              secureTextEntry
+            />
+            {errors.password && (
+              <Text style={styles.errorText}>{errors.password}</Text>
+            )}
+  
+            <TouchableOpacity
+              style={styles.linkContainer}
+              onPress={() => router.replace("/(auth)/forgotPassword")}
+            >
+              <AuraText
+                style={styles.linkTextContraseña}
+                text="Olvide mi contraseña"
+              ></AuraText>
+            </TouchableOpacity>
+  
+            <PrimaryButton
+              title="Ingresar"
+              onPress={handleSubmit}
+              disabled={false}
+              style={styles}
+            />
+  
+            <GoogleIconSvg
+              styles={styles}
+              onPress={() => console.log("Google icon pressed")}
+            />
+  
+            <TouchableOpacity
+              style={styles.linkContainer}
+              onPress={() => router.replace("/(auth)/register")}
+            >
+              <AuraText
+                style={styles.linkText}
+                text="¿No tienes una cuenta? Regístrate"
+              ></AuraText>
+            </TouchableOpacity>
+          </View>
+    );
+  
   return (
+    
     <>
       <Head>
         <title>AURA - Iniciar Sesión</title>
@@ -87,107 +158,59 @@ export default function Login() {
       <ScrollView contentContainerStyle={styles.container}>
         <StatusBar style="light" />
 
-        {/* Header con SVG */}
-        {isLandscape ? (
-          <LandscapeHeader colors={colors} styles={styles} />
+        {(isLandscape || isLargeScreen) ? (
+          <LandscapeHeader colors={colors} styles={styles}>
+            {formularioCompleto}
+          </LandscapeHeader>
         ) : (
-          <PortraitHeader colors={colors} styles={styles} />
+          <PortraitHeader colors={colors} styles={styles}>
+            {formularioCompleto}
+          </PortraitHeader>
         )}
-
-        <View style={styles.card}>
-          <AuraText style={styles.title} text="Inicia Sesion" />
-          <AuraText style={styles.subtitle} text="Organiza, Estudia, Aprende" />
-
-          {errors.form && (
-            <Text style={[styles.errorText, styles.formError]}>
-              {errors.form}
-            </Text>
-          )}
-
-          <AuraTextInput
-            style={styles.input}
-            placeholder="Correo Electrónico"
-            value={formData.email}
-            onChangeText={(text) => handleChange("email", text)}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-
-          <AuraTextInput
-            style={styles.input}
-            placeholder="Contraseña"
-            value={formData.password}
-            onChangeText={(text) => handleChange("password", text)}
-            secureTextEntry
-          />
-          {errors.password && (
-            <Text style={styles.errorText}>{errors.password}</Text>
-          )}
-
-          <TouchableOpacity
-            style={styles.linkContainer}
-            onPress={() => router.replace("/(auth)/forgotPassword")}
-          >
-            <AuraText
-              style={styles.linkTextContraseña}
-              text="Olvide mi contraseña"
-            ></AuraText>
-          </TouchableOpacity>
-
-          <PrimaryButton
-            title="Ingresar"
-            onPress={handleSubmit}
-            disabled={false}
-            style={styles}
-          />
-
-          <GoogleIconSvg
-            styles={styles}
-            onPress={() => console.log("Google icon pressed")}
-          />
-
-          <TouchableOpacity
-            style={styles.linkContainer}
-            onPress={() => router.replace("/(auth)/register")}
-          >
-            <AuraText
-              style={styles.linkText}
-              text="¿No tienes una cuenta? Regístrate"
-            ></AuraText>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
     </>
   );
 }
 
-const LandscapeHeader = ({ colors, styles }) => (
-  <View style={styles.backgroundContainerLandscape}>
-    <Svg
-      width="100%"
-      height="100%"
-      preserveAspectRatio="xMidYMid slice"
-      viewBox="0 0 100 100"
-      style={styles.svg}
-    >
-      <Path
-        d="M411.5 253.452C328 515.452 258 232.5 159 208C30 165 18 390 -31 191.5C-73 -27.5 64.1476 -74.5212 173.5 -74.5212C518 -134.5 291.5 215.452 411.5 253.452Z"
-        fill={colors.purple}
-      />
-    </Svg>
-
-    <View style={styles.headerContentLandscape}>
+const LandscapeHeader = ({ colors, styles, children }) => {
+  return (
+    <View style={localStyles.container}>
+      {/* Lado Izquierdo con Imagen y Texto */}
+      <View style={localStyles.leftSide}>
       <Image
-        source={require("../../assets/images/login_students.png")}
-        style={styles.headerImageLandscape}
-        resizeMode="contain"
-      />
-    </View>
-  </View>
-);
+          source={require('../../assets/images/login_students.png')}
+          style={localStyles.image}
+          resizeMode="contain"
+        />
+        <Svg
+          viewBox="0 0 550 561"
+          preserveAspectRatio="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            zIndex: 0,  // Asegúrate de que esté detrás de la imagen
+          }}
+        >
+          <Path
+            d="M0 25C0 11.1929 11.1929 0 25 0H521.935C543.409 0 554.89 25.2886 540.755 41.4552L354.384 254.62C346.365 263.792 346.125 277.41 353.818 286.858L543.797 520.216C557.095 536.55 545.472 561 524.41 561H25C11.1929 561 0 549.807 0 536V25Z"
+            fill="#7752CC"
+          />
+        </Svg>
+      <AuraText style={localStyles.slogan}>Organiza, Estudia y Aprende</AuraText>
+      </View>
 
-const PortraitHeader = ({ colors, styles }) => (
+      {/* Lado Derecho donde se colocará el formulario */}
+      <View style={localStyles.rightSide}>
+        {children}
+      </View>
+    </View>
+  );
+};
+
+const PortraitHeader = ({ colors, styles, children }) => (
   <View style={styles.backgroundContainer}>
     <Svg
       width="100%"
@@ -209,8 +232,14 @@ const PortraitHeader = ({ colors, styles }) => (
         resizeMode="contain"
       />
     </View>
+
+    {/* Aquí renderizamos el formulario */}
+    <View style={styles.formContainer}>
+      {children}
+    </View>
   </View>
 );
+
 
 const createStyles = (theme) => {
   return StyleSheet.create({
@@ -218,6 +247,7 @@ const createStyles = (theme) => {
       flexGrow: 1,
       backgroundColor: "#e4d7c2",
       position: "relative",
+      alignItems: "center"
     },
     header: {
       backgroundColor: "#9068d9",
@@ -235,7 +265,7 @@ const createStyles = (theme) => {
       borderRadius: 20,
       padding: 20,
       width: "90%",
-      marginTop: -100,
+      marginTop: 300,
       alignSelf: "center",
       marginBottom: 50,
       shadowColor: "#000",
@@ -310,6 +340,12 @@ const createStyles = (theme) => {
       fontWeight: 600,
       marginTop: 0,
     },
+    formContainer: {
+      paddingHorizontal: 20,
+      marginTop: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     // Estilos para modo vertical
     backgroundContainer: {
       height: 400,
@@ -363,3 +399,88 @@ const createStyles = (theme) => {
     },
   });
 };
+
+const localStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    flex: 1,
+    backgroundColor: '#e7e1cf', // Fondo general beige
+    borderRadius: 27,
+    overflow: 'hidden',
+    width:"85%",
+    //maxHeight: 825,
+    marginTop:40,
+    marginBottom:40,
+  },
+  leftSide: {
+    flex: 1,
+    backgroundColor:"#ffffff",
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  image: {
+    width: "85%", // puedes ajustar
+    height: '80%', // o '100%' si quieres que cubra todo el alto del contenedor
+    resizeMode: 'contain',
+    marginBottom: 20,
+    zIndex: 2,
+    position: 'relative',
+  },
+  slogan: {
+    color: '#fff',
+    fontSize: 18,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  rightSide: {
+    flex: 1,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    padding: 40,
+    marginTop:-250,
+  },
+  title: {
+    fontSize: 28,
+    color: '#c35f91',
+    marginBottom: 30,
+    fontWeight: 'bold',
+  },
+  input: {
+    backgroundColor: '#e7e1cf',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 15,
+  },
+  link: {
+    fontSize: 12,
+    textAlign: 'right',
+    marginBottom: 20,
+    color: '#666',
+  },
+  loginButton: {
+    backgroundColor: '#f4a950',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  loginText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  googleLogo: {
+    width: 40,
+    height: 40,
+    alignSelf: 'center',
+    marginBottom: 10,
+  },
+  registerText: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: '#444',
+  },
+});
+
+
