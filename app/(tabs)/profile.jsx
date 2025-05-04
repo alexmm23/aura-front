@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   ScrollView,
@@ -18,11 +18,6 @@ import { router } from "expo-router";
 export default function Profile() {
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
-  const { logout, isAuthenticated } = useAuth(); // Hook para manejar la autenticación
-
-  if (!isAuthenticated) {
-    router.replace("/login"); // Redirige a la pantalla de inicio de sesión
-  }
   return (
     <>
       <Head>
