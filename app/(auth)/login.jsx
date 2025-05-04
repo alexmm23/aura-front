@@ -84,72 +84,69 @@ export default function Login() {
 
   const formularioCompleto = (
     <View style={styles.card}>
-            <AuraText style={styles.title} text="Inicia Sesion" />
-            <AuraText style={styles.subtitle} text="Organiza, Estudia, Aprende" />
-  
-            {errors.form && (
-              <Text style={[styles.errorText, styles.formError]}>
-                {errors.form}
-              </Text>
-            )}
-  
-            <AuraTextInput
-              style={styles.input}
-              placeholder="Correo Electrónico"
-              value={formData.email}
-              onChangeText={(text) => handleChange("email", text)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-  
-            <AuraTextInput
-              style={styles.input}
-              placeholder="Contraseña"
-              value={formData.password}
-              onChangeText={(text) => handleChange("password", text)}
-              secureTextEntry
-            />
-            {errors.password && (
-              <Text style={styles.errorText}>{errors.password}</Text>
-            )}
-  
-            <TouchableOpacity
-              style={styles.linkContainer}
-              onPress={() => router.replace("/(auth)/forgotPassword")}
-            >
-              <AuraText
-                style={styles.linkTextContraseña}
-                text="Olvide mi contraseña"
-              ></AuraText>
-            </TouchableOpacity>
-  
-            <PrimaryButton
-              title="Ingresar"
-              onPress={handleSubmit}
-              disabled={false}
-              style={styles}
-            />
-  
-            <GoogleIconSvg
-              styles={styles}
-              onPress={() => console.log("Google icon pressed")}
-            />
-  
-            <TouchableOpacity
-              style={styles.linkContainer}
-              onPress={() => router.replace("/(auth)/register")}
-            >
-              <AuraText
-                style={styles.linkText}
-                text="¿No tienes una cuenta? Regístrate"
-              ></AuraText>
-            </TouchableOpacity>
-          </View>
-    );
-  
+      <AuraText style={styles.title} text="Inicia Sesion" />
+      <AuraText style={styles.subtitle} text="Organiza, Estudia, Aprende" />
+
+      {errors.form && (
+        <Text style={[styles.errorText, styles.formError]}>{errors.form}</Text>
+      )}
+
+      <AuraTextInput
+        style={styles.input}
+        placeholder="Correo Electrónico"
+        value={formData.email}
+        onChangeText={(text) => handleChange("email", text)}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+
+      <AuraTextInput
+        style={styles.input}
+        placeholder="Contraseña"
+        value={formData.password}
+        onChangeText={(text) => handleChange("password", text)}
+        secureTextEntry
+      />
+      {errors.password && (
+        <Text style={styles.errorText}>{errors.password}</Text>
+      )}
+
+      <TouchableOpacity
+        style={styles.linkContainer}
+        onPress={() => router.replace("/(auth)/forgotPassword")}
+      >
+        <AuraText
+          style={styles.linkTextContraseña}
+          text="Olvide mi contraseña"
+        ></AuraText>
+      </TouchableOpacity>
+
+      <PrimaryButton
+        title="Ingresar"
+        onPress={handleSubmit}
+        disabled={false}
+        style={styles}
+      />
+
+      <GoogleIconSvg
+        styles={styles}
+        onPress={() => console.log("Google icon pressed")}
+      />
+
+      <TouchableOpacity
+        style={styles.linkContainer}
+        onPress={() => router.replace("/(auth)/register")}
+      >
+        <AuraText
+          style={styles.linkText}
+          text="¿No tienes una cuenta? Regístrate"
+        ></AuraText>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
-    
     <>
       <Head>
         <title>AURA - Iniciar Sesión</title>
@@ -158,7 +155,7 @@ export default function Login() {
       <ScrollView contentContainerStyle={styles.container}>
         <StatusBar style="light" />
 
-        {(isLandscape || isLargeScreen) ? (
+        {isLandscape || isLargeScreen ? (
           <LandscapeHeader colors={colors} styles={styles}>
             {formularioCompleto}
           </LandscapeHeader>
@@ -177,8 +174,8 @@ const LandscapeHeader = ({ colors, styles, children }) => {
     <View style={localStyles.container}>
       {/* Lado Izquierdo con Imagen y Texto */}
       <View style={localStyles.leftSide}>
-      <Image
-          source={require('../../assets/images/login_students.png')}
+        <Image
+          source={require("../../assets/images/login_students.png")}
           style={localStyles.image}
           resizeMode="contain"
         />
@@ -186,12 +183,12 @@ const LandscapeHeader = ({ colors, styles, children }) => {
           viewBox="0 0 550 561"
           preserveAspectRatio="none"
           style={{
-            position: 'absolute',
+            position: "absolute",
             top: 0,
             left: 0,
-            width: '100%',
-            height: '100%',
-            zIndex: 0,  // Asegúrate de que esté detrás de la imagen
+            width: "100%",
+            height: "100%",
+            zIndex: 0, // Asegúrate de que esté detrás de la imagen
           }}
         >
           <Path
@@ -199,13 +196,13 @@ const LandscapeHeader = ({ colors, styles, children }) => {
             fill="#7752CC"
           />
         </Svg>
-      <AuraText style={localStyles.slogan}>Organiza, Estudia y Aprende</AuraText>
+        <AuraText style={localStyles.slogan}>
+          Organiza, Estudia y Aprende
+        </AuraText>
       </View>
 
       {/* Lado Derecho donde se colocará el formulario */}
-      <View style={localStyles.rightSide}>
-        {children}
-      </View>
+      <View style={localStyles.rightSide}>{children}</View>
     </View>
   );
 };
@@ -234,12 +231,9 @@ const PortraitHeader = ({ colors, styles, children }) => (
     </View>
 
     {/* Aquí renderizamos el formulario */}
-    <View style={styles.formContainer}>
-      {children}
-    </View>
+    <View style={styles.formContainer}>{children}</View>
   </View>
 );
-
 
 const createStyles = (theme) => {
   return StyleSheet.create({
@@ -247,7 +241,7 @@ const createStyles = (theme) => {
       flexGrow: 1,
       backgroundColor: "#e4d7c2",
       position: "relative",
-      alignItems: "center"
+      alignItems: "center",
     },
     header: {
       backgroundColor: "#9068d9",
@@ -343,8 +337,8 @@ const createStyles = (theme) => {
     formContainer: {
       paddingHorizontal: 20,
       marginTop: 20,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
     },
     // Estilos para modo vertical
     backgroundContainer: {
@@ -402,85 +396,83 @@ const createStyles = (theme) => {
 
 const localStyles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
+    flexDirection: "row",
     flex: 1,
-    backgroundColor: '#e7e1cf', // Fondo general beige
+    backgroundColor: "#e7e1cf", // Fondo general beige
     borderRadius: 27,
-    overflow: 'hidden',
-    width:"85%",
+    overflow: "hidden",
+    width: "85%",
     //maxHeight: 825,
-    marginTop:40,
-    marginBottom:40,
+    marginTop: 40,
+    marginBottom: 40,
   },
   leftSide: {
     flex: 1,
-    backgroundColor:"#ffffff",
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    overflow: 'hidden',
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+    overflow: "hidden",
   },
   image: {
     width: "85%", // puedes ajustar
-    height: '80%', // o '100%' si quieres que cubra todo el alto del contenedor
-    resizeMode: 'contain',
+    height: "80%", // o '100%' si quieres que cubra todo el alto del contenedor
+    resizeMode: "contain",
     marginBottom: 20,
     zIndex: 2,
-    position: 'relative',
+    position: "relative",
   },
   slogan: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    textAlign: 'center',
-    fontWeight: '500',
+    textAlign: "center",
+    fontWeight: "500",
   },
   rightSide: {
     flex: 1,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
+    backgroundColor: "#fff",
+    justifyContent: "center",
     padding: 40,
-    marginTop:-250,
+    marginTop: -250,
   },
   title: {
     fontSize: 28,
-    color: '#c35f91',
+    color: "#c35f91",
     marginBottom: 30,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   input: {
-    backgroundColor: '#e7e1cf',
+    backgroundColor: "#e7e1cf",
     padding: 12,
     borderRadius: 8,
     marginBottom: 15,
   },
   link: {
     fontSize: 12,
-    textAlign: 'right',
+    textAlign: "right",
     marginBottom: 20,
-    color: '#666',
+    color: "#666",
   },
   loginButton: {
-    backgroundColor: '#f4a950',
+    backgroundColor: "#f4a950",
     padding: 12,
     borderRadius: 8,
     marginBottom: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   loginText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
   },
   googleLogo: {
     width: 40,
     height: 40,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginBottom: 10,
   },
   registerText: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 13,
-    color: '#444',
+    color: "#444",
   },
 });
-
-
