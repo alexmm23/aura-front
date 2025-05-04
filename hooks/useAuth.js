@@ -6,24 +6,35 @@ export function useAuth() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Verifica si el token ha expirado
-    const isTokenExpired = (token) => {
+    const isTokenExpired = async (token) => {
         try {
-            const decoded = jwtDecode(token);
-            const currentTime = Math.floor(Date.now() / 1000); // Tiempo actual en segundos
-            return decoded.exp < currentTime; // Retorna true si el token ha expirado
+            const response = await fetch('http://localhost:3000/api/users/token/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token }),
+            });
+            if (!response.ok) {
+                throw new Error('Token inválido o expirado');
+            }
+            const data = await response.json();
+            return data.expired;
         } catch (error) {
-            return true; // Si no se puede decodificar, considera el token como expirado
+            console.error('Error al verificar el token:', error);
+            return true; // Si hay un error, consideramos que el token ha expirado
         }
     };
 
     // Solicita un nuevo access token usando el refresh token
     const refreshAccessToken = async (refreshToken) => {
         try {
+            const body = {
+                refreshToken,
+            };
+            console.log('Cuerpo de la solicitud para renovar el token:', body);
             const response = await fetch('http://localhost:3000/api/users/token/refresh', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refreshToken }),
+                body: JSON.stringify(body),
             });
 
             if (!response.ok) {
@@ -46,27 +57,23 @@ export function useAuth() {
                 const refreshToken = await AsyncStorage.getItem('refreshToken');
 
                 if (token && !isTokenExpired(token)) {
-                    // Si el access token es válido
-                    setIsAuthenticated(true);
+                    setIsAuthenticated(true); // Usuario autenticado
                 } else if (refreshToken) {
-                    // Si el access token ha expirado, intenta renovarlo
                     const newAccessToken = await refreshAccessToken(refreshToken);
                     if (newAccessToken) {
                         await AsyncStorage.setItem('userToken', newAccessToken);
-                        setIsAuthenticated(true);
+                        setIsAuthenticated(true); // Usuario autenticado
                     } else {
-                        // Si no se puede renovar el token, cerrar sesión
-                        setIsAuthenticated(false);
+                        setIsAuthenticated(false); // No se pudo renovar el token
                     }
                 } else {
-                    // Si no hay tokens, el usuario no está autenticado
-                    setIsAuthenticated(false);
+                    setIsAuthenticated(false); // No hay tokens válidos
                 }
             } catch (error) {
                 console.error('Error checking auth status:', error);
                 setIsAuthenticated(false);
             } finally {
-                setIsLoading(false);
+                setIsLoading(false); // Finaliza la carga
             }
         };
 
