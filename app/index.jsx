@@ -14,16 +14,13 @@ export default function Index() {
   const Container = Platform.OS === "web" ? ScrollView : View;
 
   const router = useRouter();
-
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/login");
+    if (isAuthenticated) {
+      router.replace("/(tabs)/home");
+    } else {
+      router.replace("/login");
     }
-  }, [isLoading, isAuthenticated]);
-
-  if (!isLoading && !isAuthenticated) {
-    return null; // o una pantalla de carga
-  }
+  }, [isAuthenticated, router]);
 
   /**
    * Desarrollar una landing page que muestre un mensaje de bienvenida y un botón para iniciar sesión o registrarse.
