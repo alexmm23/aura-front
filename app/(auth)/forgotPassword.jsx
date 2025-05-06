@@ -14,7 +14,61 @@ import Svg, { Path } from "react-native-svg";
 import { AuraText } from "@/components/AuraText";
 import { AuraTextInput } from "@/components/AuraTextInput";
 import { Image } from "react-native";
+const LandscapeHeader = ({ colors, styles, children }) => {
+  return (
+    <View style={localStyles.container}>
+      {/* Lado Izquierdo con Imagen y Texto */}
+      <View style={localStyles.leftSide}>
+      <Svg
+          width="100%"
+          height="100%"
+          viewBox="0 0 500 500"
+          preserveAspectRatio="xMidYMid meet"
+          style={localStyles.svgBackground}
+        >
+          <Path
+            d="M285.812 156.109C136.142 156.109 172.653 353.184 -85 214.631C-85 132.862 -234.669 -290.5 -85 -290.5C64.6692 -290.5 708 -462 457 214.631C457 296.401 435.481 156.109 285.812 156.109Z"
+            fill="#7752CC"
+          />
+        </Svg>
+        <Image
+          source={require("../../assets/images/books_Forgot.png")}
+          style={localStyles.image}
+          resizeMode="contain"
+        />
+      </View>
 
+      {/* Lado Derecho donde se colocará el formulario */}
+      <View style={localStyles.rightSide}>{children}</View>
+    </View>
+  );
+};
+
+
+const PortraitHeader = ({ colors, styles }) => (
+<View style={styles.backgroundContainer}>
+  <Svg
+    width="100%"
+    height="100%" // mantenemos esto para que escale
+    preserveAspectRatio="none"
+    viewBox="0 0 349 371"
+    style={styles.svg}
+  >
+    <Path
+      d="M285.812 156.109C136.142 156.109 172.653 353.184 -85 214.631C-85 132.862 33.4293 -130 183.099 -130C332.768 -130 457 132.862 457 214.631C457 296.401 435.481 156.109 285.812 156.109Z"
+      fill={colors.purple}
+    />
+  </Svg>
+
+  <View style={styles.headerContent}>
+    <Image
+      source={require("../../assets/images/books_Forgot.png")}
+      style={styles.headerImageLandscape}
+      resizeMode="contain"
+    />
+  </View>
+</View>
+);
 
 export default function ForgotPassword() {
   const router = useRouter();
@@ -26,6 +80,9 @@ export default function ForgotPassword() {
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const validateEmail = (email) => /^\S+@\S+\.\S+$/.test(email);
+
+  const isLargeScreen = width >= 928;
+  const isLandscape = width > height;
 
   const handleSubmit = async () => {
     const newErrors = {};
@@ -52,134 +109,98 @@ export default function ForgotPassword() {
 
   const Header = width > height ? LandscapeHeader : PortraitHeader;
 
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <StatusBar style="light" />
+  const formularioCompleto = (
+    <View style={styles.card}>
+      <AuraText 
+        style={styles.title} 
+        text="¿Olvidaste tu contraseña?" 
+      />
       
-      <Header colors={colors} styles={styles} />
-
-      <View style={styles.card}>
-        <AuraText 
-          style={styles.title} 
-          text="¿Olvidaste tu contraseña?" 
-        />
-        
-        <AuraText 
-          style={styles.subtitle} 
-          text={isSubmitted 
-            ? "Hemos enviado un enlace de recuperación a tu correo electrónico" 
-            : ""} 
-        />
-
-        {errors.form && (
-          <Text style={[styles.errorText, styles.formError]}>
-            {errors.form}
-          </Text>
-        )}
-
-        {!isSubmitted ? (
-          <>
-            <AuraTextInput
-              style={styles.input}
-              placeholder="Correo Electrónico"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            {errors.email && (
-              <Text style={styles.errorText}>{errors.email}</Text>
-            )}
-
-            <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-              <AuraText style={styles.buttonText} text="Enviar"/>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <View style={styles.successContainer} />
-        )}
-
-<TouchableOpacity
-          style={styles.linkContainer}
-          onPress={() => router.replace("/(auth)/login")}>
-          <AuraText 
-            style={styles.linkText} 
-            text={isSubmitted ? "Volver al inicio de sesión" : "¿Recordaste tu contraseña? Inicia sesión"} 
+      <AuraText 
+        style={styles.subtitle} 
+        text={isSubmitted 
+          ? "Hemos enviado un enlace de recuperación a tu correo electrónico" 
+          : ""} 
+      />
+  
+      {errors.form && (
+        <Text style={[styles.errorText, styles.formError]}>
+          {errors.form}
+        </Text>
+      )}
+  
+      {!isSubmitted ? (
+        <>
+          <AuraTextInput
+            style={styles.input}
+            placeholder="Correo Electrónico"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
           />
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          {errors.email && (
+            <Text style={styles.errorText}>{errors.email}</Text>
+          )}
+  
+          <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+            <AuraText style={styles.buttonText} text="Enviar"/>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <View style={styles.successContainer} />
+      )}
+  
+      <TouchableOpacity
+        style={styles.linkContainer}
+        onPress={() => router.replace("/(auth)/login")}>
+        <AuraText 
+          style={styles.linkText} 
+          text={isSubmitted ? "Volver al inicio de sesión" : "¿Recordaste tu contraseña? Inicia sesión"} 
+        />
+      </TouchableOpacity>
+    </View>
+  );
+  
+  return (
+    <View style={styles.container}>
+      <StatusBar style="light" />
+      {isLandscape || isLargeScreen ? (
+        <LandscapeHeader colors={colors} styles={styles}>
+          {formularioCompleto}
+        </LandscapeHeader>
+      ) : (
+        <>
+          <PortraitHeader colors={colors} styles={styles} />
+          {formularioCompleto}
+        </>
+      )}
+    </View>
   );
 }
 
-const LandscapeHeader = ({ colors, styles }) => (
-  <View style={styles.backgroundContainerLandscape}>
-    <Svg
-      width="100%"
-      height="100%"
-      preserveAspectRatio="xMidYMid slice"
-      viewBox="0 0 100 100"
-      style={styles.svg}
-    >
-      <Path
-        d="M285.812 156.109C136.142 156.109 172.653 353.184 -85 214.631C-85 132.862 33.4293 -130 183.099 -130C332.768 -130 457 132.862 457 214.631C457 296.401 435.481 156.109 285.812 156.109Z"
-        fill={colors.purple}
-      />
-    </Svg>
-
-    <View style={styles.headerContentLandscape}>
-      <Image
-        source={require("../../assets/images/books_Forgot.png")}
-        style={styles.headerImageLandscape}
-        resizeMode="contain"
-      />
-    </View>
-  </View>
-);
-
-const PortraitHeader = ({ colors, styles }) => (
-  <View style={styles.backgroundContainer}>
-    <Svg
-      width="100%"
-      height="150%"
-      preserveAspectRatio="none"
-      viewBox="0 0 349 371"
-      style={styles.svg}
-    >
-      <Path
-        d="M285.812 156.109C136.142 156.109 172.653 353.184 -85 214.631C-85 132.862 33.4293 -130 183.099 -130C332.768 -130 457 132.862 457 214.631C457 296.401 435.481 156.109 285.812 156.109Z"
-        fill={colors.purple}
-      />
-    </Svg>
-
-    <View style={styles.headerContent}>
-      <Image
-        source={require("../../assets/images/books_Forgot.png")}
-        style={styles.headerImageLandscape}
-        resizeMode="contain"
-      />
-    </View>
-  </View>
-);
 
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: "#e4d7c2",
     position: "relative",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   card: {
     backgroundColor: "white",
-    borderRadius: 20,
-    padding: 20,
-    margin: 20,
-    marginTop: "-60%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    alignItems: "center",
-    elevation: 3,
+      borderRadius: 20,
+      padding: 20,
+      width: "90%",
+      //alignSelf: "center",
+      marginTop:"50%",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      alignItems: "center",
+      elevation: 3,
   },
   title: {
     fontSize: 35,
@@ -244,36 +265,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginVertical: 20,
   },
-  backgroundContainer: {
-    height: 350,
-    width: "100%",
-    position: "relative",
-  },
-  backgroundContainerLandscape: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: "40%",
-    height: "100%",
-  },
-  svg: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  headerContentLandscape: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 30,
-  },
   headerImageLandscape: {
     width: "100%",
     height: "80%",
@@ -281,9 +272,10 @@ const styles = StyleSheet.create({
   },
   // Estilos para modo vertical
   backgroundContainer: {
-    height: 600,                //AUMENTE PARA DAR ESPACIO
+    height:920,                //AUMENTE PARA DAR ESPACIO
     width: "100%",
-    position: "relative",
+    position: "absolute",
+    //justifyContent:"flex-end",
   },
   // Estilos para modo horizontal
   backgroundContainerLandscape: {
@@ -324,12 +316,114 @@ const styles = StyleSheet.create({
   headerImage: {
     width: "90%",
     height: 250,            //altura aumentada
-    marginBottom: 20,
-    marginTop:15,
+    
   },
   headerImageLandscape: {
     width: "100%", // Ocupa todo el ancho disponible
     height: "80%", // Ocupa más altura
     maxHeight: 500, // Límite para pantallas grandes
   },
+  formContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  }
 });
+
+
+const localStyles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    flex: 1,
+    backgroundColor: "#e7e1cf", // Fondo general beige
+    borderRadius: 27,
+    overflow: "hidden",
+    width: "85%",
+    maxHeight: 825,
+    marginTop: 40,
+    marginBottom: 40,
+  },
+  leftSide: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+    overflow: "hidden",
+  },
+  image: {
+    width: "45%", // puedes ajustar
+    height: "50%", // o '100%' si quieres que cubra todo el alto del contenedor
+    resizeMode: "contain",
+    marginBottom: 20,
+    zIndex: 2,
+    position: "relative",
+  },
+  slogan: {
+    color: "#fff",
+    fontSize: 18,
+    textAlign: "center",
+    fontWeight: "500",
+  },
+  rightSide: {
+    flex: 1,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    padding: 40,
+    marginTop: -250,
+  },
+  title: {
+    fontSize: 28,
+    color: "#c35f91",
+    marginBottom: 30,
+    fontWeight: "bold",
+  },
+  input: {
+    backgroundColor: "#e7e1cf",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 15,
+  },
+  link: {
+    fontSize: 12,
+    textAlign: "right",
+    marginBottom: 20,
+    color: "#666",
+  },
+  loginButton: {
+    backgroundColor: "#f4a950",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    alignItems: "center",
+  },
+  loginText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  googleLogo: {
+    width: 40,
+    height: 40,
+    alignSelf: "center",
+    marginBottom: 10,
+  },
+  registerText: {
+    textAlign: "center",
+    fontSize: 13,
+    color: "#444",
+  },
+  svgBackground: {
+    position: "absolute",
+    width: "130%",
+    height: "150%",
+    maxHeight:800,
+    marginTop:"-5%",
+    marginLeft:"0%",
+    zIndex:0,
+  },
+});
+

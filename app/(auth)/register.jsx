@@ -16,10 +16,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { Colors } from "@/constants/Colors";
 import FormRegister from "@/components/FormRegister";
 import { useRouter } from "expo-router";
-import { AuraText } from "@/components/AuraText"; // Adjust the import path as necessary
+import { AuraText } from "@/components/AuraText";
+
 export default function Register() {
   const Container = Platform.OS === "web" ? ScrollView : SafeAreaView;
   const { height, width } = useWindowDimensions();
+  
+  const isLargeScreen = width >= 928;
   const isLandscape = width > height;
 
   const router = useRouter();
@@ -41,32 +44,28 @@ export default function Register() {
   const validate = () => {
     const newErrors = {};
 
-    // Validación de campos vacíos
     Object.entries(formData).forEach(([key, value]) => {
       if (!value) {
         newErrors[key] = "Este campo es obligatorio";
       }
     });
 
-    // Validación de email
     if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Email no válido";
     }
 
-    // Validación de contraseña
     if (formData.password && formData.password.length < 6) {
       newErrors.password = "La contraseña debe tener al menos 6 caracteres";
     }
 
-    // Validación de confirmación de contraseña
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Las contraseñas no coinciden";
     }
 
     return newErrors;
   };
+
   const registerUser = async (user) => {
-    // Hacer una funcion general de fetch que muestre los errores y los maneje
     const response = await fetch("http://localhost:3000/api/users/create", {
       method: "POST",
       headers: {
@@ -78,8 +77,7 @@ export default function Register() {
       const errorData = await response.json();
       throw new Error(errorData.error);
     }
-    const data = await response.json();
-    return data;
+    return await response.json();
   };
 
   const handleSubmit = async () => {
@@ -99,12 +97,9 @@ export default function Register() {
         role_id: 2,
       };
       const response = await registerUser(user);
-      console.log("Response:", response); // Verifica la respuesta del servidor
-
-      // // login(token, ukser);
-      // router.replace("/(auth)/login");
+      console.log("Response:", response);
     } catch (error) {
-      console.error("Error:", error.message); // Manejo de errores
+      console.error("Error:", error.message);
       setErrors({ general: error.message, ...formErrors });
     } finally {
       setIsSubmitting(false);
@@ -115,29 +110,62 @@ export default function Register() {
     <Container contentContainerStyle={styles.container}>
       <StatusBar style="light" />
 
-      {/* Header con SVG */}
       {isLandscape ? (
-        <LandscapeHeader colors={colors} styles={styles} />
+        <View style={localStyles.landscapeContainer}>
+          {/* Lado Izquierdo con Imagen */}
+          <View style={localStyles.leftSide}>
+            <Svg
+              width="100%"
+              height="50%"
+              viewBox="0 0 500 500"
+              preserveAspectRatio="xMidYMid meet"
+              style={localStyles.svgBackground}
+            >
+              <Path
+                d="M419 42C51.0001 115 326.5 164.5 163 305.5C79.5 368 -15 408.336 -15 315C-15 221.664 -246.583 -43 -148 -43C-49.4172 -43 419 -51.3361 419 42Z"
+                fill="#7752CC"
+              />
+            </Svg>
+            <Image
+              source={require("../../assets/images/books-illustration.png")}
+              style={localStyles.image}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* Lado Derecho con Formulario */}
+          <View style={localStyles.rightSide}>
+            <View style={styles.cardLandscape}>
+              <AuraText style={styles.title} text="Registrate" />
+              <FormRegister
+                formData={formData}
+                setFormData={setFormData}
+                errors={errors}
+                handleSubmit={handleSubmit}
+                isSubmitting={isSubmitting}
+              />
+            </View>
+          </View>
+        </View>
       ) : (
-        <PortraitHeader colors={colors} styles={styles} />
+        <>
+          <PortraitHeader colors={colors} styles={styles} />
+          <View style={styles.card}>
+            <AuraText style={styles.title} text="Registrate" />
+            <FormRegister
+              formData={formData}
+              setFormData={setFormData}
+              errors={errors}
+              handleSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
+            />
+          </View>
+        </>
       )}
-
-      <View style={styles.card}>
-        <AuraText style={styles.title} text="Registrate" />
-
-        <FormRegister
-          formData={formData}
-          setFormData={setFormData}
-          errors={errors}
-          handleSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-        />
-      </View>
     </Container>
   );
 }
 
-// Dentro del componente PortraitHeader, actualiza el Path:
 const PortraitHeader = ({ colors, styles }) => (
   <View style={styles.backgroundContainer}>
     <Svg
@@ -152,37 +180,10 @@ const PortraitHeader = ({ colors, styles }) => (
         fill={colors.purple}
       />
     </Svg>
-
     <View style={styles.headerContent}>
       <Image
         source={require("../../assets/images/books-illustration.png")}
         style={styles.headerImage}
-        resizeMode="contain"
-      />
-    </View>
-  </View>
-);
-
-// Componente de encabezado para orientación horizontal
-const LandscapeHeader = ({ colors, styles }) => (
-  <View style={styles.backgroundContainerLandscape}>
-    <Svg
-      width="100%"
-      height="100%"
-      preserveAspectRatio="none"
-      viewBox="0 0 100 100"
-      style={styles.svg}
-    >
-      <Path
-        d="M0,0 L30,0 Q50,50 70,0 L100,0 L100,100 L0,100 Z"
-        fill={colors.purple}
-      />
-    </Svg>
-
-    <View style={styles.headerContentLandscape}>
-      <Image
-        source={require("../../assets/images/books-illustration.png")}
-        style={styles.headerImageLandscape}
         resizeMode="contain"
       />
     </View>
@@ -195,20 +196,10 @@ const createStyles = (theme, isLandscape) => {
       flexGrow: 1,
       backgroundColor: theme.beige,
     },
-    // Estilos para modo vertical
     backgroundContainer: {
       height: 180,
       width: "100%",
       position: "relative",
-    },
-    // Estilos para modo horizontal
-    backgroundContainerLandscape: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      bottom: 0,
-      width: "30%", // El header ocupa solo una parte del ancho en modo horizontal
-      height: "100%",
     },
     svg: {
       position: "absolute",
@@ -227,40 +218,36 @@ const createStyles = (theme, isLandscape) => {
       alignItems: "center",
       paddingTop: 20,
     },
-    headerContentLandscape: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      justifyContent: "center",
-      alignItems: "center",
-    },
     headerImage: {
       width: "80%",
       height: 120,
       marginBottom: 20,
     },
-    headerImageLandscape: {
-      width: "80%",
-      height: "50%",
-    },
-    // Ajusta la tarjeta según la orientación
     card: {
       backgroundColor: theme.white,
       borderRadius: 20,
       padding: 20,
-      margin: isLandscape ? 10 : 20,
-      marginLeft: isLandscape ? "35%" : 20, // En horizontal, la tarjeta comienza después del header
-      marginTop: isLandscape ? 10 : -20,
-      marginBottom: isLandscape ? 10 : 20,
+      margin: 20,
+      marginTop: -20,
       alignItems: "center",
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 4,
       elevation: 3,
-      flex: isLandscape ? 1 : undefined, // En horizontal, la tarjeta debe ocupar el espacio disponible
+    },
+    cardLandscape: {
+      width: "100%",
+      maxWidth: 450,
+      backgroundColor: "white",
+      borderRadius: 20,
+      padding: 20,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+      alignItems: "center",
     },
     title: {
       fontSize: 36,
@@ -271,3 +258,51 @@ const createStyles = (theme, isLandscape) => {
     },
   });
 };
+
+const localStyles = StyleSheet.create({
+  landscapeContainer: {
+    flex: 1,
+    flexDirection: "row",
+    width: "90%",
+    maxWidth: 1100,
+    alignSelf: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    overflow: "hidden",
+    elevation: 3,
+    height: "80%",
+    marginVertical: 40,
+  },
+  leftSide: {
+    width: "50%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    padding: 20,
+  },
+  rightSide: {
+    width: "50%",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 30,
+    backgroundColor: "#ffffff",
+  },
+  svgBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "100%",
+    zIndex: -1,
+    width: 1000,
+    marginTop:"-5%",
+    marginLeft:"-40%",
+  },
+  image: {
+    width: "90%",
+    height: "60%",
+    marginTop: 40,
+  },
+});
+
+
