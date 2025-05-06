@@ -16,8 +16,10 @@ import { useAuth } from "@/hooks/useAuth"; // Hook para manejar la autenticació
 import { router } from "expo-router";
 
 export default function Profile() {
+  const { logout, isAuthenticated } = useAuth(); // Hook para manejar la autenticación
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
+
   return (
     <>
       <Head>
