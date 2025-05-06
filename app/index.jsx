@@ -1,32 +1,29 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ScrollView, Text, View, Platform } from "react-native";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useAuth } from "../hooks/useAuth"; // We'll create this hook
-import PrimaryButton from "@/components/PrimaryButton"; // Adjust the import path as necessary
+import { useAuth } from "../hooks/useAuth";
+import PrimaryButton from "@/components/PrimaryButton";
 
 export default function Index() {
   const { isAuthenticated, isLoading } = useAuth();
-  // const { isAuthenticated, isLoading } = {
-  //   isAuthenticated: false,
-  //   isLoading: false,
-  // }; // Mocked for demonstration
+  const [isMounted, setIsMounted] = useState(false); // Estado para verificar si el componente está montado
+  const router = useRouter();
   const Container = Platform.OS === "web" ? ScrollView : View;
 
-  const router = useRouter();
   useEffect(() => {
-    if (isAuthenticated) {
-      router.replace("/(tabs)/home");
-    } else {
-      router.replace("/login");
-    }
-  }, [isAuthenticated, router]);
+    setIsMounted(true); // Marca el componente como montado
+  }, []);
 
-  /**
-   * Desarrollar una landing page que muestre un mensaje de bienvenida y un botón para iniciar sesión o registrarse.
-   *
-   *
-   */
+  useEffect(() => {
+    if (isMounted && !isLoading) {
+      if (isAuthenticated) {
+        router.replace("/(tabs)/home");
+      } else {
+        router.replace("/login");
+      }
+    }
+  }, [isMounted, isAuthenticated, isLoading, router]);
+
   return (
     <Container style={{ flex: 1, marginHorizontal: 0, marginVertical: "auto" }}>
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
