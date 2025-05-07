@@ -116,7 +116,7 @@ export default function ForgotPassword() {
       setEmail("");
       setErrors({});
       setIsSubmitted(true);
-      router.replace("/(auth)/login");
+      router.replace("/(autxh)/login");
     } catch (error) {
       setErrors({ form: "Error al procesar la solicitud" });
     }
