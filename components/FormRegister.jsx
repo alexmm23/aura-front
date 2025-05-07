@@ -149,7 +149,7 @@ const FormRegister = ({
 const styles = StyleSheet.create({
   formContainer: {
     width: "100%",
-    maxWidth: 500,
+    maxWidth: 700,
     alignSelf: "center",
   },
   landscapeAdjustment: {
