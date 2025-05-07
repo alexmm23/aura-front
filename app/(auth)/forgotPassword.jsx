@@ -5,7 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   useWindowDimensions,
-  TouchableOpacity
+  TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -19,7 +19,7 @@ const LandscapeHeader = ({ colors, styles, children }) => {
     <View style={localStyles.container}>
       {/* Lado Izquierdo con Imagen y Texto */}
       <View style={localStyles.leftSide}>
-      <Svg
+        <Svg
           width="100%"
           height="100%"
           viewBox="0 0 500 500"
@@ -44,37 +44,36 @@ const LandscapeHeader = ({ colors, styles, children }) => {
   );
 };
 
-
 const PortraitHeader = ({ colors, styles }) => (
-<View style={styles.backgroundContainer}>
-  <Svg
-    width="100%"
-    height="100%" // mantenemos esto para que escale
-    preserveAspectRatio="none"
-    viewBox="0 0 349 371"
-    style={styles.svg}
-  >
-    <Path
-      d="M285.812 156.109C136.142 156.109 172.653 353.184 -85 214.631C-85 132.862 33.4293 -130 183.099 -130C332.768 -130 457 132.862 457 214.631C457 296.401 435.481 156.109 285.812 156.109Z"
-      fill={colors.purple}
-    />
-  </Svg>
+  <View style={styles.backgroundContainer}>
+    <Svg
+      width="100%"
+      height="100%" // mantenemos esto para que escale
+      preserveAspectRatio="none"
+      viewBox="0 0 349 371"
+      style={styles.svg}
+    >
+      <Path
+        d="M285.812 156.109C136.142 156.109 172.653 353.184 -85 214.631C-85 132.862 33.4293 -130 183.099 -130C332.768 -130 457 132.862 457 214.631C457 296.401 435.481 156.109 285.812 156.109Z"
+        fill={colors.purple}
+      />
+    </Svg>
 
-  <View style={styles.headerContent}>
-    <Image
-      source={require("../../assets/images/books_Forgot.png")}
-      style={styles.headerImageLandscape}
-      resizeMode="contain"
-    />
+    <View style={styles.headerContent}>
+      <Image
+        source={require("../../assets/images/books_Forgot.png")}
+        style={styles.headerImageLandscape}
+        resizeMode="contain"
+      />
+    </View>
   </View>
-</View>
 );
 
 export default function ForgotPassword() {
   const router = useRouter();
   const { width, height } = useWindowDimensions();
   const colors = Colors.light;
-  
+
   const [email, setEmail] = useState("");
   const [errors, setErrors] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -86,7 +85,7 @@ export default function ForgotPassword() {
 
   const handleSubmit = async () => {
     const newErrors = {};
-    
+
     if (!email) {
       newErrors.email = "El correo electrónico es obligatorio";
     } else if (!validateEmail(email)) {
@@ -99,9 +98,25 @@ export default function ForgotPassword() {
     }
 
     try {
-      // Aquí iría la llamada real a la API
+      const response = await fetch(
+        "http://localhost:3000/api/users/reset-password",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        setErrors({ form: data.message || "Error al enviar el correo" });
+        return;
+      }
+      setEmail("");
+      setErrors({});
       setIsSubmitted(true);
-      setTimeout(() => router.replace("/(auth)/login"), 3000);
+      router.replace("/(auth)/login");
     } catch (error) {
       setErrors({ form: "Error al procesar la solicitud" });
     }
@@ -111,24 +126,21 @@ export default function ForgotPassword() {
 
   const formularioCompleto = (
     <View style={styles.card}>
-      <AuraText 
-        style={styles.title} 
-        text="¿Olvidaste tu contraseña?" 
+      <AuraText style={styles.title} text="¿Olvidaste tu contraseña?" />
+
+      <AuraText
+        style={styles.subtitle}
+        text={
+          isSubmitted
+            ? "Hemos enviado un enlace de recuperación a tu correo electrónico"
+            : ""
+        }
       />
-      
-      <AuraText 
-        style={styles.subtitle} 
-        text={isSubmitted 
-          ? "Hemos enviado un enlace de recuperación a tu correo electrónico" 
-          : ""} 
-      />
-  
+
       {errors.form && (
-        <Text style={[styles.errorText, styles.formError]}>
-          {errors.form}
-        </Text>
+        <Text style={[styles.errorText, styles.formError]}>{errors.form}</Text>
       )}
-  
+
       {!isSubmitted ? (
         <>
           <AuraTextInput
@@ -139,29 +151,32 @@ export default function ForgotPassword() {
             keyboardType="email-address"
             autoCapitalize="none"
           />
-          {errors.email && (
-            <Text style={styles.errorText}>{errors.email}</Text>
-          )}
-  
+          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+
           <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-            <AuraText style={styles.buttonText} text="Enviar"/>
+            <AuraText style={styles.buttonText} text="Enviar" />
           </TouchableOpacity>
         </>
       ) : (
         <View style={styles.successContainer} />
       )}
-  
+
       <TouchableOpacity
         style={styles.linkContainer}
-        onPress={() => router.replace("/(auth)/login")}>
-        <AuraText 
-          style={styles.linkText} 
-          text={isSubmitted ? "Volver al inicio de sesión" : "¿Recordaste tu contraseña? Inicia sesión"} 
+        onPress={() => router.replace("/(auth)/login")}
+      >
+        <AuraText
+          style={styles.linkText}
+          text={
+            isSubmitted
+              ? "Volver al inicio de sesión"
+              : "¿Recordaste tu contraseña? Inicia sesión"
+          }
         />
       </TouchableOpacity>
     </View>
   );
-  
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -179,28 +194,27 @@ export default function ForgotPassword() {
   );
 }
 
-
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: "#e4d7c2",
     position: "relative",
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   card: {
     backgroundColor: "white",
-      borderRadius: 20,
-      padding: 20,
-      width: "90%",
-      //alignSelf: "center",
-      marginTop:"50%",
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      alignItems: "center",
-      elevation: 3,
+    borderRadius: 20,
+    padding: 20,
+    width: "90%",
+    //alignSelf: "center",
+    marginTop: "50%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    alignItems: "center",
+    elevation: 3,
   },
   title: {
     fontSize: 35,
@@ -272,7 +286,7 @@ const styles = StyleSheet.create({
   },
   // Estilos para modo vertical
   backgroundContainer: {
-    height:920,                //AUMENTE PARA DAR ESPACIO
+    height: 920, //AUMENTE PARA DAR ESPACIO
     width: "100%",
     position: "absolute",
     //justifyContent:"flex-end",
@@ -298,10 +312,10 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 350,              // igual que el contenedor
+    height: 350, // igual que el contenedor
     justifyContent: "center",
     alignItems: "center",
-    paddingTop: 40,          //mas espacio arriba
+    paddingTop: 40, //mas espacio arriba
   },
   headerContentLandscape: {
     position: "absolute",
@@ -311,12 +325,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: "center",
     alignItems: "center",
-    padding: 30             // mas espacio al rededor
+    padding: 30, // mas espacio al rededor
   },
   headerImage: {
     width: "90%",
-    height: 250,            //altura aumentada
-    
+    height: 250, //altura aumentada
   },
   headerImageLandscape: {
     width: "100%", // Ocupa todo el ancho disponible
@@ -331,9 +344,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingBottom: 40,
-  }
+  },
 });
-
 
 const localStyles = StyleSheet.create({
   container: {
@@ -420,10 +432,9 @@ const localStyles = StyleSheet.create({
     position: "absolute",
     width: "130%",
     height: "150%",
-    maxHeight:800,
-    marginTop:"-5%",
-    marginLeft:"0%",
-    zIndex:0,
+    maxHeight: 800,
+    marginTop: "-5%",
+    marginLeft: "0%",
+    zIndex: 0,
   },
 });
-
