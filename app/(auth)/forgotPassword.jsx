@@ -99,7 +99,7 @@ export default function ForgotPassword() {
 
     try {
       const response = await fetch(
-        "http://localhost:3000/api/users/reset-password",
+        "http://localhost:3000/api/auth/reset-password",
         {
           method: "POST",
           headers: {

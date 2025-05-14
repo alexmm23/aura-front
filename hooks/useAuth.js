@@ -8,7 +8,7 @@ export function useAuth() {
 
     const isTokenExpired = async (token) => {
         try {
-            const response = await fetch('http://localhost:3000/api/users/token/verify', {
+            const response = await fetch('http://localhost:3000/api/auth/token/verify', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token }),
@@ -31,7 +31,7 @@ export function useAuth() {
                 refreshToken,
             };
             console.log('Cuerpo de la solicitud para renovar el token:', body);
-            const response = await fetch('http://localhost:3000/api/users/token/refresh', {
+            const response = await fetch('http://localhost:3000/api/auth/token/refresh', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),

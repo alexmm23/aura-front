@@ -56,7 +56,7 @@ export default function Login() {
 
     try {
       //TODO: Replace with your actual API call
-      const response = await fetch("http://localhost:3000/api/users/login", {
+      const response = await fetch("http://localhost:3000/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
