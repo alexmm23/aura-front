@@ -13,12 +13,35 @@ import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/hooks/useAuth"; // Hook para manejar la autenticación
-import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage"; // Para manejar el almacenamiento local
 
 export default function Profile() {
   const { logout, isAuthenticated } = useAuth(); // Hook para manejar la autenticación
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
+  const googleLogin = async () => {
+    const token = AsyncStorage.getItem("userToken");
+    if (!token) {
+      console.log("No hay token de usuario disponible");
+      return;
+    }
+    console.log("Token de usuario:", token);
+    await fetch("http://localhost:3000/api/auth/google", {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Google login data:", data);
+      })
+      .catch((error) => {
+        console.error("Error during Google login:", error);
+      });
+  };
 
   return (
     <>
@@ -54,35 +77,37 @@ export default function Profile() {
           {/* Card principal */}
           <View style={styles.card}>
             <AuraText style={styles.title} text="Mi Perfil" />
-
             {/* Íconos de plataformas */}
             <View style={styles.iconRow}>
-              <Image
-                source={require("@/assets/images/classroom.png")}
-                style={styles.icon}
-              />
-              <Image
-                source={require("@/assets/images/moodle.png")}
-                style={styles.icon}
-              />
-              <Image
-                source={require("@/assets/images/teams.png")}
-                style={styles.icon}
-              />
+              <TouchableOpacity onPress={() => googleLogin()}>
+                <Image
+                  source={require("@/assets/images/classroom.png")}
+                  style={styles.icon}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity>
+                <Image
+                  source={require("@/assets/images/moodle.png")}
+                  style={styles.icon}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity>
+                <Image
+                  source={require("@/assets/images/teams.png")}
+                  style={styles.icon}
+                />
+              </TouchableOpacity>
             </View>
-
             {/* Botones */}
             <TouchableOpacity style={styles.button}>
               <AuraText style={styles.buttonText} text="Editar Perfil" />
             </TouchableOpacity>
-
             <TouchableOpacity style={styles.button}>
               <AuraText
                 style={styles.buttonText}
                 text="Administrar Suscripción"
               />
             </TouchableOpacity>
-
             <TouchableOpacity
               style={[styles.button, styles.logoutButton]}
               onPress={() => logout()}

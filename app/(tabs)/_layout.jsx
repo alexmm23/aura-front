@@ -42,7 +42,7 @@ export default function TabsLayout() {
     if (!isLoading && !isAuthenticated) {
       router.replace("/login"); // Redirige a la pantalla de inicio de sesión
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, router]);
 
   // Muestra una pantalla de carga mientras se verifica la autenticación
   if (isLoading) {

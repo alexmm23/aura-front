@@ -30,7 +30,7 @@ export function useAuth() {
             const body = {
                 refreshToken,
             };
-            console.log('Cuerpo de la solicitud para renovar el token:', body);
+            // console.log('Cuerpo de la solicitud para renovar el token:', body);
             const response = await fetch('http://localhost:3000/api/auth/token/refresh', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -38,11 +38,12 @@ export function useAuth() {
             });
 
             if (!response.ok) {
-                throw new Error('No se pudo renovar el token');
+                const data = await response.json();
+                throw new Error(data.error);
             }
 
             const data = await response.json();
-            return data.accessToken;
+            return data;
         } catch (error) {
             console.error('Error al renovar el token:', error);
             return null;
@@ -55,13 +56,17 @@ export function useAuth() {
             try {
                 const token = await AsyncStorage.getItem('userToken');
                 const refreshToken = await AsyncStorage.getItem('refreshToken');
-
-                if (token && !isTokenExpired(token)) {
+                const tokenExpired = await isTokenExpired(token);
+                if (token && !tokenExpired) {
+                    +
                     setIsAuthenticated(true); // Usuario autenticado
                 } else if (refreshToken) {
-                    const newAccessToken = await refreshAccessToken(refreshToken);
-                    if (newAccessToken) {
+                    const { accessToken, refreshToken: newRefreshToken } = await refreshAccessToken(refreshToken);
+                    if (accessToken && newRefreshToken) {
+                        const newAccessToken = accessToken;
                         await AsyncStorage.setItem('userToken', newAccessToken);
+                        await AsyncStorage.setItem('refreshToken', newRefreshToken);
+                        console.log('Token renovado:', newAccessToken);
                         setIsAuthenticated(true); // Usuario autenticado
                     } else {
                         setIsAuthenticated(false); // No se pudo renovar el token
