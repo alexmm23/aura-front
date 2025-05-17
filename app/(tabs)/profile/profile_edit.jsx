@@ -9,19 +9,20 @@ import {
 } from "react-native";
 import Head from "expo-router/head";
 import { AuraText } from "@/components/AuraText";
+import {AuraTextInput} from "@/components/AuraTextInput"
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
-import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/hooks/useAuth"; // Hook para manejar la autenticación
+import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage"; // Para manejar el almacenamiento local
+
 
 export default function Profile() {
   const { logout, isAuthenticated } = useAuth(); // Hook para manejar la autenticación
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
   const router = useRouter();
-
   const googleLogin = async () => {
     const token = AsyncStorage.getItem("userToken");
     if (!token) {
@@ -45,6 +46,37 @@ export default function Profile() {
         console.error("Error during Google login:", error);
       });
   };
+  const formularioCompleto = (
+      <>
+      <AuraTextInput
+        style={styles.input}
+        placeholder="Nombre"
+        autoCapitalize="none"
+      />
+
+      <AuraTextInput
+        style={styles.input}
+        placeholder="Apellidos"
+        autoCapitalize="none" 
+      />
+
+      <AuraTextInput
+        style={styles.input}
+        placeholder="Contraseña"
+        //value={formData.password}
+        //onChangeText={(text) => handleChange("password", text)}
+        secureTextEntry
+      />
+      <AuraTextInput
+        style={styles.input}
+        placeholder="Verificar contraseña"
+        //value={formData.password}
+        //onChangeText={(text) => handleChange("password", text)}
+        secureTextEntry
+      />
+        
+      </>      
+    );
 
   return (
     <>
@@ -63,7 +95,9 @@ export default function Profile() {
           end={{ x: 1, y: 0 }}
           style={styles.cardheader}
         >
-   
+          <TouchableOpacity style={styles.backButton} onPress={() => router.replace("/(tabs)/profile")}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
         </LinearGradient>
 
         {/* Imagen de perfil superpuesta */}
@@ -78,42 +112,15 @@ export default function Profile() {
           {/* Card principal */}
           <View style={styles.card}>
             <AuraText style={styles.title} text="Mi Perfil" />
-            {/* Íconos de plataformas */}
-            <View style={styles.iconRow}>
-              <TouchableOpacity onPress={() => googleLogin()}>
-                <Image
-                  source={require("@/assets/images/classroom.png")}
-                  style={styles.icon}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity>
-                <Image
-                  source={require("@/assets/images/moodle.png")}
-                  style={styles.icon}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity>
-                <Image
-                  source={require("@/assets/images/teams.png")}
-                  style={styles.icon}
-                />
-              </TouchableOpacity>
-            </View>
+
+            {/*Texto para el email*/}
+            <AuraText style={styles.email} text="a13243155@ceti.mx" />
+
+            {formularioCompleto}
+
             {/* Botones */}
-            <TouchableOpacity style={styles.button} onPress={() => router.push("/profile/profile_edit")}>
-              <AuraText style={styles.buttonText} text="Editar Perfil" />
-            </TouchableOpacity>
             <TouchableOpacity style={styles.button}>
-              <AuraText
-                style={styles.buttonText}
-                text="Administrar Suscripción"
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.logoutButton]}
-              onPress={() => logout()}
-            >
-              <AuraText style={styles.logoutText} text="Cerrar Sesión" />
+              <AuraText style={styles.buttonText} text="Editar Perfil" />
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -198,6 +205,16 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: "center",
   },
+  input: {
+      backgroundColor: "#DDD7C2",
+      borderRadius: 8,
+      padding: 12,
+      marginVertical: 8,
+      marginTop: 10,
+      width: "90%",
+      fontSize: 18,
+      color: "#919191",
+    },
   card: {
     backgroundColor: "#fff",
     borderRadius: 20,
@@ -214,6 +231,12 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "bold",
     color: "#D29828",
+    marginBottom: 20,
+  },
+  email: {
+    fontSize: 16,
+    fontWeight: "regular",
+    color: "#919191",
     marginBottom: 20,
   },
   iconRow: {
@@ -233,7 +256,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 30,
-    width: "90%",
+    width: "80%",
     marginVertical: 8,
   },
   buttonText: {
