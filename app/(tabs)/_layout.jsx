@@ -10,7 +10,11 @@ export default function TabsLayout() {
   const { isAuthenticated, isLoading } = useAuth(); // Verifica si el usuario está autenticado
 
   const MENU_ITEMS = [
-    { name: "home", icon: "home", text: "Inicio", route: "/(tabs)/home" },
+    { name: "home", 
+      icon: "home", 
+      text: "Inicio", 
+      route: "/(tabs)/home",
+    },
     {
       name: "notes",
       icon: "document-text",
@@ -33,7 +37,7 @@ export default function TabsLayout() {
       name: "profile",
       icon: "person",
       text: "Perfil",
-      route: "/(auth)/profile",
+      route: "/(tabs)/profile",
     },
   ];
 
@@ -76,17 +80,26 @@ export default function TabsLayout() {
       }}
     >
       {MENU_ITEMS.map((item) => (
-        <Tabs.Screen
-          key={item.name}
-          name={item.name}
-          options={{
-            tabBarLabel: item.text,
-            tabBarIcon: ({ color }) => (
-              <Ionicons name={item.icon} size={24} color={color} />
-            ),
-          }}
-        />
-      ))}
-    </Tabs>
+    <Tabs.Screen
+      key={item.name}
+      name={item.name}
+      options={{
+        tabBarLabel: item.text,
+        tabBarIcon: ({ color }) => (
+          <Ionicons name={item.icon} size={24} color={color} />
+        ),
+      }}
+    />
+  ))}
+
+  {/* Oculta la pantalla que no quieres que aparezca en las tabs */}
+  <Tabs.Screen
+    name="profile/profile_edit"
+    options={{
+      href: null, // <- esto lo excluye del router de tabs
+      //tabBarButton: () => null,
+    }}
+  />
+</Tabs>
   );
 }

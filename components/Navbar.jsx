@@ -14,7 +14,7 @@ export default function Navbar() {
     { icon: "document-text", text: "Notas", route: "/(tabs)/notes" },
     { icon: "school", text: "Clases", route: "/(tabs)/classes" },
     { icon: "chatbubbles", text: "Chats", route: "/(tabs)/chats" },
-    { icon: "person", text: "Perfil", route: "/(auth)/profile" },
+    { icon: "person", text: "Perfil", route: "/(tabs)/profile" },
   ];
 
   const onPressItem = (route) => {
