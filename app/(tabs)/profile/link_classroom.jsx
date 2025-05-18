@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/hooks/useAuth"; // Hook para manejar la autenticación
 import AsyncStorage from "@react-native-async-storage/async-storage"; // Para manejar el almacenamiento local
+import {AuraTextInput} from "@/components/AuraTextInput"
 
 export default function Profile() {
   const { logout, isAuthenticated } = useAuth(); // Hook para manejar la autenticación
@@ -23,7 +24,7 @@ export default function Profile() {
   const router = useRouter();
 
   const googleLogin = async () => {
-    const token = await AsyncStorage.getItem("userToken");
+    const token = AsyncStorage.getItem("userToken");
     if (!token) {
       console.log("No hay token de usuario disponible");
       return;
@@ -39,7 +40,7 @@ export default function Profile() {
     })
       .then((response) => response.json())
       .then((data) => {
-        window.location.href = data.url; // Redirige a la URL proporcionada por el backend
+        console.log("Google login data:", data);
       })
       .catch((error) => {
         console.error("Error during Google login:", error);
@@ -62,17 +63,12 @@ export default function Profile() {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.cardheader}
-        >
-   
+        ><TouchableOpacity style={styles.backButton} onPress={() => router.replace("/(tabs)/profile")}>
+        <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
         </LinearGradient>
 
-        {/* Imagen de perfil superpuesta */}
-        <View style={styles.profileImageContainer}>
-          <Image
-            source={require("@/assets/images/icon.png")}
-            style={styles.profileImage}
-          />
-        </View>
+        
 
         <ScrollView contentContainerStyle={styles.content}>
           {/* Card principal */}
@@ -83,41 +79,59 @@ export default function Profile() {
               <TouchableOpacity onPress={() => router.push("/profile/link_classroom")}>
                   <Image
                     source={require("@/assets/images/classroom.png")}
-                    style={styles.icon}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => router.push("/profile/link_moodle")}>
-                  <Image
-                    source={require("@/assets/images/moodle.png")}
-                    style={styles.icon}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => router.push("/profile/link_teams")}>
-                  <Image
-                    source={require("@/assets/images/teams.png")}
-                    style={styles.icon}
+                    style={styles.icon1}
                   />
                 </TouchableOpacity>
             </View>
+            <AuraTextInput
+                style={styles.input}
+                placeholder="Correo"
+                autoCapitalize="none"
+            />
+            <AuraTextInput
+                style={styles.input}
+                placeholder="Constraseña"
+                autoCapitalize="none"
+            />
+
+
 
             {/* Botones */}
             <TouchableOpacity style={styles.button} onPress={() => router.push("/profile/profile_edit")}>
-              <AuraText style={styles.buttonText} text="Editar Perfil" />
+              <AuraText style={styles.buttonText} text="Agregar Cuenta" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.button}>
-              <AuraText
-                style={styles.buttonText}
-                text="Administrar Suscripción"
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.logoutButton]}
-              onPress={() => logout()}
-            >
-              <AuraText style={styles.logoutText} text="Cerrar Sesión" />
-            </TouchableOpacity>
+            
+          </View>
+          {/* Card principal */}
+          <View style={styles.card1}>
+            {/* Íconos de plataformas */}
+            <View style={styles.iconColumn}>
+            {[1, 2, 3].map((_, index) => (
+                <TouchableOpacity
+                key={index}
+                onPress={() => router.push("/profile/link_classroom")}
+                style={styles.iconGroup}
+                >
+                <Image
+                    source={require("@/assets/images/classroom.png")}
+                    style={styles.icon}
+                />
+                <AuraText style={styles.text} text="Correo Electronico" />
+                </TouchableOpacity>
+            ))}
+            </View>
+
+            
+
+
+            
           </View>
         </ScrollView>
+
+        
+          
+      
+
 
         {/* Navbar persistente */}
         {/* <Navbar /> */}
@@ -166,6 +180,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#EDE6DB",
   },
+  backButton: {
+    backgroundColor: "#00000020",
+    borderRadius: 20,
+    padding: 5,
+  },
+  iconColumn: {
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 20, // espacio entre ítems
+  },
+  iconGroup: {
+    alignItems: "center",
+  },  
   cardheader: {
     marginLeft: 20,
     borderRadius: 30,
@@ -199,7 +227,12 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: "center",
   },
+  content1: {
+    padding: 20,
+    alignItems: "center",
+  },
   card: {
+    marginBottom: "20%",
     backgroundColor: "#fff",
     borderRadius: 20,
     paddingVertical: 30,
@@ -210,6 +243,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 5,
     elevation: 4,
+    marginBottom: "5%"
+  },
+  card1: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+    width: "100%",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 4,
+    marginBottom: "0%"
   },
   title: {
     fontSize: 26,
@@ -225,8 +272,13 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   icon: {
-    width: 40,
-    height: 40,
+    width: 70,
+    height: 70,
+    resizeMode: "contain",
+  },
+  icon1: {
+    width: 130,
+    height: 130,
     resizeMode: "contain",
   },
   button: {
@@ -240,6 +292,11 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     color: "#fff",
+    textAlign: "center",
+  },
+  text: {
+    fontSize: 16,
+    color: "#919191",
     textAlign: "center",
   },
   logoutButton: {
@@ -284,6 +341,16 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "80%",
     maxHeight: 500,
+  },
+  input: {
+    backgroundColor: "#DDD7C2",
+    borderRadius: 8,
+    padding: 12,
+    marginVertical: 8,
+    marginTop: 10,
+    width: "90%",
+    fontSize: 18,
+    color: "#919191",
   },
   // Estilos para modo horizontal
   backgroundContainerLandscape: {

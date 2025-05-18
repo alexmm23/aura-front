@@ -100,6 +100,14 @@ export default function TabsLayout() {
       //tabBarButton: () => null,
     }}
   />
+  <Tabs.Screen
+    name="profile/link_classroom"
+    options={{
+      href: null, // <- esto lo excluye del router de tabs
+      //tabBarButton: () => null,
+    }}
+  />
 </Tabs>
+
   );
 }
