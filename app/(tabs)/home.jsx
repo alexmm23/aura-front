@@ -5,17 +5,47 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from "react-native";
+import React, { useEffect, useState } from "react";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { AuraText } from "@/components/AuraText";
 import Head from "expo-router/head";
 import Svg, { Path } from "react-native-svg";
 import { Colors } from "@/constants/Colors";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HomeScreen() {
+  const [homework, setHomework] = useState([]);
   const { height, width } = useWindowDimensions();
   const colors = Colors.light;
   const isLandscape = width > height;
+  const fetchHomework = async () => {
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      const response = await fetch(
+        "http://localhost:3000/api/student/homework",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      const data = await response.json();
+      console.log("Homework data:", data);
+      setHomework(data);
+      console.log(data);
+    } catch (error) {
+      console.error("Error fetching homework:", error);
+    }
+  };
+  useEffect(() => {
+    fetchHomework();
+  }, []);
 
   return (
     <>
@@ -59,51 +89,22 @@ export default function HomeScreen() {
             {/* Mis Tareas */}
             <View style={styles.card}>
               <AuraText style={styles.title} text="Mis Tareas"></AuraText>
-
-              <View style={styles.taskCard}>
-                <View>
-                  <Text style={styles.taskSubject}>Matemáticas</Text>
-                  <Text style={styles.taskDescription}>Descripción</Text>
-                  <Text style={styles.taskDueDate}>Fecha de entrega</Text>
+              {homework.map((task, index) => (
+                <View key={index} style={styles.taskCard}>
+                  <View>
+                    <Text style={styles.taskSubject}>{task.courseName}</Text>
+                    <Text style={styles.taskDescription}>{task.title}</Text>
+                    <Text style={styles.taskDueDate}>
+                      {task.dueDate
+                        ? `${task.dueDate.day || 0}-${task.dueDate.month}-${
+                            task.dueDate.year
+                          }`
+                        : "Sin fecha"}
+                    </Text>
+                  </View>
+                  <Ionicons name="checkmark-circle" size={40} color="#4CAF50" />
                 </View>
-                <Ionicons name="people" size={40} color="#4CAF50" />
-              </View>
-
-              <View style={styles.taskCard}>
-                <View>
-                  <Text style={styles.taskSubject}>Inglés</Text>
-                  <Text style={styles.taskDescription}>Descripción</Text>
-                  <Text style={styles.taskDueDate}>Fecha de entrega</Text>
-                </View>
-                <MaterialCommunityIcons
-                  name="mortar-board"
-                  size={40}
-                  color="#FF9800"
-                />
-              </View>
-
-              <View style={styles.taskCard}>
-                <View>
-                  <Text style={styles.taskSubject}>Análisis de Datos</Text>
-                  <Text style={styles.taskDescription}>Descripción</Text>
-                  <Text style={styles.taskDueDate}>Fecha de entrega</Text>
-                </View>
-                <MaterialCommunityIcons
-                  name="microsoft-teams"
-                  size={40}
-                  color="#3F51B5"
-                />
-              </View>
-
-              {/* Añado algunas tarjetas más para demostrar el scroll */}
-              <View style={styles.taskCard}>
-                <View>
-                  <Text style={styles.taskSubject}>Ciencias</Text>
-                  <Text style={styles.taskDescription}>Descripción</Text>
-                  <Text style={styles.taskDueDate}>Fecha de entrega</Text>
-                </View>
-                <Ionicons name="flask" size={40} color="#E91E63" />
-              </View>
+              ))}
             </View>
           </ScrollView>
         </SafeAreaView>
