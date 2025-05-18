@@ -20,7 +20,7 @@ export default function Profile() {
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
   const googleLogin = async () => {
-    const token = AsyncStorage.getItem("userToken");
+    const token = await AsyncStorage.getItem("userToken");
     if (!token) {
       console.log("No hay token de usuario disponible");
       return;
@@ -36,7 +36,7 @@ export default function Profile() {
     })
       .then((response) => response.json())
       .then((data) => {
-        console.log("Google login data:", data);
+        window.location.href = data.url; // Redirige a la URL proporcionada por el backend
       })
       .catch((error) => {
         console.error("Error during Google login:", error);
