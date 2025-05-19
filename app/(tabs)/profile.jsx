@@ -62,9 +62,7 @@ export default function Profile() {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.cardheader}
-        >
-   
-        </LinearGradient>
+        ></LinearGradient>
 
         {/* Imagen de perfil superpuesta */}
         <View style={styles.profileImageContainer}>
@@ -80,28 +78,35 @@ export default function Profile() {
             <AuraText style={styles.title} text="Mi Perfil" />
             {/* Íconos de plataformas */}
             <View style={styles.iconRow}>
-              <TouchableOpacity onPress={() => router.push("/profile/link_classroom")}>
-                  <Image
-                    source={require("@/assets/images/classroom.png")}
-                    style={styles.icon}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => router.push("/profile/link_moodle")}>
-                  <Image
-                    source={require("@/assets/images/moodle.png")}
-                    style={styles.icon}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => router.push("/profile/link_teams")}>
-                  <Image
-                    source={require("@/assets/images/teams.png")}
-                    style={styles.icon}
-                  />
-                </TouchableOpacity>
+              <TouchableOpacity onPress={() => googleLogin()}>
+                <Image
+                  source={require("@/assets/images/classroom.png")}
+                  style={styles.icon}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push("/profile/link_moodle")}
+              >
+                <Image
+                  source={require("@/assets/images/moodle.png")}
+                  style={styles.icon}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push("/profile/link_teams")}
+              >
+                <Image
+                  source={require("@/assets/images/teams.png")}
+                  style={styles.icon}
+                />
+              </TouchableOpacity>
             </View>
 
             {/* Botones */}
-            <TouchableOpacity style={styles.button} onPress={() => router.push("/profile/profile_edit")}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => router.push("/profile/profile_edit")}
+            >
               <AuraText style={styles.buttonText} text="Editar Perfil" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.button}>
