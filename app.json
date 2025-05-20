@@ -15,7 +15,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.alexmm23.aurafront"
     },
     "web": {
       "name": "AURA - Organiza, Estudia y Aprende",
@@ -40,6 +41,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c3118355-cc9b-41fd-9ce0-4ea410d8128c"
+      }
     }
   }
 }
