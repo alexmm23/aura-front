@@ -23,6 +23,9 @@ export default function Profile() {
   const { logout, isAuthenticated } = useAuth(); // Hook para manejar la autenticación
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
+  const isLargeScreen = width >= 928;
+  const shouldUseLandscapeLayout = isLargeScreen || isLandscape;
+
   const router = useRouter();
   const googleLogin = async () => {
     const token = AsyncStorage.getItem("userToken");
@@ -79,57 +82,54 @@ export default function Profile() {
     );
 
   return (
-    <>
-      <Head>
-        <title>Mi Perfil</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      </Head>
-      <View style={styles.container}>
-        {/* Fondo con PortraitHeader */}
-        <PortraitHeader />
+  <>
+    <Head>
+      <title>Mi Perfil</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    </Head>
+    <View style={styles.container}>
+      <PortraitHeader />
 
-        {/* Header con botón atrás */}
-        <LinearGradient
-          colors={["#B065C4", "#F4A45B"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.cardheader}
+      <LinearGradient
+        colors={["#B065C4", "#F4A45B"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.cardheader}
+      >
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.replace("/(tabs)/profile")}
         >
-          <TouchableOpacity style={styles.backButton} onPress={() => router.replace("/(tabs)/profile")}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
-        </LinearGradient>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+      </LinearGradient>
 
-        {/* Imagen de perfil superpuesta */}
-        <View style={styles.profileImageContainer}>
-          <Image
-            source={require("@/assets/images/icon.png")}
-            style={styles.profileImage}
-          />
-        </View>
-
-        <ScrollView contentContainerStyle={styles.content}>
-          {/* Card principal */}
-          <View style={styles.card}>
-            <AuraText style={styles.title} text="Mi Perfil" />
-
-            {/*Texto para el email*/}
-            <AuraText style={styles.email} text="a13243155@ceti.mx" />
-
-            {formularioCompleto}
-
-            {/* Botones */}
-            <TouchableOpacity style={styles.button}>
-              <AuraText style={styles.buttonText} text="Editar Perfil" />
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-
-        {/* Navbar persistente */}
-        {/* <Navbar /> */}
+      <View style={styles.profileImageContainer}>
+        <Image
+          source={require("@/assets/images/icon.png")}
+          style={styles.profileImage}
+        />
       </View>
-    </>
-  );
+
+      {/* ScrollView con diseño adaptativo */}
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          shouldUseLandscapeLayout && styles.contentLandscape,
+        ]}
+      >
+        <View style={styles.card}>
+          <AuraText style={styles.title} text="Mi Perfil" />
+          <AuraText style={styles.email} text="a13243155@ceti.mx" />
+          {formularioCompleto}
+          <TouchableOpacity style={styles.button}>
+            <AuraText style={styles.buttonText} text="Editar Perfil" />
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
+  </>
+);
 }
 
 // Componente PortraitHeader
@@ -354,4 +354,14 @@ const styles = StyleSheet.create({
     height: "80%", // Ocupa más altura
     maxHeight: 500, // Límite para pantallas grandes
   },
+  contentLandscape: {
+  flexDirection: "row",     // para poner el contenido en horizontal
+  justifyContent: "center", // puedes ajustar esto según tu diseño
+  alignItems: "flex-start", // opcional, si quieres alinear arriba
+  gap: 20,                  // separación entre elementos si agregas más
+  paddingHorizontal: 32,
+  paddingVertical: 16,
+},
+
+
 });

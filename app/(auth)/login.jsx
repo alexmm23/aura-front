@@ -129,10 +129,10 @@ export default function Login() {
         style={styles}
       />
 
-      <GoogleIconSvg
+      {/*<GoogleIconSvg
         styles={styles}
         onPress={() => console.log("Google icon pressed")}
-      />
+      />*/}
 
       <TouchableOpacity
         style={styles.linkContainer}

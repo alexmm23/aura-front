@@ -78,7 +78,7 @@ export default function Profile() {
             <View style={styles.iconRow}>
               <TouchableOpacity onPress={() => router.push("/profile/link_classroom")}>
                   <Image
-                    source={require("@/assets/images/classroom.png")}
+                    source={require("@/assets/images/moodle.png")}
                     style={styles.icon1}
                   />
                 </TouchableOpacity>
@@ -113,7 +113,7 @@ export default function Profile() {
                 style={styles.iconGroup}
                 >
                 <Image
-                    source={require("@/assets/images/classroom.png")}
+                    source={require("@/assets/images/moodle.png")}
                     style={styles.icon}
                 />
                 <AuraText style={styles.text} text="Correo Electronico" />

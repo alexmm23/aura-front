@@ -101,7 +101,7 @@ export default function TabsLayout() {
     }}
   />
   <Tabs.Screen
-    name="profile/link_classroom"
+    name="profile/link_moodle"
     options={{
       href: null, // <- esto lo excluye del router de tabs
       //tabBarButton: () => null,
