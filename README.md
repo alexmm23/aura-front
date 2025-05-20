@@ -23,6 +23,58 @@ In the output, you'll find options to open the app in a
 - [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
 - [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
+## Configuración de URLs de la API
+
+Este proyecto utiliza un sistema de URLs dinámicas que permite cambiar fácilmente entre entornos de desarrollo y producción.
+
+### Uso del sistema de URLs dinámicas
+
+Para usar las URLs dinámicas en cualquier componente o archivo, importa las utilidades `API` y `buildApiUrl` desde el archivo de configuración:
+
+```javascript
+import { API, buildApiUrl } from '@/config/api';
+
+// Uso de una URL completa
+const apiUrl = buildApiUrl(API.ENDPOINTS.AUTH.LOGIN);
+// Resultado: http://localhost:3000/api/auth/login (en desarrollo)
+
+// Otra forma de uso para endpoints específicos
+fetch(buildApiUrl(API.ENDPOINTS.STUDENT.HOMEWORK));
+```
+
+### Configuración de entornos
+
+Las URLs se pueden configurar de las siguientes maneras:
+
+1. **Scripts para cambiar entre entornos**:
+   ```bash
+   # Cambiar a entorno de desarrollo
+   npm run env:dev
+   
+   # Cambiar a entorno de producción
+   npm run env:prod
+   ```
+
+2. **Variables de entorno**: Crea o modifica el archivo `.env` en la raíz del proyecto:
+   ```
+   API_URL=http://tu-api-url.com/api
+   ```
+
+3. **Configuración en app.config.js**: El archivo `app.config.js` contiene configuraciones para diferentes entornos:
+   ```javascript
+   extra: {
+      apiUrl: process.env.API_URL || "http://localhost:3000/api",
+      apiProduction: "https://api.aura-app.com/api",
+    },
+   ```
+
+4. **Configuración según la plataforma**: Para emuladores Android, se usa automáticamente la URL correcta (`10.0.2.2` en lugar de `localhost`).
+
+### Ambiente de desarrollo vs producción
+
+- En desarrollo (`__DEV__` = true), se usa la URL del entorno de desarrollo.
+- En producción, se usa automáticamente la URL de producción.
+
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
 ## Get a fresh project
