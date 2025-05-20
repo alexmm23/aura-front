@@ -10,6 +10,7 @@ import {
   Dimensions,
   useWindowDimensions,
 } from "react-native";
+import { API, buildApiUrl } from "@/config/api";
 import Svg, { Path } from "react-native-svg";
 import { StatusBar } from "expo-status-bar";
 import { useAuth } from "@/hooks/useAuth";
@@ -66,7 +67,7 @@ export default function Register() {
   };
 
   const registerUser = async (user) => {
-    const response = await fetch("http://localhost:3000/api/users/create", {
+    const response = await fetch(buildApiUrl(API.ENDPOINTS.AUTH.REGISTER), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

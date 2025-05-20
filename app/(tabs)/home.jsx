@@ -8,6 +8,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { AuraText } from "@/components/AuraText";
+import { API, buildApiUrl } from "@/config/api";
 import Head from "expo-router/head";
 import Svg, { Path } from "react-native-svg";
 import { Colors } from "@/constants/Colors";
@@ -23,7 +24,7 @@ export default function HomeScreen() {
     try {
       const token = await AsyncStorage.getItem("userToken");
       const response = await fetch(
-        "http://localhost:3000/api/student/homework",
+        buildApiUrl(API.ENDPOINTS.STUDENT.HOMEWORK),
         {
           method: "GET",
           headers: {

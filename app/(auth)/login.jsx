@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { KeyboardAvoidingView, Platform } from "react-native";
+import { API, buildApiUrl } from "@/config/api";
 
 import {
   View,
@@ -55,8 +56,7 @@ export default function Login() {
     }
 
     try {
-      //TODO: Replace with your actual API call
-      const response = await fetch("http://localhost:3000/api/auth/login", {
+      const response = await fetch(buildApiUrl(API.ENDPOINTS.AUTH.LOGIN), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

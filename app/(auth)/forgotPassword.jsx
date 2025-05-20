@@ -7,6 +7,7 @@ import {
   useWindowDimensions,
   TouchableOpacity,
 } from "react-native";
+import { API, buildApiUrl } from "@/config/api";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "@/constants/Colors";
@@ -95,11 +96,9 @@ export default function ForgotPassword() {
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
-    }
-
-    try {
+    }    try {
       const response = await fetch(
-        "http://localhost:3000/api/auth/reset-password",
+        buildApiUrl(API.ENDPOINTS.AUTH.RESET_PASSWORD),
         {
           method: "POST",
           headers: {

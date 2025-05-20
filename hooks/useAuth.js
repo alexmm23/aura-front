@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import jwtDecode from 'jwt-decode';
+import { API, buildApiUrl } from '../config/api';
 
 export function useAuth() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -8,7 +9,7 @@ export function useAuth() {
 
     const isTokenExpired = async (token) => {
         try {
-            const response = await fetch('http://localhost:3000/api/auth/token/verify', {
+            const response = await fetch(buildApiUrl(API.ENDPOINTS.AUTH.VERIFY_TOKEN), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token }),
@@ -31,7 +32,7 @@ export function useAuth() {
                 refreshToken,
             };
             // console.log('Cuerpo de la solicitud para renovar el token:', body);
-            const response = await fetch('http://localhost:3000/api/auth/token/refresh', {
+            const response = await fetch(buildApiUrl(API.ENDPOINTS.AUTH.REFRESH_TOKEN), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),

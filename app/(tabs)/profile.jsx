@@ -7,6 +7,7 @@ import {
   useWindowDimensions,
   TouchableOpacity,
 } from "react-native";
+import { API, buildApiUrl } from "@/config/api";
 import Head from "expo-router/head";
 import { AuraText } from "@/components/AuraText";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,9 +28,8 @@ export default function Profile() {
     if (!token) {
       console.log("No hay token de usuario disponible");
       return;
-    }
-    console.log("Token de usuario:", token);
-    await fetch("http://localhost:3000/api/auth/google", {
+    }    console.log("Token de usuario:", token);
+    await fetch(buildApiUrl(API.ENDPOINTS.AUTH.GOOGLE), {
       method: "GET",
       headers: {
         Accept: "application/json",
