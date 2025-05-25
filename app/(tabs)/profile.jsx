@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   ScrollView,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
+import fetchWithAuth from "@/utils/fetchWithAuth";
 import Head from "expo-router/head";
 import { AuraText } from "@/components/AuraText";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,34 +19,52 @@ import { useAuth } from "@/hooks/useAuth"; // Hook para manejar la autenticació
 import AsyncStorage from "@react-native-async-storage/async-storage"; // Para manejar el almacenamiento local
 
 export default function Profile() {
-  const { logout, isAuthenticated } = useAuth(); // Hook para manejar la autenticación
+  const { logout } = useAuth(); // Hook para manejar la autenticación
+
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
   const router = useRouter();
-
   const googleLogin = async () => {
-    const token = await AsyncStorage.getItem("userToken");
-    if (!token) {
-      console.log("No hay token de usuario disponible");
-      return;
-    }    console.log("Token de usuario:", token);
-    await fetch(buildApiUrl(API.ENDPOINTS.AUTH.GOOGLE), {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        window.location.href = data.url; // Redirige a la URL proporcionada por el backend
-      })
-      .catch((error) => {
-        console.error("Error during Google login:", error);
-      });
+    try {
+      const response = await fetchWithAuth(
+        buildApiUrl(API.ENDPOINTS.AUTH.GOOGLE),
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const data = await response.json();
+      window.location.href = data.url; // Redirige a la URL proporcionada por el backend
+    } catch (error) {
+      console.error("Error during Google login:", error);
+    }
   };
-
+  const teamsLogin = async () => {
+    try {
+      const response = await fetchWithAuth(
+        buildApiUrl(API.ENDPOINTS.AUTH.TEAMS),
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const data = await response.json();
+      // Redirige a la URL de Microsoft (OAuth2)
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert("No se pudo iniciar sesión con Teams");
+      }
+    } catch (error) {
+      console.error("Error during Teams login:", error);
+    }
+  };
   return (
     <>
       <Head>
@@ -92,9 +111,7 @@ export default function Profile() {
                   style={styles.icon}
                 />
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => router.push("/profile/link_teams")}
-              >
+              <TouchableOpacity onPress={teamsLogin}>
                 <Image
                   source={require("@/assets/images/teams.png")}
                   style={styles.icon}

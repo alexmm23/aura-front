@@ -18,18 +18,18 @@ const getCurrentEnvironment = () => {
 // Get the base API URL depending on environment
 const getBaseUrl = () => {
   const environment = getCurrentEnvironment();
-  
+
   // For Android emulator, localhost refers to the emulator itself, not your machine
-  const devUrl = Platform.OS === 'android' 
-    ? 'http://10.0.2.2:3000/api' 
+  const devUrl = Platform.OS === 'android'
+    ? 'http://10.0.2.2:3000/api'
     : API_URL || apiUrl || 'http://localhost:3000/api';
-    
+
   // Environments configuration
   const urls = {
     development: devUrl,
     production: apiProduction || 'https://api.aura-app.com/api',
   };
-  
+
   return urls[environment] || urls.development;
 };
 
@@ -45,6 +45,8 @@ export const API = {
       REFRESH_TOKEN: '/auth/token/refresh',
       GOOGLE: '/auth/google',
       RESET_PASSWORD: '/auth/reset-password',
+      LOGOUT: '/auth/logout',
+      TEAMS: '/auth/teams',
     },
     // Student endpoints
     STUDENT: {
