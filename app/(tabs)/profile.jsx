@@ -55,7 +55,6 @@ export default function Profile() {
         }
       );
       const data = await response.json();
-      // Redirige a la URL de Microsoft (OAuth2)
       if (data.url) {
         window.location.href = data.url;
       } else {
