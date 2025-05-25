@@ -14,7 +14,7 @@ export default function AuthLayout() {
     } else {
       // Aquí puedes redirigir a la pantalla de inicio de sesión si no está autenticado
       if (!isAuthenticated) {
-        router.replace("/login");
+        //router.replace("/login");
       } else {
         router.replace("/(tabs)/home");
       }

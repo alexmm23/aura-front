@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   useWindowDimensions,
+  Image,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -97,13 +98,14 @@ export default function HomeScreen() {
                     <Text style={styles.taskDescription}>{task.title}</Text>
                     <Text style={styles.taskDueDate}>
                       {task.dueDate
-                        ? `${task.dueDate.day || 0}-${task.dueDate.month}-${
-                            task.dueDate.year
-                          }`
+                        ? `${task.dueDate.day || 0}-${task.dueDate.month}-${task.dueDate.year}`
                         : "Sin fecha"}
                     </Text>
                   </View>
-                  <Ionicons name="checkmark-circle" size={40} color="#4CAF50" />
+                  <Image
+                    source={getPlatformIcon(task.platform)}
+                    style={styles.platformIcon}
+                  />
                 </View>
               ))}
             </View>
@@ -147,6 +149,15 @@ const PortraitHeader = ({ colors, styles }) => (
     </Svg>
   </View>
 );
+
+const getPlatformIcon = (platform) => {
+  const icons = {
+    classroom: require("@/assets/images/classroom.png"),
+    moodle: require("@/assets/images/moodle.png"),
+    teams: require("@/assets/images/teams.png"),
+  };
+  return icons[platform?.toLowerCase()] || icons.classroom; // fallback to classroom if platform is unknown
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -287,5 +298,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 30, // mas espacio al rededor
+  },
+  platformIcon: {
+    width: 50,
+    height: 50,
+    resizeMode: "contain",
   },
 });

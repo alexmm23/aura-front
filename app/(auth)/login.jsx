@@ -136,7 +136,7 @@ export default function Login() {
 
       <TouchableOpacity
         style={styles.linkContainer}
-        onPress={() => router.replace("/(auth)/register")}
+        onPress={() => router.push("/register")}
       >
         <AuraText
           style={styles.linkText}
