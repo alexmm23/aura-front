@@ -127,7 +127,7 @@ export default function Profile() {
           <View style={styles.card}>
             <AuraText style={styles.title} text="Mi Perfil" />
             {profileData && (
-              <AuraText sryle={styles.title} text={profileData.user.name} />
+              <AuraText sryle={styles.title} text={profileData.user.email} />
             )}
             {/* Íconos de plataformas */}
             <View style={styles.iconRow}>
@@ -152,11 +152,15 @@ export default function Profile() {
                 />
               </TouchableOpacity>
             </View>
-
-            {/* Botones */}
+            {/* /* Botones */}
             <TouchableOpacity
               style={styles.button}
-              onPress={() => router.push("/profile/profile_edit")}
+              onPress={() =>
+                router.push({
+                  pathname: "/profile/profile_edit",
+                  params: { userId: profileData?.user?.email },
+                })
+              }
             >
               <AuraText style={styles.buttonText} text="Editar Perfil" />
             </TouchableOpacity>
