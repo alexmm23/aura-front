@@ -72,14 +72,14 @@ export function useAuth() {
                     return;
                 }
                 if (token && !(await isTokenExpired(token))) {
-                    decodeAndSetUser(token);
+                    // decodeAndSetUser(token);
                     setIsAuthenticated(true);
                 } else if (refreshToken) {
                     const result = await refreshAccessToken(refreshToken);
                     if (result && result.accessToken && result.refreshToken) {
                         await AsyncStorage.setItem('userToken', result.accessToken);
                         await AsyncStorage.setItem('refreshToken', result.refreshToken);
-                        decodeAndSetUser(result.accessToken);
+                        // decodeAndSetUser(result.accessToken);
                         setIsAuthenticated(true);
                     } else {
                         setIsAuthenticated(false);
@@ -104,7 +104,7 @@ export function useAuth() {
         try {
             await AsyncStorage.setItem('userToken', token);
             await AsyncStorage.setItem('refreshToken', refreshToken);
-            decodeAndSetUser(token);
+            // decodeAndSetUser(token);
             setIsAuthenticated(true);
         } catch (error) {
             console.error('Error storing auth data:', error);
