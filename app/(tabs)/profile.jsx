@@ -20,6 +20,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage"; // Para ma
 
 export default function Profile() {
   const { logout } = useAuth(); // Hook para manejar la autenticación
+  const [profileData, setProfileData] = useState(null);
 
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
@@ -42,6 +43,31 @@ export default function Profile() {
       console.error("Error during Google login:", error);
     }
   };
+  const fetchProfile = async () => {
+    try {
+      const response = await fetchWithAuth(
+        buildApiUrl(API.ENDPOINTS.PROFILE.INFO),
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const data = await response.json();
+      console.log("Perfil obtenido:", data);
+      if (data) {
+        setProfileData(data);
+      }
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      alert(
+        "Error al obtener el perfil. Por favor, inténtalo de nuevo más tarde."
+      );
+    }
+  };
+
   const teamsLogin = async () => {
     try {
       const response = await fetchWithAuth(
@@ -64,6 +90,12 @@ export default function Profile() {
       console.error("Error during Teams login:", error);
     }
   };
+
+  useEffect(() => {
+    // Verifica si el usuario ya está vinculado al perfil
+    fetchProfile();
+  }, [router]);
+
   return (
     <>
       <Head>
@@ -94,6 +126,9 @@ export default function Profile() {
           {/* Card principal */}
           <View style={styles.card}>
             <AuraText style={styles.title} text="Mi Perfil" />
+            {profileData && (
+              <AuraText sryle={styles.title} text={profileData.user.name} />
+            )}
             {/* Íconos de plataformas */}
             <View style={styles.iconRow}>
               <TouchableOpacity onPress={() => googleLogin()}>

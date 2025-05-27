@@ -55,6 +55,7 @@ export const API = {
     // Profile endpoints
     PROFILE: {
       LINK_CLASSROOM: '/profile/link-classroom',
+      INFO: '/users/profile',
     },
   },
 };
