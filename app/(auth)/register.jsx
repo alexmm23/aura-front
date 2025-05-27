@@ -22,12 +22,12 @@ import { AuraText } from "@/components/AuraText";
 export default function Register() {
   const Container = Platform.OS === "web" ? ScrollView : SafeAreaView;
   const { height, width } = useWindowDimensions();
-  
+
   const isLargeScreen = width >= 928;
   const isLandscape = width > height;
 
   const router = useRouter();
-  const { login } = useAuth();
+  // const { login } = useAuth();
   const colors = Colors.light;
   const styles = createStyles(colors, isLandscape);
 
@@ -299,8 +299,8 @@ const localStyles = StyleSheet.create({
     height: "100%",
     zIndex: -1,
     width: 1000,
-    marginTop:"-5%",
-    marginLeft:"-40%",
+    marginTop: "-5%",
+    marginLeft: "-40%",
   },
   image: {
     width: "90%",
