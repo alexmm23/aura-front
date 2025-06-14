@@ -6,7 +6,8 @@
         "developmentClient": true,
         "env": {
           "APP_ENV": "development"
-        }
+        },
+        "distribution": "internal"
       }
     },
     "preview": {
