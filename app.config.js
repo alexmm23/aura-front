@@ -34,6 +34,21 @@ export default {
             eas: {
                 projectId: "c3118355-cc9b-41fd-9ce0-4ea410d8128c"
             }
-        }
+        },
+        android: {
+            adaptiveIcon: {
+                foregroundImage: "./assets/images/adaptive-icon.png",
+                backgroundColor: "#FFFFFF"
+            },
+            package: "com.aura.app",
+            versionCode: 1,
+            permissions: [
+                "CAMERA",
+                "READ_EXTERNAL_STORAGE",
+                "WRITE_EXTERNAL_STORAGE",
+                "INTERNET",
+            ],
+            softwareKeyboardLayoutMode: "pan"
+        },
     }
 };
