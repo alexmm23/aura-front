@@ -2,18 +2,14 @@ import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import jwtDecode from 'jwt-decode';
 import { API, buildApiUrl } from '../config/api';
-import { router } from 'expo-router';
 
 function getPathname() {
     return typeof window !== 'undefined' ? window.location.pathname : '';
 }
 
-async function clearAuthAndRedirect() {
+async function clearAuthData() {
     await AsyncStorage.removeItem('userToken');
     await AsyncStorage.removeItem('refreshToken');
-    if (!getPathname().startsWith('/login')) {
-        router.replace('/login');
-    }
 }
 
 export function useAuth() {
@@ -66,11 +62,12 @@ export function useAuth() {
             try {
                 const token = await AsyncStorage.getItem('userToken');
                 const refreshToken = await AsyncStorage.getItem('refreshToken');
+                
                 if (!token && !refreshToken) {
                     setIsAuthenticated(false);
-                    await clearAuthAndRedirect();
                     return;
                 }
+                
                 if (token && !(await isTokenExpired(token))) {
                     // decodeAndSetUser(token);
                     setIsAuthenticated(true);
@@ -83,20 +80,21 @@ export function useAuth() {
                         setIsAuthenticated(true);
                     } else {
                         setIsAuthenticated(false);
-                        await clearAuthAndRedirect();
+                        await clearAuthData();
                     }
                 } else {
                     setIsAuthenticated(false);
-                    await clearAuthAndRedirect();
+                    await clearAuthData();
                 }
             } catch (error) {
                 console.error('Error checking auth status:', error);
                 setIsAuthenticated(false);
-                await clearAuthAndRedirect();
+                await clearAuthData();
             } finally {
                 setIsLoading(false);
             }
         };
+        
         checkAuthStatus();
     }, []);
 
@@ -114,7 +112,7 @@ export function useAuth() {
     const logout = async () => {
         setIsAuthenticated(false);
         setUser(null);
-        await clearAuthAndRedirect();
+        await clearAuthData();
     };
 
     return {

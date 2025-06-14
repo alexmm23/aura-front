@@ -21,8 +21,8 @@ const getBaseUrl = () => {
 
   // For Android emulator, localhost refers to the emulator itself, not your machine
   const devUrl = Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000/api'
-    : API_URL || apiUrl || 'http://localhost:3000/api';
+    ? 'http://192.168.0.127:3000/api'
+    : API_URL || apiUrl || 'http://192.168.0.127:3000/api';
 
   // Environments configuration
   const urls = {

@@ -1,25 +1,14 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useLayoutEffect } from "react";
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useAuth } from "@/hooks/useAuth"; // Hook para manejar la autenticación
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AuthLayout() {
-  // Aquí puedes agregar lógica para verificar la autenticación
-  // y redirigir a la pantalla de inicio de sesión si es necesario.
   const { isAuthenticated, isLoading } = useAuth();
-  // Si la autenticación está en proceso, puedes mostrar un indicador de carga
-  useEffect(() => {
-    if (isLoading) {
-      // Mostrar un indicador de carga o realizar alguna acción
-    } else {
-      // Aquí puedes redirigir a la pantalla de inicio de sesión si no está autenticado
-      if (!isAuthenticated) {
-        //router.replace("/login");
-      } else {
-        router.replace("/(tabs)/home");
-      }
-    }
-  }, [isAuthenticated, isLoading]);
+  
+  // Eliminamos la navegación automática del layout de autenticación
+  // La navegación ya se maneja en el archivo index.jsx
+  
   return (
     <>
       <StatusBar style="dark" />
@@ -46,12 +35,6 @@ export default function AuthLayout() {
           name="forgotPassword"
           options={{
             title: "Recuperar Contraseña",
-          }}
-        />
-        <Stack.Screen
-          name="profile"
-          options={{
-            title: "Perfil",
           }}
         />
       </Stack>
