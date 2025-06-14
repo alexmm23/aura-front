@@ -23,6 +23,7 @@ export default {
         scheme: "myapp",
         userInterfaceStyle: "automatic",
         newArchEnabled: true,
+        owner: "alexmm23",
 
         // El resto de tu configuración actual...
 
