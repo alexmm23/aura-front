@@ -17,6 +17,7 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/hooks/useAuth"; // Hook para manejar la autenticación
 import AsyncStorage from "@react-native-async-storage/async-storage"; // Para manejar el almacenamiento local
+import * as Linking from "expo-linking";
 
 export default function Profile() {
   const { logout } = useAuth(); // Hook para manejar la autenticación
@@ -38,11 +39,14 @@ export default function Profile() {
         }
       );
       const data = await response.json();
-      window.location.href = data.url; // Redirige a la URL proporcionada por el backend
+      if (data.url) {
+        Linking.openURL(data.url);
+      }
     } catch (error) {
       console.error("Error during Google login:", error);
     }
   };
+
   const fetchProfile = async () => {
     try {
       const response = await fetchWithAuth(
@@ -82,7 +86,7 @@ export default function Profile() {
       );
       const data = await response.json();
       if (data.url) {
-        window.location.href = data.url;
+        Linking.openURL(data.url);
       } else {
         alert("No se pudo iniciar sesión con Teams");
       }
