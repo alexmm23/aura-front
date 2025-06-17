@@ -18,11 +18,11 @@ const getCurrentEnvironment = () => {
 // Get the base API URL depending on environment
 const getBaseUrl = () => {
   const environment = getCurrentEnvironment();
-
   // For Android emulator, localhost refers to the emulator itself, not your machine
   const devUrl = Platform.OS === 'android'
-    ? 'http://192.168.0.127:3000/api'
-    : API_URL || apiUrl || 'http://192.168.0.127:3000/api';
+    ? 'http://localhost:3000/api'
+    : 'http://localhost:3000/api'; // TODO: Change to your local dev URL
+  console.log('API URL:', devUrl);
 
   // Environments configuration
   const urls = {
