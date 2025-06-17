@@ -10,11 +10,7 @@ export default function TabsLayout() {
   const { isAuthenticated, isLoading } = useAuth();
 
   const MENU_ITEMS = [
-    { name: "home", 
-      icon: "home", 
-      text: "Inicio", 
-      route: "/(tabs)/home",
-    },
+    { name: "home", icon: "home", text: "Inicio", route: "/(tabs)/home" },
     {
       name: "notes",
       icon: "document-text",
@@ -39,6 +35,12 @@ export default function TabsLayout() {
       text: "Perfil",
       route: "/(tabs)/profile",
     },
+    {
+      name: "NoteBookScreen",
+      icon: "book",
+      text: "Cuaderno",
+      route: "/(tabs)/notebook",
+    },
   ];
 
   // Usamos useLayoutEffect para la navegación y agregamos un pequeño retraso
@@ -47,7 +49,7 @@ export default function TabsLayout() {
       const timer = setTimeout(() => {
         router.replace("/(auth)/login");
       }, 100);
-      
+
       return () => clearTimeout(timer);
     }
   }, [isAuthenticated, isLoading, router]);
