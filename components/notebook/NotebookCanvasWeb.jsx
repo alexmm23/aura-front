@@ -6,6 +6,7 @@ const TOOL_PENCIL = "pen";
 const TOOL_RECT = "rect";
 const TOOL_ERASER = "eraser";
 const TOOL_TEXT = "text";
+const TOOL_IMAGE = "image";
 
 const colors = ["black", "red", "blue", "green", "orange"];
 const brushSizes = [1, 2, 5, 10, 15];
@@ -13,6 +14,7 @@ const textSizes = [12, 16, 20, 24, 32];
 
 const NotebookCanvasWeb = ({ onSave, onBack }) => {
   const canvasRef = useRef();
+  const fileInputRef = useRef();
   const [tool, setTool] = useState(TOOL_PENCIL);
   const [color, setColor] = useState(colors[0]);
   const [brushSize, setBrushSize] = useState(2);
@@ -21,6 +23,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   const [lastPoint, setLastPoint] = useState({ x: 0, y: 0 });
   const [rectStart, setRectStart] = useState(null);
   const [canvasState, setCanvasState] = useState(null);
+  const [pendingImage, setPendingImage] = useState(null);
   const [textInput, setTextInput] = useState({
     visible: false,
     x: 0,
@@ -66,6 +69,18 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         y: pos.y,
         text: "",
       });
+      return;
+    }
+
+    if (tool === TOOL_IMAGE) {
+      if (pendingImage) {
+        // Si hay una imagen pendiente, colocarla en la posición clickeada
+        addImageToCanvas(pendingImage, pos.x, pos.y);
+        setPendingImage(null);
+      } else {
+        // Si no hay imagen, abrir el selector de archivos
+        fileInputRef.current?.click();
+      }
       return;
     }
 
@@ -146,13 +161,66 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     // Ocultar el input de texto
     setTextInput({ visible: false, x: 0, y: 0, text: "" });
   };
-
   const handleTextKeyPress = (e) => {
     if (e.key === "Enter") {
       addTextToCanvas(textInput.text);
     } else if (e.key === "Escape") {
       setTextInput({ visible: false, x: 0, y: 0, text: "" });
     }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          setPendingImage(img);
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+    // Limpiar el input para permitir seleccionar el mismo archivo otra vez
+    e.target.value = "";
+  };
+  const addImageToCanvas = (img, x, y) => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+
+    // Calcular el tamaño de la imagen para que quepa en el canvas
+    const maxWidth = 200;
+    const maxHeight = 200;
+    let { width, height } = img;
+
+    if (width > maxWidth || height > maxHeight) {
+      const ratio = Math.min(maxWidth / width, maxHeight / height);
+      width *= ratio;
+      height *= ratio;
+    }
+
+    // Dibujar la imagen en la posición especificada
+    ctx.globalCompositeOperation = "source-over";
+    ctx.drawImage(img, x, y, width, height);
+  };
+  const getCanvasCursor = () => {
+    if (tool === TOOL_IMAGE && pendingImage) {
+      return "copy";
+    } else if (tool === TOOL_TEXT) {
+      return "text";
+    } else if (tool === TOOL_ERASER) {
+      return "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTMgNi45OTY3QzMgNi40NDc3IDMuNDQ3NzEgNiAzLjk5OTk5IDZIMjBDMjAuNTUyMyA2IDIxIDYuNDQ3NzEgMjEgN1YxN0MyMSAxNy41NTIzIDIwLjU1MjMgMTggMjAgMThIMTMuNDEyMkMxMy4xNDkgMTggMTIuODk3NSAxNy44OTQ2IDEyLjcwNzEgMTcuNzA3MUw5IDEzLjk5OTlMNS4yOTI4OSAxNy43MDcxQzUuMTAyNTMgMTcuODk0NiA0Ljg1MDk5IDE4IDQuNTg3NzggMThIMy45OTk5OUMzLjQ0NzcxIDE4IDMgMTcuNTUyMyAzIDE3VjYuOTk2N1oiIGZpbGw9IiMzMzMiLz4KPC9zdmc+Cg==') 12 12, auto";
+    }
+    return "crosshair";
+  };
+
+  const handleToolChange = (newTool) => {
+    // Si hay una imagen pendiente y se cambia de herramienta, cancelarla
+    if (tool === TOOL_IMAGE && newTool !== TOOL_IMAGE && pendingImage) {
+      setPendingImage(null);
+    }
+    setTool(newTool);
   };
 
   const clearCanvas = () => {
@@ -177,7 +245,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   const Toolbar = () => (
     <View style={styles.toolbar}>
       <button
-        onClick={() => setTool(TOOL_PENCIL)}
+        onClick={() => handleToolChange(TOOL_PENCIL)}
         style={{
           ...styles.toolButton,
           ...(tool === TOOL_PENCIL ? styles.activeBtn : {}),
@@ -186,7 +254,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         ✏️ Lápiz
       </button>
       <button
-        onClick={() => setTool(TOOL_RECT)}
+        onClick={() => handleToolChange(TOOL_RECT)}
         style={{
           ...styles.toolButton,
           ...(tool === TOOL_RECT ? styles.activeBtn : {}),
@@ -195,7 +263,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         ⬛ Rectángulo
       </button>
       <button
-        onClick={() => setTool(TOOL_ERASER)}
+        onClick={() => handleToolChange(TOOL_ERASER)}
         style={{
           ...styles.toolButton,
           ...(tool === TOOL_ERASER ? styles.activeBtn : {}),
@@ -204,13 +272,22 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         🧽 Borrador
       </button>
       <button
-        onClick={() => setTool(TOOL_TEXT)}
+        onClick={() => handleToolChange(TOOL_TEXT)}
         style={{
           ...styles.toolButton,
           ...(tool === TOOL_TEXT ? styles.activeBtn : {}),
         }}
       >
         📝 Texto
+      </button>
+      <button
+        onClick={() => handleToolChange(TOOL_IMAGE)}
+        style={{
+          ...styles.toolButton,
+          ...(tool === TOOL_IMAGE ? styles.activeBtn : {}),
+        }}
+      >
+        🖼️ Imagen
       </button>
       <View style={styles.separator} />
       <View style={styles.controlGroup}>
@@ -256,7 +333,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
             <option key={size} value={size}>
               {size}px
             </option>
-          ))}{" "}
+          ))}
         </select>
       </View>
       <View style={styles.separator} />
@@ -278,6 +355,14 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
           </View>
 
           <View style={styles.separator} />
+        </View>
+      )}
+      {tool === TOOL_IMAGE && pendingImage && (
+        <View>
+          <View style={styles.separator} />
+          <Text style={styles.pendingImageText}>
+            📷 Imagen cargada - Haz clic en el canvas para colocarla
+          </Text>
         </View>
       )}
       <button onClick={clearCanvas} style={styles.actionButton}>
@@ -310,7 +395,10 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
           ref={canvasRef}
           width={800}
           height={600}
-          style={styles.canvas}
+          style={{
+            ...styles.canvas,
+            cursor: getCanvasCursor(),
+          }}
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
@@ -342,6 +430,13 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
             placeholder="Escribe aquí (Enter para confirmar, Esc para cancelar)"
           />
         )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          style={{ display: "none" }}
+        />
       </View>
     </View>
   );
@@ -423,7 +518,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#ffffff",
     boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-    cursor: "crosshair",
   },
   fallbackContainer: {
     flex: 1,
@@ -435,6 +529,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#6c757d",
     textAlign: "center",
+  },
+  pendingImageText: {
+    fontSize: 12,
+    color: "#28a745",
+    fontWeight: "600",
+    padding: "4px 8px",
+    backgroundColor: "#d4edda",
+    borderRadius: 4,
+    border: "1px solid #c3e6cb",
   },
 });
 
