@@ -8,27 +8,8 @@ export default function TabsLayout() {
   const colors = Colors.light;
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
-
   const MENU_ITEMS = [
     { name: "home", icon: "home", text: "Inicio", route: "/(tabs)/home" },
-    {
-      name: "notes",
-      icon: "document-text",
-      text: "Notas",
-      route: "/(tabs)/notes",
-    },
-    {
-      name: "classes",
-      icon: "school",
-      text: "Clases",
-      route: "/(tabs)/classes",
-    },
-    {
-      name: "chats",
-      icon: "chatbubbles",
-      text: "Chats",
-      route: "/(tabs)/chats",
-    },
     {
       name: "profile",
       icon: "person",
@@ -39,7 +20,7 @@ export default function TabsLayout() {
       name: "NoteBookScreen",
       icon: "book",
       text: "Cuaderno",
-      route: "/(tabs)/notebook",
+      route: "/(tabs)/NoteBookScreen",
     },
   ];
 
@@ -75,6 +56,7 @@ export default function TabsLayout() {
         },
       }}
     >
+      {" "}
       {MENU_ITEMS.map((item) => (
         <Tabs.Screen
           key={item.name}
@@ -87,6 +69,19 @@ export default function TabsLayout() {
           }}
         />
       ))}
+      {/* Ocultar rutas anidadas que no queremos en la navegación */}
+      <Tabs.Screen
+        name="profile/link_moodle"
+        options={{
+          href: null, // Esto oculta la ruta de la navegación
+        }}
+      />
+      <Tabs.Screen
+        name="profile/profile_edit"
+        options={{
+          href: null, // Esto oculta la ruta de la navegación
+        }}
+      />
     </Tabs>
   );
 }
