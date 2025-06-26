@@ -86,7 +86,7 @@ const NotebookScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#E6E2D2",
   },
   header: {
     flexDirection: "row",
