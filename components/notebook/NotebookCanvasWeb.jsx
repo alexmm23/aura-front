@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { View, StyleSheet, Platform, Text } from "react-native";
+import { View, StyleSheet, Platform, Text, Image  } from "react-native";
 
 // Este componente usa Canvas HTML5 nativo para web
 const TOOL_PENCIL = "pen";
@@ -30,6 +30,8 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     y: 0,
     text: "",
   }); // Para guardar el estado del canvas
+  const [showBrushSlider, setShowBrushSlider] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
 
   // Configuración inicial del canvas (solo una vez)
   useEffect(() => {
@@ -251,7 +253,10 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
           ...(tool === TOOL_PENCIL ? styles.activeBtn : {}),
         }}
       >
-        ✏️ Lápiz
+        <Image
+          source={require("../../assets/images/lapiz.png")}
+          style={{ width: 24, height: 24 }}
+        />
       </button>
       <button
         onClick={() => handleToolChange(TOOL_RECT)}
@@ -260,8 +265,10 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
           ...(tool === TOOL_RECT ? styles.activeBtn : {}),
         }}
       >
-        ⬛ Rectángulo
-      </button>
+        <Image
+          source={require("../../assets/images/rectangulo.png")}
+          style={{ width: 24, height: 24 }}
+        />      </button>
       <button
         onClick={() => handleToolChange(TOOL_ERASER)}
         style={{
@@ -269,8 +276,10 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
           ...(tool === TOOL_ERASER ? styles.activeBtn : {}),
         }}
       >
-        🧽 Borrador
-      </button>
+        <Image
+          source={require("../../assets/images/borrador.png")}
+          style={{ width: 24, height: 24 }}
+        />      </button>
       <button
         onClick={() => handleToolChange(TOOL_TEXT)}
         style={{
@@ -278,8 +287,10 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
           ...(tool === TOOL_TEXT ? styles.activeBtn : {}),
         }}
       >
-        📝 Texto
-      </button>
+        <Image
+          source={require("../../assets/images/fuente.png")}
+          style={{ width: 24, height: 24 }}
+        />      </button>
       <button
         onClick={() => handleToolChange(TOOL_IMAGE)}
         style={{
@@ -287,56 +298,65 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
           ...(tool === TOOL_IMAGE ? styles.activeBtn : {}),
         }}
       >
-        🖼️ Imagen
+        <Image
+          source={require("../../assets/images/agregarImagen.png")}
+          style={{ width: 24, height: 24 }}
+        />      
+        </button>
+      <button
+        onClick={() => setShowBrushSlider((prev) => !prev)}
+        style={styles.toolButton}
+      >
+        <Image
+          source={require("../../assets/images/anchura.png")}
+          style={{ width: 24, height: 24 }}
+        />      
+        </button>
+      {showBrushSlider && (
+        <View style={styles.brushSliderPopover}>
+          <Text style={styles.controlLabel}>Grosor: {brushSize}px</Text>
+          <input
+            type="range"
+            min="1"
+            max="20"
+            step="1"
+            value={brushSize}
+            onChange={(e) => setBrushSize(parseInt(e.target.value))}
+            style={{
+              width: 120,
+              marginLeft: 8,
+              cursor: "pointer",
+            }}
+          />
+        </View>
+      )}
+      {showColorPicker && (
+        <div style={styles.colorPickerPopover}>
+          <input
+            type="color"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+            style={{
+              width: 40,
+              height: 40,
+              border: "none",
+              background: "none",
+              cursor: "pointer",
+            }}
+            autoFocus
+            onBlur={() => setShowColorPicker(false)}
+          />
+        </div>
+      )}
+      <button
+        onClick={() => setShowColorPicker((prev) => !prev)}
+        style={styles.toolButton}
+      >
+        <Image
+          source={require("../../assets/images/color.png")}
+          style={{ width: 24, height: 24 }}
+        /> 
       </button>
-      <View style={styles.separator} />
-      <View style={styles.controlGroup}>
-        <Text style={styles.controlLabel}>Color:</Text>
-        <select
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-          style={styles.selectInput}
-        >
-          {colors.map((c) => (
-            <option
-              key={c}
-              value={c}
-              style={{
-                backgroundColor: c,
-                color: c === "black" ? "white" : "black",
-              }}
-            >
-              {c === "black"
-                ? "● Negro"
-                : c === "red"
-                ? "● Rojo"
-                : c === "blue"
-                ? "● Azul"
-                : c === "green"
-                ? "● Verde"
-                : c === "orange"
-                ? "● Naranja"
-                : c}
-            </option>
-          ))}
-        </select>
-      </View>
-      <View style={styles.separator} />
-      <View style={styles.controlGroup}>
-        <Text style={styles.controlLabel}>Grosor:</Text>
-        <select
-          value={brushSize}
-          onChange={(e) => setBrushSize(parseInt(e.target.value))}
-          style={styles.selectInput}
-        >
-          {brushSizes.map((size) => (
-            <option key={size} value={size}>
-              {size}px
-            </option>
-          ))}
-        </select>
-      </View>
-      <View style={styles.separator} />
       {tool === TOOL_TEXT && (
         <View>
           <View style={styles.controlGroup}>
@@ -366,14 +386,23 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         </View>
       )}
       <button onClick={clearCanvas} style={styles.actionButton}>
-        🗑️ Limpiar
+        <Image
+          source={require("../../assets/images/limpiar.png")}
+          style={{ width: 24, height: 24 }}
+        />
       </button>
       <button onClick={saveCanvas} style={styles.actionButton}>
-        💾 Guardar
+        <Image
+          source={require("../../assets/images/salvar.png")}
+          style={{ width: 24, height: 24 }}
+        />
       </button>
       {onBack && (
         <button onClick={onBack} style={styles.actionButton}>
-          ← Volver
+         <Image
+          source={require("../../assets/images/volver.png")}
+          style={{ width: 24, height: 24 }}
+        />
         </button>
       )}
     </View>
@@ -389,54 +418,58 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   }
   return (
     <View style={styles.container}>
-      <Toolbar />
-      <View style={styles.canvasContainer}>
-        <canvas
-          ref={canvasRef}
-          width={800}
-          height={600}
-          style={{
-            ...styles.canvas,
-            cursor: getCanvasCursor(),
-          }}
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-        />
-        {textInput.visible && (
-          <input
-            type="text"
-            value={textInput.text}
-            onChange={(e) =>
-              setTextInput({ ...textInput, text: e.target.value })
-            }
-            onKeyDown={handleTextKeyPress}
-            onBlur={() => addTextToCanvas(textInput.text)}
-            autoFocus
+      <View style={styles.mainContent}>
+        <View style={styles.toolbarContainer}>
+          <Toolbar />
+        </View>
+        <View style={styles.canvasContainer}>
+          <canvas
+            ref={canvasRef}
+            width={800}
+            height={600}
             style={{
-              position: "absolute",
-              left: textInput.x + 16, // offset para que no se superponga con el canvas
-              top: textInput.y + 16,
-              fontSize: `${textSize}px`,
-              color: color,
-              border: "2px solid #007bff",
-              borderRadius: 4,
-              padding: "4px 8px",
-              backgroundColor: "rgba(255, 255, 255, 0.9)",
-              outline: "none",
-              zIndex: 10,
+              ...styles.canvas,
+              cursor: getCanvasCursor(),
             }}
-            placeholder="Escribe aquí (Enter para confirmar, Esc para cancelar)"
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
           />
-        )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileSelect}
-          style={{ display: "none" }}
-        />
+          {textInput.visible && (
+            <input
+              type="text"
+              value={textInput.text}
+              onChange={(e) =>
+                setTextInput({ ...textInput, text: e.target.value })
+              }
+              onKeyDown={handleTextKeyPress}
+              onBlur={() => addTextToCanvas(textInput.text)}
+              autoFocus
+              style={{
+                position: "absolute",
+                left: textInput.x + 16, // offset para que no se superponga con el canvas
+                top: textInput.y + 16,
+                fontSize: `${textSize}px`,
+                color: color,
+                border: "2px solid #007bff",
+                borderRadius: 4,
+                padding: "4px 8px",
+                backgroundColor: "rgba(255, 255, 255, 0.9)",
+                outline: "none",
+                zIndex: 10,
+              }}
+              placeholder="Escribe aquí (Enter para confirmar, Esc para cancelar)"
+            />
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            style={{ display: "none" }}
+          />
+        </View>
       </View>
     </View>
   );
@@ -445,17 +478,38 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#E6E2D2",
+  },
+  mainContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    width: "100%",
+    height: "100%",
+  },
+  toolbarContainer: {
+    position: "sticky",
+    top: 40,
+    left: 0,
+    zIndex: 100,
+    minWidth: 80,
+    maxWidth: 120,
+    marginRight: 24,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+    padding: 12,
+    height: "fit-content",
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+    position: "relative", // <-- Asegúrate de tener esto
   },
   toolbar: {
-    flexDirection: "row",
+    flexDirection: "column",
     alignItems: "center",
-    padding: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e9ecef",
-    flexWrap: "wrap",
-    gap: 8,
+    gap: 12,
   },
   toolButton: {
     padding: "8px",
@@ -508,10 +562,11 @@ const styles = StyleSheet.create({
   },
   canvasContainer: {
     flex: 1,
-    padding: 16,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
+    padding: 16,
+    minHeight: 600,
   },
   canvas: {
     border: "2px solid #dee2e6",
@@ -538,6 +593,36 @@ const styles = StyleSheet.create({
     backgroundColor: "#d4edda",
     borderRadius: 4,
     border: "1px solid #c3e6cb",
+  },
+  brushSliderPopover: {
+    position: "absolute",
+    left: "120%", // Justo a la derecha de la barra
+    top: 260,     // <-- Ajusta este valor según la altura de tus botones
+    backgroundColor: "#fff",
+    border: "1px solid #dee2e6",
+    borderRadius: 8,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    padding: 12,
+    zIndex: 200,
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    minWidth: 180,
+  },
+  colorPickerPopover: {
+    position: "absolute",
+    left: "180%",
+    top: 310, // Ajusta este valor para la altura deseada
+    transform: "translateX(-50%)",
+    backgroundColor: "#fff",
+    border: "1px solid #dee2e6",
+    borderRadius: 8,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    padding: 12,
+    zIndex: 300,
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
   },
 });
 
