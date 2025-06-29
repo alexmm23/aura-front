@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NotebookCanvas from "../../components/notebook/NotebookCanvas";
+import FloatingAIMenu from "../../components/FloatingAIMenu";
+import { AuraText } from "../../components/AuraText";
 
 const NotebookScreen = () => {
   const [notes, setNotes] = useState([]);
@@ -62,12 +64,12 @@ const NotebookScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Mi Cuaderno</Text>
+        <AuraText text={"Mi Cuaderno"} style={styles.title} />
         <TouchableOpacity
           style={styles.newNoteButton}
           onPress={() => setShowCanvas(true)}
         >
-          <Text style={styles.newNoteText}>+ Nueva Nota</Text>
+          <AuraText text={"+ Nueva Nota"} style={styles.newNoteText} />
         </TouchableOpacity>
       </View>
 
@@ -79,6 +81,7 @@ const NotebookScreen = () => {
         contentContainerStyle={styles.notesList}
         showsVerticalScrollIndicator={false}
       />
+      <FloatingAIMenu />
     </View>
   );
 };
