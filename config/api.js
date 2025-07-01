@@ -46,7 +46,7 @@ export const API = {
       GOOGLE: '/auth/google',
       RESET_PASSWORD: '/auth/reset-password',
       LOGOUT: '/auth/logout',
-      TEAMS: '/auth/microsoft',
+      TEAMS: '/oauth/microsoft',
     },
     // Student endpoints
     STUDENT: {
