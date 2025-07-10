@@ -63,6 +63,14 @@ const NotebookScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* Imagen decorativa de fondo */}
+      <Image
+        source={require("../../assets/images/fondonotas.png")} // Cambia por tu imagen
+        style={styles.backgroundImage}
+        resizeMode="contain" // o "cover" según prefieras
+        pointerEvents="none" // <-- Esto hace que no interfiera con toques
+      />
+      {/* Contenido principal */}
       <View style={styles.header}>
         <AuraText text={"Mis Notas"} style={styles.title} />
         <TouchableOpacity
@@ -90,13 +98,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E6E2D2",
+    position: "relative", // Importante para el posicionamiento absoluto
+  },
+  backgroundImage: {
+    position: "absolute",
+    marginTop:70,
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "80%",
+    //opacity: , // Opcional: hazla más tenue
+    zIndex: 0,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 16,
-    backgroundColor: "#fff",
+    marginTop: 48,
+    marginLeft: 150,
+    marginRight: 150,
+    backgroundColor: "transparent", // <-- Haz el fondo transparente
     borderBottomWidth: 1,
     borderBottomColor: "#e9ecef",
   },
