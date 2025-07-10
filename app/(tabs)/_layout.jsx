@@ -3,24 +3,27 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/Colors";
 import { useAuth } from "@/hooks/useAuth";
 import { useLayoutEffect } from "react";
+import { Image } from "react-native";
 
 export default function TabsLayout() {
   const colors = Colors.light;
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const MENU_ITEMS = [
-    { name: "home", icon: "home", text: "Inicio", route: "/(tabs)/home" },
-    {
-      name: "NoteBookScreen",
-      icon: "book",
-      text: "Cuaderno",
-      route: "/(tabs)/NoteBookScreen",
+    { name: "home", 
+      icon: require("../../assets/images/home.png"),
+      text: "Inicio",
+       route: "/(tabs)/home" 
     },
-    {
-      name: "profile",
-      icon: "person",
-      text: "Perfil",
-      route: "/(tabs)/profile",
+    { name: "NoteBookScreen", 
+      icon: require("../../assets/images/cuaderno.png"), 
+      text: "Cuaderno", 
+      route: "/(tabs)/NoteBookScreen" 
+    },
+    { name: "profile", 
+      icon: require("../../assets/images/perfil.png"),
+      text: "Perfil", 
+      route: "/(tabs)/profile" 
     },
   ];
 
@@ -44,22 +47,14 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primary, // Color del ícono/texto activo
-        tabBarInactiveTintColor: colors.gray, // Color del ícono/texto inactivo
+        tabBarActiveTintColor: "#fff",
+        tabBarInactiveTintColor: "#e0e0e0",
         tabBarStyle: {
-          backgroundColor: colors.white, // Color de fondo de la navbar
-          borderTopWidth: 1, // Grosor del borde superior
-          borderTopColor: "#e0e0e0", // Color del borde superior
-          elevation: 8, // Sombra en Android
-          shadowOpacity: 0.1, // Opacidad de sombra en iOS
-          shadowRadius: 4, // Radio de sombra en iOS
-          shadowOffset: { width: 0, height: -2 }, // Offset de sombra en iOS
-          height: 65, // Altura de la navbar
-          paddingBottom: 8, // Padding inferior
-          paddingTop: 8, // Padding superior
+          backgroundColor: "#7C3AED",
+          borderTopWidth: 0,
+          height: 60,
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
-          overflow: "hidden",
         },
         tabBarLabelStyle: {
           fontSize: 12, // Tamaño de fuente del texto
@@ -77,8 +72,16 @@ export default function TabsLayout() {
           name={item.name}
           options={{
             title: item.text,
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name={item.icon} color={color} size={size} />
+            tabBarIcon: ({ focused }) => (
+              <Image
+                source={item.icon}
+                style={{
+                  width: 28,
+                  height: 28,
+                  tintColor: focused ? "#fff" : "#e0e0e0", // Aplica color si tu PNG es monocromo
+                }}
+                resizeMode="contain"
+              />
             ),
           }}
         />

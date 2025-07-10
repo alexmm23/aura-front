@@ -234,7 +234,22 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
 
   const saveCanvas = () => {
     const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+
+    // Guardar el contenido actual
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    // Rellenar fondo blanco
+    ctx.globalCompositeOperation = "destination-over";
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Descargar imagen
     const dataURL = canvas.toDataURL("image/png");
+
+    // Restaurar el contenido original
+    ctx.putImageData(imageData, 0, 0);
+    ctx.globalCompositeOperation = "source-over";
 
     // Crear un enlace para descargar
     const link = document.createElement("a");
@@ -358,8 +373,9 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         /> 
       </button>
       {tool === TOOL_TEXT && (
-        <View>
-          <View style={styles.controlGroup}>
+        <>
+          
+          <View style={styles.textSizePopover}>
             <Text style={styles.controlLabel}>Tamaño:</Text>
             <select
               value={textSize}
@@ -368,14 +384,12 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
             >
               {textSizes.map((size) => (
                 <option key={size} value={size}>
-                  {size}px
+                  {size}
                 </option>
               ))}
             </select>
           </View>
-
-          <View style={styles.separator} />
-        </View>
+        </>
       )}
       {tool === TOOL_IMAGE && pendingImage && (
         <View>
@@ -623,6 +637,21 @@ const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
+  },
+  textSizePopover: {
+    position: "absolute",
+    left: "120%", // Justo a la derecha de la barra
+    top: 155,     // Ajusta este valor para alinearlo con el botón de texto
+    backgroundColor: "#fff",
+    border: "1px solid #dee2e6",
+    borderRadius: 8,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    padding: 12,
+    zIndex: 250,
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    minWidth: 140,
   },
 });
 
