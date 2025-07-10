@@ -64,7 +64,7 @@ const NotebookScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <AuraText text={"Mi Cuaderno"} style={styles.title} />
+        <AuraText text={"Mis Notas"} style={styles.title} />
         <TouchableOpacity
           style={styles.newNoteButton}
           onPress={() => setShowCanvas(true)}
@@ -101,9 +101,9 @@ const styles = StyleSheet.create({
     borderBottomColor: "#e9ecef",
   },
   title: {
-    fontSize: 24,
+    fontSize: 48,
     fontWeight: "bold",
-    color: "#212529",
+    color: "#CB8D27",
   },
   newNoteButton: {
     paddingHorizontal: 16,

@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/Colors";
 import { useAuth } from "@/hooks/useAuth";
 import { useLayoutEffect } from "react";
-import { Image } from "react-native";
+import { Image, View, Text } from "react-native";
 
 export default function TabsLayout() {
   const colors = Colors.light;
@@ -56,13 +56,20 @@ export default function TabsLayout() {
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
         },
-        tabBarLabelStyle: {
-          fontSize: 12, // Tamaño de fuente del texto
-          fontWeight: "600", // Peso de fuente
-          marginTop: 4, // Margen superior del texto
-        },
         tabBarIconStyle: {
-          marginBottom: 2, // Margen inferior del ícono
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 0,
+          width: "100%",
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: "600",
+          marginTop: 2,
+          textAlign: "center",
+          width: "100%",
+          padding: 0,
         },
       }}
     >
@@ -72,16 +79,30 @@ export default function TabsLayout() {
           name={item.name}
           options={{
             title: item.text,
+            tabBarLabel: item.text, // <-- Fuerza el label debajo del icono
             tabBarIcon: ({ focused }) => (
-              <Image
-                source={item.icon}
-                style={{
-                  width: 28,
-                  height: 28,
-                  tintColor: focused ? "#fff" : "#e0e0e0", // Aplica color si tu PNG es monocromo
-                }}
-                resizeMode="contain"
-              />
+              <View style={{ alignItems: "center", justifyContent: "center" }}>
+                <Image
+                  source={item.icon}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    tintColor: focused ? "#fff" : "#e0e0e0",
+                    marginBottom: 2,
+                  }}
+                  resizeMode="contain"
+                />
+                <Text
+                  style={{
+                    color: focused ? "#fff" : "#e0e0e0",
+                    fontSize: 12,
+                    fontWeight: "600",
+                    marginTop: 2,
+                  }}
+                >
+                  {item.text}
+                </Text>
+              </View>
             ),
           }}
         />
