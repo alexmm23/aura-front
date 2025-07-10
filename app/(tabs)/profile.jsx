@@ -162,7 +162,6 @@ export default function Profile() {
               onPress={() =>
                 router.push({
                   pathname: "/profile/profile_edit",
-                  params: { userId: profileData?.user?.email },
                 })
               }
             >

@@ -47,6 +47,7 @@ export const API = {
       RESET_PASSWORD: '/auth/reset-password',
       LOGOUT: '/auth/logout',
       TEAMS: '/oauth/microsoft',
+      PROFILE: '/users/profile',
     },
     // Student endpoints
     STUDENT: {
@@ -56,6 +57,7 @@ export const API = {
     PROFILE: {
       LINK_CLASSROOM: '/profile/link-classroom',
       INFO: '/users/profile',
+      UPDATE: '/users/update',
     },
   },
 };

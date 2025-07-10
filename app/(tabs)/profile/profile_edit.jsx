@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { use, useEffect, useState } from "react";
 import {
   View,
   ScrollView,
@@ -6,130 +6,225 @@ import {
   StyleSheet,
   useWindowDimensions,
   TouchableOpacity,
+  Platform,
 } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
 import Head from "expo-router/head";
 import { AuraText } from "@/components/AuraText";
-import {AuraTextInput} from "@/components/AuraTextInput"
+import { AuraTextInput } from "@/components/AuraTextInput";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/hooks/useAuth"; // Hook para manejar la autenticación
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage"; // Para manejar el almacenamiento local
-
+import Toast from "react-native-toast-message"; // Para mostrar mensajes de error
 
 export default function Profile() {
-  const { logout, isAuthenticated } = useAuth(); // Hook para manejar la autenticación
+  const { logout, userToken } = useAuth(); // Hook para manejar la autenticación
   const { height, width } = useWindowDimensions();
+  const { ENDPOINTS } = API;
+  const [formData, setFormData] = useState({
+    name: "",
+    lastName: "",
+    password: "",
+    confirmPassword: "",
+  });
+
   const isLandscape = width > height;
   const isLargeScreen = width >= 928;
   const shouldUseLandscapeLayout = isLargeScreen || isLandscape;
 
-  const router = useRouter();
-  const googleLogin = async () => {
-    const token = AsyncStorage.getItem("userToken");
-    if (!token) {
-      console.log("No hay token de usuario disponible");
-      return;
-    }    console.log("Token de usuario:", token);
-    await fetch(buildApiUrl(API.ENDPOINTS.AUTH.GOOGLE), {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("Google login data:", data);
-      })
-      .catch((error) => {
-        console.error("Error during Google login:", error);
+  const getProfile = async (token) => {
+    try {
+      const response = await fetch(buildApiUrl(ENDPOINTS.PROFILE.INFO), {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
+
+      if (!response.ok) {
+        throw new Error("Error fetching profile");
+      }
+
+      const data = await response.json();
+      console.log("Profile data:", data);
+      const { user } = data;
+      // setEmail(data.email);
+      setFormData({
+        name: user.name,
+        lastName: user.lastname,
+        password: "",
+        confirmPassword: "",
+        email: user.email || "", // Asignar email si está disponible
+      });
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    }
   };
+
+  const saveProfile = async () => {
+    const token = await AsyncStorage.getItem("userToken");
+    if (!token) {
+      console.error("No user token found");
+      return;
+    }
+    // Solo tomar los campos que el usuario ha modificado y no estén vacíos
+    const updateFields = {};
+    if (formData.name) updateFields.name = formData.name;
+    if (formData.lastName) updateFields.lastname = formData.lastName;
+    if (formData.password) updateFields.password = formData.password;
+
+    if (Object.keys(updateFields).length === 0) {
+      console.warn("No changes to save");
+      return;
+    }
+
+    try {
+      const response = await fetch(buildApiUrl(ENDPOINTS.PROFILE.UPDATE), {
+        method: "PATCH",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updateFields),
+      });
+      if (!response.ok) {
+        console.error("Error updating profile:", response.statusText);
+        Toast.show({
+          type: "error",
+          text1: "Error al actualizar el perfil",
+          text2:
+            "Error al actualizar el perfil. Por favor, inténtalo de nuevo.",
+        });
+      }
+      // Si la respuesta es exitosa, puedes manejar la respuesta aquí
+      Toast.show({
+        type: "success",
+        text1: "Perfil actualizado correctamente",
+      });
+      const data = await response.json();
+      console.log("Profile updated successfully:", data);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+    }
+  };
+
+  const handleChange = (field, value) => {
+    setFormData((prevData) => ({
+      ...prevData,
+      [field]: value,
+    }));
+  };
+
+  const router = useRouter();
   const formularioCompleto = (
-      <>
+    <>
       <AuraTextInput
         style={styles.input}
         placeholder="Nombre"
         autoCapitalize="none"
+        value={formData.name || ""}
+        onChangeText={(text) => handleChange("name", text)}
+        name="name"
       />
 
       <AuraTextInput
         style={styles.input}
         placeholder="Apellidos"
-        autoCapitalize="none" 
+        autoCapitalize="none"
+        value={formData.lastName || ""}
+        onChangeText={(text) => handleChange("lastName", text)}
+        name="lastName"
       />
 
       <AuraTextInput
         style={styles.input}
-        placeholder="Contraseña"
-        //value={formData.password}
-        //onChangeText={(text) => handleChange("password", text)}
+        placeholder="Nueva Contraseña"
+        value={formData.password || ""}
+        onChangeText={(text) => handleChange("password", text)}
+        autoCapitalize="none"
+        autoComplete="password"
         secureTextEntry
+        name="password"
       />
+
       <AuraTextInput
         style={styles.input}
-        placeholder="Verificar contraseña"
-        //value={formData.password}
-        //onChangeText={(text) => handleChange("password", text)}
+        placeholder="Confirmar contraseña"
+        value={formData.confirmPassword || ""}
+        onChangeText={(text) => handleChange("confirmPassword", text)}
         secureTextEntry
+        autoCapitalize="none"
+        autoComplete="password"
+        name="confirmPassword"
       />
-        
-      </>      
-    );
+    </>
+  );
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = await AsyncStorage.getItem("userToken");
+      if (token) {
+        getProfile(token);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   return (
-  <>
-    <Head>
-      <title>Mi Perfil</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    </Head>
-    <View style={styles.container}>
-      <PortraitHeader />
+    <>
+      <Head>
+        <title>Mi Perfil</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </Head>
+      <View style={styles.container}>
+        <PortraitHeader />
 
-      <LinearGradient
-        colors={["#B065C4", "#F4A45B"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.cardheader}
-      >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.replace("/(tabs)/profile")}
+        <LinearGradient
+          colors={["#B065C4", "#F4A45B"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.cardheader}
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-      </LinearGradient>
-
-      <View style={styles.profileImageContainer}>
-        <Image
-          source={require("@/assets/images/icon.png")}
-          style={styles.profileImage}
-        />
-      </View>
-
-      {/* ScrollView con diseño adaptativo */}
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          shouldUseLandscapeLayout && styles.contentLandscape,
-        ]}
-      >
-        <View style={styles.card}>
-          <AuraText style={styles.title} text="Mi Perfil" />
-          <AuraText style={styles.email} text="a13243155@ceti.mx" />
-          {formularioCompleto}
-          <TouchableOpacity style={styles.button}>
-            <AuraText style={styles.buttonText} text="Editar Perfil" />
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.replace("/(tabs)/profile")}
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
+        </LinearGradient>
+
+        <View style={styles.profileImageContainer}>
+          <Image
+            source={require("@/assets/images/icon.png")}
+            style={styles.profileImage}
+          />
         </View>
-      </ScrollView>
-    </View>
-  </>
-);
+
+        {/* ScrollView con diseño adaptativo */}
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            shouldUseLandscapeLayout && styles.contentLandscape,
+          ]}
+        >
+          <View style={styles.card}>
+            <AuraText style={styles.title} text="Mi Perfil" />
+            <AuraText style={styles.email} text={formData.email || ""} />
+            {formularioCompleto}
+            <TouchableOpacity style={styles.button} onPress={saveProfile}>
+              <AuraText style={styles.buttonText} text="Guardar Cambios" />
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+      <Toast />
+    </>
+  );
 }
 
 // Componente PortraitHeader
@@ -168,6 +263,14 @@ const LandscapeHeader = ({ colors, styles }) => (
 );
 
 const styles = StyleSheet.create({
+  toastContainer: {
+    ...(Platform.OS === "web" && {
+      position: "fixed",
+      top: 50,
+      right: 20,
+      zIndex: 9999,
+    }),
+  },
   container: {
     flex: 1,
     backgroundColor: "#EDE6DB",
@@ -206,15 +309,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   input: {
-      backgroundColor: "#DDD7C2",
-      borderRadius: 8,
-      padding: 12,
-      marginVertical: 8,
-      marginTop: 10,
-      width: "90%",
-      fontSize: 18,
-      color: "#919191",
-    },
+    backgroundColor: "#DDD7C2",
+    borderRadius: 8,
+    padding: 12,
+    marginVertical: 8,
+    marginTop: 10,
+    width: "90%",
+    fontSize: 18,
+    color: "#919191",
+  },
   card: {
     backgroundColor: "#fff",
     borderRadius: 20,
@@ -355,13 +458,11 @@ const styles = StyleSheet.create({
     maxHeight: 500, // Límite para pantallas grandes
   },
   contentLandscape: {
-  flexDirection: "row",     // para poner el contenido en horizontal
-  justifyContent: "center", // puedes ajustar esto según tu diseño
-  alignItems: "flex-start", // opcional, si quieres alinear arriba
-  gap: 20,                  // separación entre elementos si agregas más
-  paddingHorizontal: 32,
-  paddingVertical: 16,
-},
-
-
+    flexDirection: "row", // para poner el contenido en horizontal
+    justifyContent: "center", // puedes ajustar esto según tu diseño
+    alignItems: "flex-start", // opcional, si quieres alinear arriba
+    gap: 20, // separación entre elementos si agregas más
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+  },
 });
