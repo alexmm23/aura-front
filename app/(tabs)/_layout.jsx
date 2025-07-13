@@ -79,7 +79,7 @@ export default function TabsLayout() {
           name={item.name}
           options={{
             title: item.text,
-            tabBarLabel: item.text, // <-- Fuerza el label debajo del icono
+            //tabBarLabel: item.text, // Esto pone el texto debajo del icono
             tabBarIcon: ({ focused }) => (
               <View style={{ alignItems: "center", justifyContent: "center" }}>
                 <Image
@@ -94,10 +94,10 @@ export default function TabsLayout() {
                 />
                 <Text
                   style={{
+                    fontSize: 10,
                     color: focused ? "#fff" : "#e0e0e0",
-                    fontSize: 12,
                     fontWeight: "600",
-                    marginTop: 2,
+                    marginTop: 0,
                   }}
                 >
                   {item.text}
