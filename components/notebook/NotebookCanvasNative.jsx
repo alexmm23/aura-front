@@ -103,6 +103,8 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
   // Manejo de eventos táctiles directos (en lugar de PanResponder)
 
   const handleDrawStart = (x, y) => {
+    console.log("handleDrawStart called with:", x, y, "tool:", tool);
+
     if (tool === TOOL_TEXT) {
       setTextInputModal({
         visible: true,
@@ -137,6 +139,11 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
       return;
     }
 
+    if (isDrawing) {
+      console.log("Already drawing, ignoring start");
+      return;
+    }
+
     setIsDrawing(true);
 
     if (tool === TOOL_PENCIL || tool === TOOL_ERASER) {
@@ -150,48 +157,65 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
   const handleDrawMove = (x, y) => {
     if (!isDrawing) return;
 
-    if (tool === TOOL_PENCIL || tool === TOOL_ERASER) {
-      setCurrentPath((prev) => `${prev} L${x},${y}`);
-    } else if (tool === TOOL_RECT) {
-      setCurrentRect((prev) => ({ ...prev, endX: x, endY: y }));
+    try {
+      if (tool === TOOL_PENCIL || tool === TOOL_ERASER) {
+        setCurrentPath((prev) => `${prev} L${x},${y}`);
+      } else if (tool === TOOL_RECT) {
+        setCurrentRect((prev) => ({ ...prev, endX: x, endY: y }));
+      }
+    } catch (error) {
+      console.error("Error in handleDrawMove:", error);
     }
   };
 
   const handleDrawEnd = () => {
+    console.log("handleDrawEnd called, isDrawing:", isDrawing);
+
     if (!isDrawing) return;
 
-    if (tool === TOOL_PENCIL && currentPath) {
-      addLayer({
-        type: "drawing",
-        path: currentPath,
-        color,
-        strokeWidth: brushSize,
-        isEraser: false,
-      });
-    } else if (tool === TOOL_ERASER && currentPath) {
-      addLayer({
-        type: "drawing",
-        path: currentPath,
-        color: "transparent",
-        strokeWidth: brushSize * 2,
-        isEraser: true,
-      });
-    } else if (tool === TOOL_RECT && currentRect) {
-      const { startX, startY, endX, endY } = currentRect;
-      addLayer({
-        type: "rect",
-        x: Math.min(startX, endX),
-        y: Math.min(startY, endY),
-        width: Math.abs(endX - startX),
-        height: Math.abs(endY - startY),
-        color,
-        strokeWidth: brushSize,
-      });
-    }
+    try {
+      if (tool === TOOL_PENCIL && currentPath) {
+        addLayer({
+          type: "drawing",
+          path: currentPath,
+          color,
+          strokeWidth: brushSize,
+          isEraser: false,
+        });
+      } else if (tool === TOOL_ERASER && currentPath) {
+        addLayer({
+          type: "drawing",
+          path: currentPath,
+          color: "transparent",
+          strokeWidth: brushSize * 2,
+          isEraser: true,
+        });
+      } else if (tool === TOOL_RECT && currentRect) {
+        const { startX, startY, endX, endY } = currentRect;
+        const width = Math.abs(endX - startX);
+        const height = Math.abs(endY - startY);
 
-    setIsDrawing(false);
-    setCurrentPath("");
-    setCurrentRect(null);
+        // Solo crear el rectángulo si tiene un tamaño mínimo
+        if (width > 5 && height > 5) {
+          addLayer({
+            type: "rect",
+            x: Math.min(startX, endX),
+            y: Math.min(startY, endY),
+            width,
+            height,
+            color,
+            strokeWidth: brushSize,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error in handleDrawEnd:", error);
+    } finally {
+      // Siempre limpiar el estado
+      setIsDrawing(false);
+      setCurrentPath("");
+      setCurrentRect(null);
+    }
   };
 
   const findLayerAtPoint = (x, y) => {
@@ -287,80 +311,102 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
     }
   };
 
-  // Renderizado de capas
+  // Renderizado de capas con manejo de errores
   const renderLayers = () => {
-    return layers
-      .sort((a, b) => a.zIndex - b.zIndex)
-      .map((layer) => {
-        switch (layer.type) {
-          case "drawing":
-            return (
-              <Path
-                key={layer.id}
-                path={layer.path}
-                style={layer.isEraser ? "fill" : "stroke"}
-                strokeWidth={layer.strokeWidth}
-                color={layer.isEraser ? "transparent" : layer.color}
-                blendMode={layer.isEraser ? "clear" : "srcOver"}
-              />
-            );
-          case "rect":
-            return (
-              <Rect
-                key={layer.id}
-                x={layer.x}
-                y={layer.y}
-                width={layer.width}
-                height={layer.height}
-                style="stroke"
-                strokeWidth={layer.strokeWidth}
-                color={layer.color}
-              />
-            );
-          default:
-            return null;
-        }
-      });
+    try {
+      return layers
+        .sort((a, b) => a.zIndex - b.zIndex)
+        .map((layer) => {
+          if (!layer || !layer.id) return null;
+
+          switch (layer.type) {
+            case "drawing":
+              if (!layer.path) return null;
+              return (
+                <Path
+                  key={layer.id}
+                  path={layer.path}
+                  style={layer.isEraser ? "fill" : "stroke"}
+                  strokeWidth={layer.strokeWidth || 2}
+                  color={
+                    layer.isEraser ? "transparent" : layer.color || "black"
+                  }
+                  blendMode={layer.isEraser ? "clear" : "srcOver"}
+                />
+              );
+            case "rect":
+              if (!layer.width || !layer.height) return null;
+              return (
+                <Rect
+                  key={layer.id}
+                  x={layer.x || 0}
+                  y={layer.y || 0}
+                  width={layer.width}
+                  height={layer.height}
+                  style="stroke"
+                  strokeWidth={layer.strokeWidth || 2}
+                  color={layer.color || "black"}
+                />
+              );
+            default:
+              return null;
+          }
+        })
+        .filter(Boolean);
+    } catch (error) {
+      console.error("Error rendering layers:", error);
+      return [];
+    }
   };
 
-  // Renderizado de elementos en progreso
+  // Renderizado de elementos en progreso con manejo de errores
   const renderCurrentDrawing = () => {
-    const elements = [];
+    try {
+      const elements = [];
 
-    if (
-      isDrawing &&
-      currentPath &&
-      (tool === TOOL_PENCIL || tool === TOOL_ERASER)
-    ) {
-      elements.push(
-        <Path
-          key="current-path"
-          path={currentPath}
-          style={tool === TOOL_ERASER ? "fill" : "stroke"}
-          strokeWidth={tool === TOOL_ERASER ? brushSize * 2 : brushSize}
-          color={tool === TOOL_ERASER ? "transparent" : color}
-          blendMode={tool === TOOL_ERASER ? "clear" : "srcOver"}
-        />
-      );
+      if (
+        isDrawing &&
+        currentPath &&
+        (tool === TOOL_PENCIL || tool === TOOL_ERASER)
+      ) {
+        elements.push(
+          <Path
+            key="current-path"
+            path={currentPath}
+            style={tool === TOOL_ERASER ? "fill" : "stroke"}
+            strokeWidth={tool === TOOL_ERASER ? brushSize * 2 : brushSize}
+            color={tool === TOOL_ERASER ? "transparent" : color}
+            blendMode={tool === TOOL_ERASER ? "clear" : "srcOver"}
+          />
+        );
+      }
+
+      if (isDrawing && currentRect && tool === TOOL_RECT) {
+        const { startX, startY, endX, endY } = currentRect;
+        const width = Math.abs(endX - startX);
+        const height = Math.abs(endY - startY);
+
+        if (width > 0 && height > 0) {
+          elements.push(
+            <Rect
+              key="current-rect"
+              x={Math.min(startX, endX)}
+              y={Math.min(startY, endY)}
+              width={width}
+              height={height}
+              style="stroke"
+              strokeWidth={brushSize}
+              color={color}
+            />
+          );
+        }
+      }
+
+      return elements;
+    } catch (error) {
+      console.error("Error rendering current drawing:", error);
+      return [];
     }
-
-    if (isDrawing && currentRect && tool === TOOL_RECT) {
-      const { startX, startY, endX, endY } = currentRect;
-      elements.push(
-        <Rect
-          key="current-rect"
-          x={Math.min(startX, endX)}
-          y={Math.min(startY, endY)}
-          width={Math.abs(endX - startX)}
-          height={Math.abs(endY - startY)}
-          style="stroke"
-          strokeWidth={brushSize}
-          color={color}
-        />
-      );
-    }
-
-    return elements;
   };
 
   return (
@@ -554,15 +600,39 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
         <Canvas
           style={[StyleSheet.absoluteFillObject, styles.canvas]}
           onTouchStart={(event) => {
-            const touch = event.nativeEvent;
-            handleDrawStart(touch.locationX, touch.locationY);
+            try {
+              const touch = event.nativeEvent;
+              if (
+                touch &&
+                typeof touch.locationX === "number" &&
+                typeof touch.locationY === "number"
+              ) {
+                handleDrawStart(touch.locationX, touch.locationY);
+              }
+            } catch (error) {
+              console.error("Error in onTouchStart:", error);
+            }
           }}
           onTouchMove={(event) => {
-            const touch = event.nativeEvent;
-            handleDrawMove(touch.locationX, touch.locationY);
+            try {
+              const touch = event.nativeEvent;
+              if (
+                touch &&
+                typeof touch.locationX === "number" &&
+                typeof touch.locationY === "number"
+              ) {
+                handleDrawMove(touch.locationX, touch.locationY);
+              }
+            } catch (error) {
+              console.error("Error in onTouchMove:", error);
+            }
           }}
           onTouchEnd={() => {
-            handleDrawEnd();
+            try {
+              handleDrawEnd();
+            } catch (error) {
+              console.error("Error in onTouchEnd:", error);
+            }
           }}
         >
           <Group>
