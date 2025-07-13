@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   Text,
   Image,
+  useWindowDimensions,
+  ScrollView,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NotebookCanvas from "../../components/notebook/NotebookCanvas";
@@ -15,6 +17,8 @@ import { AuraText } from "../../components/AuraText";
 const NotebookScreen = () => {
   const [notes, setNotes] = useState([]);
   const [showCanvas, setShowCanvas] = useState(false);
+  const { width, height } = useWindowDimensions();
+  const isLargeScreen = width >= 928;
 
   useEffect(() => {
     loadNotes();
@@ -61,16 +65,54 @@ const NotebookScreen = () => {
     );
   }
 
+  // --- Responsive layouts ---
+  if (isLargeScreen) {
+    return (
+      <View style={responsiveStyles.landscapeContainer}>
+        <Image
+          source={require("../../assets/images/fondonotas.png")}
+          style={responsiveStyles.landscapeImage}
+          resizeMode="contain"
+          pointerEvents="none"
+        />
+
+        <View style={responsiveStyles.contentWrapper}>
+          <View style={responsiveStyles.header}>
+            <AuraText text={"Mis Notas"} style={responsiveStyles.title} />
+            <TouchableOpacity
+              style={responsiveStyles.newNoteButton}
+              onPress={() => setShowCanvas(true)}
+            >
+              <AuraText text={"+ Nueva Nota"} style={responsiveStyles.newNoteText} />
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={notes}
+            renderItem={renderNote}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            contentContainerStyle={responsiveStyles.notesList}
+            showsVerticalScrollIndicator={false}
+          />
+
+          <FloatingAIMenu />
+        </View>
+      </View>
+    );
+  }
+
+
+
+  // Portrait / mobile layout
   return (
     <View style={styles.container}>
-      {/* Imagen decorativa de fondo */}
       <Image
-        source={require("../../assets/images/fondonotas.png")} // Cambia por tu imagen
+        source={require("../../assets/images/fondonotas.png")}
         style={styles.backgroundImage}
-        resizeMode="contain" // o "cover" según prefieras
-        pointerEvents="none" // <-- Esto hace que no interfiera con toques
+        resizeMode="contain"
+        pointerEvents="none"
       />
-      {/* Contenido principal */}
       <View style={styles.header}>
         <AuraText text={"Mis Notas"} style={styles.title} />
         <TouchableOpacity
@@ -80,7 +122,6 @@ const NotebookScreen = () => {
           <AuraText text={"+ Nueva Nota"} style={styles.newNoteText} />
         </TouchableOpacity>
       </View>
-
       <FlatList
         data={notes}
         renderItem={renderNote}
@@ -98,17 +139,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E6E2D2",
-    position: "relative", // Importante para el posicionamiento absoluto
+    position: "relative",
   },
   backgroundImage: {
     position: "absolute",
-    marginTop:70,
     top: 0,
     left: 0,
     width: "100%",
-    height: "80%",
-    //opacity: , // Opcional: hazla más tenue
+    height: "100%",
     zIndex: 0,
+    transform: [
+      { rotate: "-45deg" },
+      { scale: 1.5 }
+    ],
   },
   header: {
     flexDirection: "row",
@@ -116,14 +159,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     marginTop: 48,
-    marginLeft: 150,
-    marginRight: 150,
-    backgroundColor: "transparent", // <-- Haz el fondo transparente
+    marginLeft: 24,
+    marginRight: 24,
+    backgroundColor: "transparent",
     borderBottomWidth: 1,
     borderBottomColor: "#e9ecef",
   },
   title: {
-    fontSize: 48,
+    fontSize: 36,
     fontWeight: "bold",
     color: "#CB8D27",
   },
@@ -164,6 +207,69 @@ const styles = StyleSheet.create({
     color: "#6c757d",
     textAlign: "center",
   },
+});
+
+const responsiveStyles = StyleSheet.create({
+  landscapeContainer: {
+    flex: 1,
+    backgroundColor: "#E6E2D2",
+    alignItems: "center",
+  },
+  landscapeImage: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "90%",
+    height: "100%",
+    marginLeft: "5%",
+    zIndex: 0,
+  },
+  rightSide: {
+    flex: 1,
+    padding: 40,
+    alignItems: "center",
+    backgroundColor: "transparent",
+    width: "100%",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    marginTop: 24,
+    marginLeft: 24,
+    marginRight: 24,
+    backgroundColor: "transparent",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9ecef",
+    width: "100%",
+  },
+  title: {
+    fontSize: 48,
+    fontWeight: "bold",
+    color: "#CB8D27",
+  },
+  newNoteButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#007bff",
+    borderRadius: 6,
+  },
+  newNoteText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  notesList: {
+    padding: 16,
+    width: "100%",
+  },
+  contentWrapper: {
+    width: "90%",
+    marginLeft: "5%",
+    marginRight: "5%",
+    flex: 1,
+  },
+
 });
 
 export default NotebookScreen;

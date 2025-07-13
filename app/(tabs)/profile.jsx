@@ -138,21 +138,13 @@ export default function Profile() {
               <TouchableOpacity onPress={() => googleLogin()}>
                 <Image
                   source={require("@/assets/images/classroom.png")}
-                  style={styles.icon}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => router.push("/profile/link_moodle")}
-              >
-                <Image
-                  source={require("@/assets/images/moodle.png")}
-                  style={styles.icon}
+                  style={styles.classroomIcon}
                 />
               </TouchableOpacity>
               <TouchableOpacity onPress={teamsLogin}>
                 <Image
                   source={require("@/assets/images/teams.png")}
-                  style={styles.icon}
+                  style={styles.teamsIcon}
                 />
               </TouchableOpacity>
             </View>
@@ -287,9 +279,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 25,
   },
-  icon: {
-    width: 100,
-    height: 100,
+  classroomIcon: {
+    width: 70,
+    height: 70,
+    aspectRatio: 1,
+    resizeMode: "contain",
+  },
+  teamsIcon: {
+    width: 40,
+    height: 40,
+    aspectRatio: 1,
     resizeMode: "contain",
   },
   button: {
@@ -392,7 +391,7 @@ const styles = StyleSheet.create({
   },
   headerImageLandscape: {
     width: "100%", // Ocupa todo el ancho disponible
-    height: "80%", // Ocupa más altura
-    maxHeight: 500, // Límite para pantallas grandes
+    height: "80%",// Ocupa más altura
+    maxHeight: 500 // Límite para pantallas grandes
   },
 });
