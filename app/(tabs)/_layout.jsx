@@ -10,20 +10,23 @@ export default function TabsLayout() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const MENU_ITEMS = [
-    { name: "home", 
+    {
+      name: "home",
       icon: require("../../assets/images/home.png"),
       text: "Inicio",
-       route: "/(tabs)/home" 
+      route: "/(tabs)/home",
     },
-    { name: "NoteBookScreen", 
-      icon: require("../../assets/images/cuaderno.png"), 
-      text: "Cuaderno", 
-      route: "/(tabs)/NoteBookScreen" 
+    {
+      name: "NoteBookScreen",
+      icon: require("../../assets/images/cuaderno.png"),
+      text: "Cuaderno",
+      route: "/(tabs)/NoteBookScreen",
     },
-    { name: "profile", 
+    {
+      name: "profile",
       icon: require("../../assets/images/perfil.png"),
-      text: "Perfil", 
-      route: "/(tabs)/profile" 
+      text: "Perfil",
+      route: "/(tabs)/profile",
     },
   ];
 
@@ -92,7 +95,7 @@ export default function TabsLayout() {
                   }}
                   resizeMode="contain"
                 />
-                <Text
+                {/* <Text
                   style={{
                     fontSize: 10,
                     color: focused ? "#fff" : "#e0e0e0",
@@ -101,7 +104,7 @@ export default function TabsLayout() {
                   }}
                 >
                   {item.text}
-                </Text>
+                </Text> */}
               </View>
             ),
           }}
