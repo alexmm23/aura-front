@@ -4,11 +4,42 @@ import { Colors } from "@/constants/Colors";
 import { useAuth } from "@/hooks/useAuth";
 import { useLayoutEffect } from "react";
 import { Image, View, Text } from "react-native";
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 export default function TabsLayout() {
   const colors = Colors.light;
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+
+  // Usamos useLayoutEffect para la navegación y agregamos un pequeño retraso
+  useLayoutEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      const timer = setTimeout(() => {
+        router.replace("/(auth)/login");
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  // Si aún estamos cargando o no autenticado, no renderizamos las pestañas
+  if (isLoading || !isAuthenticated) {
+    return null; // No renderizar nada mientras verificamos autenticación
+  }
+
+  return (
+    <SafeAreaProvider>
+      <TabsContent />
+    </SafeAreaProvider>
+  );
+}
+
+function TabsContent() {
+  const insets = useSafeAreaInsets();
+
   const MENU_ITEMS = [
     {
       name: "home",
@@ -30,22 +61,6 @@ export default function TabsLayout() {
     },
   ];
 
-  // Usamos useLayoutEffect para la navegación y agregamos un pequeño retraso
-  useLayoutEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      const timer = setTimeout(() => {
-        router.replace("/(auth)/login");
-      }, 100);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated, isLoading, router]);
-
-  // Si aún estamos cargando o no autenticado, no renderizamos las pestañas
-  if (isLoading || !isAuthenticated) {
-    return null; // No renderizar nada mientras verificamos autenticación
-  }
-
   return (
     <Tabs
       screenOptions={{
@@ -55,7 +70,8 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: "#7C3AED",
           borderTopWidth: 0,
-          height: 60,
+          // height: 60 + insets.bottom, // Agregar el espacio del área segura inferior
+          // paddingBottom: insets.bottom, // Padding para el área segura
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
         },
@@ -92,6 +108,7 @@ export default function TabsLayout() {
                     height: 28,
                     tintColor: focused ? "#fff" : "#e0e0e0",
                     marginBottom: 2,
+                    marginTop: 10,
                   }}
                   resizeMode="contain"
                 />
