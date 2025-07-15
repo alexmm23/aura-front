@@ -18,6 +18,7 @@ import {
   Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 
 // Constantes de herramientas
 const TOOL_PENCIL = "pen";
@@ -32,6 +33,12 @@ const textSizes = [12, 16, 20, 24, 32, 40];
 
 const NotebookCanvasNative = ({ onSave, onBack }) => {
   const canvasRef = useCanvasRef();
+
+  // Debug: Verificar que onBack se está pasando correctamente
+  React.useEffect(() => {
+    console.log("NotebookCanvasNative mounted");
+    console.log("onBack prop:", typeof onBack, onBack);
+  }, []);
 
   // Estados principales
   const [tool, setTool] = useState(TOOL_PENCIL);
@@ -410,399 +417,419 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Toolbar */}
-      <View style={styles.toolbar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {/* Herramientas */}
-          <TouchableOpacity
-            style={[
-              styles.toolButton,
-              tool === TOOL_SELECT && styles.activeButton,
-            ]}
-            onPress={() => setTool(TOOL_SELECT)}
-          >
-            <Ionicons
-              name="hand-left"
-              size={20}
-              color={tool === TOOL_SELECT ? "#fff" : "#333"}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.toolButton,
-              tool === TOOL_PENCIL && styles.activeButton,
-            ]}
-            onPress={() => setTool(TOOL_PENCIL)}
-          >
-            <Ionicons
-              name="create"
-              size={20}
-              color={tool === TOOL_PENCIL ? "#fff" : "#333"}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.toolButton,
-              tool === TOOL_RECT && styles.activeButton,
-            ]}
-            onPress={() => setTool(TOOL_RECT)}
-          >
-            <Ionicons
-              name="square-outline"
-              size={20}
-              color={tool === TOOL_RECT ? "#fff" : "#333"}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.toolButton,
-              tool === TOOL_ERASER && styles.activeButton,
-            ]}
-            onPress={() => setTool(TOOL_ERASER)}
-          >
-            <Ionicons
-              name="brush"
-              size={20}
-              color={tool === TOOL_ERASER ? "#fff" : "#333"}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.toolButton,
-              tool === TOOL_TEXT && styles.activeButton,
-            ]}
-            onPress={() => setTool(TOOL_TEXT)}
-          >
-            <Ionicons
-              name="text"
-              size={20}
-              color={tool === TOOL_TEXT ? "#fff" : "#333"}
-            />
-          </TouchableOpacity>
-
-          {/* Controles */}
-          <TouchableOpacity
-            style={styles.toolButton}
-            onPress={() => setShowColorPicker(!showColorPicker)}
-          >
-            <View style={[styles.colorPreview, { backgroundColor: color }]} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.toolButton}
-            onPress={() => setShowBrushSlider(!showBrushSlider)}
-          >
-            <Text style={styles.toolText}>{brushSize}</Text>
-          </TouchableOpacity>
-
-          {tool === TOOL_TEXT && (
-            <TouchableOpacity
-              style={styles.toolButton}
-              onPress={() => setShowTextSize(!showTextSize)}
-            >
-              <Text style={styles.toolText}>T{textSize}</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Acciones */}
-          <TouchableOpacity style={styles.toolButton} onPress={clearCanvas}>
-            <Ionicons name="trash" size={20} color="#333" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.toolButton} onPress={saveCanvas}>
-            <Ionicons name="save" size={20} color="#333" />
-          </TouchableOpacity>
-
-          {onBack && (
-            <TouchableOpacity style={styles.toolButton} onPress={onBack}>
-              <Ionicons name="arrow-back" size={20} color="#333" />
-            </TouchableOpacity>
-          )}
-        </ScrollView>
-      </View>
-
-      {/* Controles expandidos */}
-      {showColorPicker && (
-        <View style={styles.colorPicker}>
-          <ScrollView horizontal>
-            {colors.map((c) => (
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+        <View style={styles.container}>
+          {/* Toolbar */}
+          <View style={styles.toolbar}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {/* Herramientas */}
               <TouchableOpacity
-                key={c}
                 style={[
-                  styles.colorOption,
-                  { backgroundColor: c },
-                  color === c && styles.selectedColor,
+                  styles.toolButton,
+                  tool === TOOL_SELECT && styles.activeButton,
                 ]}
-                onPress={() => {
-                  setColor(c);
-                  setShowColorPicker(false);
-                }}
-              />
-            ))}
-          </ScrollView>
-        </View>
-      )}
+                onPress={() => setTool(TOOL_SELECT)}
+              >
+                <Ionicons
+                  name="hand-left"
+                  size={20}
+                  color={tool === TOOL_SELECT ? "#fff" : "#333"}
+                />
+              </TouchableOpacity>
 
-      {showBrushSlider && (
-        <View style={styles.controlPanel}>
-          <Text>Grosor: {brushSize}</Text>
-          <ScrollView horizontal>
-            {brushSizes.map((size) => (
               <TouchableOpacity
-                key={size}
                 style={[
-                  styles.sizeOption,
-                  brushSize === size && styles.selectedSize,
+                  styles.toolButton,
+                  tool === TOOL_PENCIL && styles.activeButton,
                 ]}
+                onPress={() => setTool(TOOL_PENCIL)}
+              >
+                <Ionicons
+                  name="create"
+                  size={20}
+                  color={tool === TOOL_PENCIL ? "#fff" : "#333"}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.toolButton,
+                  tool === TOOL_RECT && styles.activeButton,
+                ]}
+                onPress={() => setTool(TOOL_RECT)}
+              >
+                <Ionicons
+                  name="square-outline"
+                  size={20}
+                  color={tool === TOOL_RECT ? "#fff" : "#333"}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.toolButton,
+                  tool === TOOL_ERASER && styles.activeButton,
+                ]}
+                onPress={() => setTool(TOOL_ERASER)}
+              >
+                <Ionicons
+                  name="brush"
+                  size={20}
+                  color={tool === TOOL_ERASER ? "#fff" : "#333"}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.toolButton,
+                  tool === TOOL_TEXT && styles.activeButton,
+                ]}
+                onPress={() => setTool(TOOL_TEXT)}
+              >
+                <Ionicons
+                  name="text"
+                  size={20}
+                  color={tool === TOOL_TEXT ? "#fff" : "#333"}
+                />
+              </TouchableOpacity>
+
+              {/* Controles */}
+              <TouchableOpacity
+                style={styles.toolButton}
+                onPress={() => setShowColorPicker(!showColorPicker)}
+              >
+                <View
+                  style={[styles.colorPreview, { backgroundColor: color }]}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.toolButton}
+                onPress={() => setShowBrushSlider(!showBrushSlider)}
+              >
+                <Text style={styles.toolText}>{brushSize}</Text>
+              </TouchableOpacity>
+
+              {tool === TOOL_TEXT && (
+                <TouchableOpacity
+                  style={styles.toolButton}
+                  onPress={() => setShowTextSize(!showTextSize)}
+                >
+                  <Text style={styles.toolText}>T{textSize}</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Acciones */}
+              <TouchableOpacity style={styles.toolButton} onPress={clearCanvas}>
+                <Ionicons name="trash" size={20} color="#333" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.toolButton} onPress={saveCanvas}>
+                <Ionicons name="save" size={20} color="#333" />
+              </TouchableOpacity>
+
+              {/* Botón de regresar - siempre visible */}
+              <TouchableOpacity
+                style={[styles.toolButton, styles.backButton]}
                 onPress={() => {
-                  setBrushSize(size);
-                  setShowBrushSlider(false);
+                  console.log("Back button pressed, onBack:", typeof onBack);
+                  if (onBack) {
+                    onBack();
+                  } else {
+                    console.log("onBack function not provided");
+                  }
                 }}
               >
-                <Text>{size}</Text>
+                <Ionicons name="arrow-back" size={20} color="#fff" />
+                <Text style={styles.backButtonText}>Volver</Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
+            </ScrollView>
+          </View>
 
-      {showTextSize && (
-        <View style={styles.controlPanel}>
-          <Text>Tamaño de texto: {textSize}</Text>
-          <ScrollView horizontal>
-            {textSizes.map((size) => (
-              <TouchableOpacity
-                key={size}
-                style={[
-                  styles.sizeOption,
-                  textSize === size && styles.selectedSize,
-                ]}
-                onPress={() => {
-                  setTextSize(size);
-                  setShowTextSize(false);
-                }}
-              >
-                <Text>{size}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
+          {/* Controles expandidos */}
+          {showColorPicker && (
+            <View style={styles.colorPicker}>
+              <ScrollView horizontal>
+                {colors.map((c) => (
+                  <TouchableOpacity
+                    key={c}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: c },
+                      color === c && styles.selectedColor,
+                    ]}
+                    onPress={() => {
+                      setColor(c);
+                      setShowColorPicker(false);
+                    }}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
-      {/* Canvas Container */}
-      <View style={styles.canvasContainer}>
-        {/* Canvas de Skia con eventos táctiles nativos */}
-        <Canvas
-          style={[StyleSheet.absoluteFillObject, styles.canvas]}
-          onTouchStart={(event) => {
-            try {
-              const touch = event.nativeEvent;
-              if (
-                touch &&
-                typeof touch.locationX === "number" &&
-                typeof touch.locationY === "number"
-              ) {
-                handleDrawStart(touch.locationX, touch.locationY);
-              }
-            } catch (error) {
-              console.error("Error in onTouchStart:", error);
-            }
-          }}
-          onTouchMove={(event) => {
-            try {
-              const touch = event.nativeEvent;
-              if (
-                touch &&
-                typeof touch.locationX === "number" &&
-                typeof touch.locationY === "number"
-              ) {
-                handleDrawMove(touch.locationX, touch.locationY);
-              }
-            } catch (error) {
-              console.error("Error in onTouchMove:", error);
-            }
-          }}
-          onTouchEnd={() => {
-            try {
-              handleDrawEnd();
-            } catch (error) {
-              console.error("Error in onTouchEnd:", error);
-            }
-          }}
-        >
-          <Group>
-            {renderLayers()}
-            {renderCurrentDrawing()}
-          </Group>
-        </Canvas>
+          {showBrushSlider && (
+            <View style={styles.controlPanel}>
+              <Text>Grosor: {brushSize}</Text>
+              <ScrollView horizontal>
+                {brushSizes.map((size) => (
+                  <TouchableOpacity
+                    key={size}
+                    style={[
+                      styles.sizeOption,
+                      brushSize === size && styles.selectedSize,
+                    ]}
+                    onPress={() => {
+                      setBrushSize(size);
+                      setShowBrushSlider(false);
+                    }}
+                  >
+                    <Text>{size}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
-        {/* Overlay de texto con React Native */}
-        {textElements.map((textEl) => (
-          <View
-            key={textEl.id}
-            style={[
-              styles.textOverlay,
-              {
-                left: textEl.x,
-                top: textEl.y,
-                opacity: selectedLayerId === textEl.id ? 0.7 : 1,
-              },
-            ]}
-            pointerEvents="none"
-          >
-            <Text
-              style={{
-                fontSize: textEl.fontSize,
-                color: textEl.color,
-                fontWeight: "normal",
+          {showTextSize && (
+            <View style={styles.controlPanel}>
+              <Text>Tamaño de texto: {textSize}</Text>
+              <ScrollView horizontal>
+                {textSizes.map((size) => (
+                  <TouchableOpacity
+                    key={size}
+                    style={[
+                      styles.sizeOption,
+                      textSize === size && styles.selectedSize,
+                    ]}
+                    onPress={() => {
+                      setTextSize(size);
+                      setShowTextSize(false);
+                    }}
+                  >
+                    <Text>{size}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Canvas Container */}
+          <View style={styles.canvasContainer}>
+            {/* Canvas de Skia con eventos táctiles nativos */}
+            <Canvas
+              style={[StyleSheet.absoluteFillObject, styles.canvas]}
+              onTouchStart={(event) => {
+                try {
+                  const touch = event.nativeEvent;
+                  if (
+                    touch &&
+                    typeof touch.locationX === "number" &&
+                    typeof touch.locationY === "number"
+                  ) {
+                    handleDrawStart(touch.locationX, touch.locationY);
+                  }
+                } catch (error) {
+                  console.error("Error in onTouchStart:", error);
+                }
+              }}
+              onTouchMove={(event) => {
+                try {
+                  const touch = event.nativeEvent;
+                  if (
+                    touch &&
+                    typeof touch.locationX === "number" &&
+                    typeof touch.locationY === "number"
+                  ) {
+                    handleDrawMove(touch.locationX, touch.locationY);
+                  }
+                } catch (error) {
+                  console.error("Error in onTouchMove:", error);
+                }
+              }}
+              onTouchEnd={() => {
+                try {
+                  handleDrawEnd();
+                } catch (error) {
+                  console.error("Error in onTouchEnd:", error);
+                }
               }}
             >
-              {textEl.text}
-            </Text>
-          </View>
-        ))}
-      </View>
+              <Group>
+                {renderLayers()}
+                {renderCurrentDrawing()}
+              </Group>
+            </Canvas>
 
-      {/* Panel de capas */}
-      {tool === TOOL_SELECT && (
-        <View style={styles.layersPanel}>
-          <Text style={styles.layersPanelTitle}>
-            Elementos ({layers.length + textElements.length})
-          </Text>
-          <ScrollView>
-            {/* Elementos de texto */}
-            {textElements
-              .sort((a, b) => b.zIndex - a.zIndex)
-              .map((textEl) => (
-                <View
-                  key={textEl.id}
-                  style={[
-                    styles.layerItem,
-                    selectedLayerId === textEl.id && styles.selectedLayer,
-                  ]}
-                >
-                  <TouchableOpacity
-                    style={styles.layerContent}
-                    onPress={() => setSelectedLayerId(textEl.id)}
-                  >
-                    <Text style={styles.layerText}>
-                      📝 {textEl.text.substring(0, 10)}...
-                    </Text>
-                  </TouchableOpacity>
-
-                  <View style={styles.layerControls}>
-                    <TouchableOpacity
-                      onPress={() => removeTextElement(textEl.id)}
-                    >
-                      <Text>🗑️</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-
-            {/* Capas de Skia */}
-            {layers
-              .sort((a, b) => b.zIndex - a.zIndex)
-              .map((layer) => (
-                <View
-                  key={layer.id}
-                  style={[
-                    styles.layerItem,
-                    selectedLayerId === layer.id && styles.selectedLayer,
-                  ]}
-                >
-                  <TouchableOpacity
-                    style={styles.layerContent}
-                    onPress={() => setSelectedLayerId(layer.id)}
-                  >
-                    <Text style={styles.layerText}>
-                      {layer.type === "drawing"
-                        ? "✏️"
-                        : layer.type === "rect"
-                        ? "▭"
-                        : "❓"}
-                      {layer.type}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <View style={styles.layerControls}>
-                    <TouchableOpacity onPress={() => removeLayer(layer.id)}>
-                      <Text>🗑️</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {/* Modal de texto */}
-      <Modal
-        visible={textInputModal.visible}
-        transparent
-        animationType="fade"
-        onRequestClose={() =>
-          setTextInputModal({
-            visible: false,
-            x: 0,
-            y: 0,
-            text: "",
-            editingId: null,
-          })
-        }
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.textInputContainer}>
-            <Text style={styles.modalTitle}>
-              {textInputModal.editingId ? "Editar texto" : "Agregar texto"}
-            </Text>
-            <TextInput
-              style={styles.textInput}
-              value={textInputModal.text}
-              onChangeText={(text) =>
-                setTextInputModal((prev) => ({ ...prev, text }))
-              }
-              placeholder="Escribe aquí..."
-              multiline
-              autoFocus
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={() =>
-                  setTextInputModal({
-                    visible: false,
-                    x: 0,
-                    y: 0,
-                    text: "",
-                    editingId: null,
-                  })
-                }
+            {/* Overlay de texto con React Native */}
+            {textElements.map((textEl) => (
+              <View
+                key={textEl.id}
+                style={[
+                  styles.textOverlay,
+                  {
+                    left: textEl.x,
+                    top: textEl.y,
+                    opacity: selectedLayerId === textEl.id ? 0.7 : 1,
+                  },
+                ]}
+                pointerEvents="none"
               >
-                <Text>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.primaryButton]}
-                onPress={handleTextSubmit}
-              >
-                <Text style={styles.primaryButtonText}>
-                  {textInputModal.editingId ? "Actualizar" : "Agregar"}
+                <Text
+                  style={{
+                    fontSize: textEl.fontSize,
+                    color: textEl.color,
+                    fontWeight: "normal",
+                  }}
+                >
+                  {textEl.text}
                 </Text>
-              </TouchableOpacity>
-            </View>
+              </View>
+            ))}
           </View>
+
+          {/* Panel de capas */}
+          {tool === TOOL_SELECT && (
+            <View style={styles.layersPanel}>
+              <Text style={styles.layersPanelTitle}>
+                Elementos ({layers.length + textElements.length})
+              </Text>
+              <ScrollView>
+                {/* Elementos de texto */}
+                {textElements
+                  .sort((a, b) => b.zIndex - a.zIndex)
+                  .map((textEl) => (
+                    <View
+                      key={textEl.id}
+                      style={[
+                        styles.layerItem,
+                        selectedLayerId === textEl.id && styles.selectedLayer,
+                      ]}
+                    >
+                      <TouchableOpacity
+                        style={styles.layerContent}
+                        onPress={() => setSelectedLayerId(textEl.id)}
+                      >
+                        <Text style={styles.layerText}>
+                          📝 {textEl.text.substring(0, 10)}...
+                        </Text>
+                      </TouchableOpacity>
+
+                      <View style={styles.layerControls}>
+                        <TouchableOpacity
+                          onPress={() => removeTextElement(textEl.id)}
+                        >
+                          <Text>🗑️</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+
+                {/* Capas de Skia */}
+                {layers
+                  .sort((a, b) => b.zIndex - a.zIndex)
+                  .map((layer) => (
+                    <View
+                      key={layer.id}
+                      style={[
+                        styles.layerItem,
+                        selectedLayerId === layer.id && styles.selectedLayer,
+                      ]}
+                    >
+                      <TouchableOpacity
+                        style={styles.layerContent}
+                        onPress={() => setSelectedLayerId(layer.id)}
+                      >
+                        <Text style={styles.layerText}>
+                          {layer.type === "drawing"
+                            ? "✏️"
+                            : layer.type === "rect"
+                            ? "▭"
+                            : "❓"}
+                          {layer.type}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <View style={styles.layerControls}>
+                        <TouchableOpacity onPress={() => removeLayer(layer.id)}>
+                          <Text>🗑️</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Modal de texto */}
+          <Modal
+            visible={textInputModal.visible}
+            transparent
+            animationType="fade"
+            onRequestClose={() =>
+              setTextInputModal({
+                visible: false,
+                x: 0,
+                y: 0,
+                text: "",
+                editingId: null,
+              })
+            }
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.textInputContainer}>
+                <Text style={styles.modalTitle}>
+                  {textInputModal.editingId ? "Editar texto" : "Agregar texto"}
+                </Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={textInputModal.text}
+                  onChangeText={(text) =>
+                    setTextInputModal((prev) => ({ ...prev, text }))
+                  }
+                  placeholder="Escribe aquí..."
+                  multiline
+                  autoFocus
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={styles.modalButton}
+                    onPress={() =>
+                      setTextInputModal({
+                        visible: false,
+                        x: 0,
+                        y: 0,
+                        text: "",
+                        editingId: null,
+                      })
+                    }
+                  >
+                    <Text>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.primaryButton]}
+                    onPress={handleTextSubmit}
+                  >
+                    <Text style={styles.primaryButtonText}>
+                      {textInputModal.editingId ? "Actualizar" : "Agregar"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
         </View>
-      </Modal>
-    </View>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#E6E2D2",
+  },
   container: {
     flex: 1,
     backgroundColor: "#E6E2D2",
@@ -826,6 +853,19 @@ const styles = StyleSheet.create({
   },
   activeButton: {
     backgroundColor: "#007bff",
+  },
+  backButton: {
+    backgroundColor: "#dc3545",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    minWidth: 80,
+  },
+  backButtonText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+    marginLeft: 4,
   },
   toolText: {
     fontSize: 12,
