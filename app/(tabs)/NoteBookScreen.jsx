@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { Share } from "react-native";
+import jsPDF from "jspdf";
 import {
   View,
   StyleSheet,
@@ -42,10 +44,39 @@ const NotebookScreen = () => {
     }
   };
 
-  const handleNoteSaved = () => {
-    loadNotes();
-    setShowCanvas(false);
-  };
+
+  const handleShare = async () => {
+  try {
+    // Use the last PNG dataURL
+    const dataUrl = lastPngDataUrl || (notes[0] && notes[0].data);
+    if (!dataUrl) {
+      alert("No hay notas para compartir.");
+      return;
+    }
+
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "px",
+      format: [400, 600],
+    });
+
+    pdf.addImage(dataUrl, "PNG", 0, 0, 400, 600);
+    pdf.save(`nota-${Date.now()}.pdf`);
+  } catch (error) {
+    alert("Error al compartir PDF");
+  }
+};
+
+  const handleNoteSaved = (dataUrl) => {
+  // Save the note as before (if needed)
+  loadNotes();
+  setShowCanvas(false);
+
+  // Optionally, store the last PNG for sharing
+  setLastPngDataUrl(dataUrl);
+};
+
+  const [lastPngDataUrl, setLastPngDataUrl] = useState(null);
 
   const renderNote = ({ item }) => (
     <TouchableOpacity style={styles.noteItem}>
