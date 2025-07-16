@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Share } from "react-native";
 import jsPDF from "jspdf";
 import {
   View,
@@ -11,6 +10,7 @@ import {
   useWindowDimensions,
   ScrollView,
 } from "react-native";
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NotebookCanvas from "../../components/notebook/NotebookCanvas";
 import FloatingAIMenu from "../../components/FloatingAIMenu";
@@ -96,7 +96,6 @@ const NotebookScreen = () => {
     );
   }
 
-  // --- Responsive layouts ---
   if (isLargeScreen) {
     return (
       <View style={responsiveStyles.landscapeContainer}>
@@ -106,7 +105,7 @@ const NotebookScreen = () => {
           resizeMode="contain"
           pointerEvents="none"
         />
-
+  
         <View style={responsiveStyles.contentWrapper}>
           <View style={responsiveStyles.header}>
             <AuraText text={"Mis Notas"} style={responsiveStyles.title} />
@@ -117,7 +116,7 @@ const NotebookScreen = () => {
               <AuraText text={"+ Nueva Nota"} style={responsiveStyles.newNoteText} />
             </TouchableOpacity>
           </View>
-
+  
           <FlatList
             data={notes}
             renderItem={renderNote}
@@ -126,7 +125,15 @@ const NotebookScreen = () => {
             contentContainerStyle={responsiveStyles.notesList}
             showsVerticalScrollIndicator={false}
           />
-
+  
+          {/* Add the share button here */}
+          <TouchableOpacity
+            style={styles.floatingHelpButton}
+            onPress={handleShare}
+          >
+            <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 24 }}>⇪</Text>
+          </TouchableOpacity>
+  
           <FloatingAIMenu />
         </View>
       </View>
@@ -161,6 +168,11 @@ const NotebookScreen = () => {
         contentContainerStyle={styles.notesList}
         showsVerticalScrollIndicator={false}
       />
+      <TouchableOpacity
+        style={styles.floatingHelpButton}
+        onPress={handleShare}
+      ><Text style={{ color: "#fff", fontWeight: "bold", fontSize: 24 }}>⇪</Text>
+      </TouchableOpacity>
       <FloatingAIMenu />
     </View>
   );
@@ -231,6 +243,23 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 4,
     backgroundColor: "#f8f9fa",
+  },
+  floatingHelpButton: {
+    position: "absolute",
+    bottom: 90, // Just above the AI menu
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#28a745",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    zIndex: 100,
   },
   noteDate: {
     marginTop: 8,
