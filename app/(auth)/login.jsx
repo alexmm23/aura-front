@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { KeyboardAvoidingView, Platform } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
+import { Ionicons } from "@expo/vector-icons";
 
 import {
   View,
@@ -33,6 +34,7 @@ export default function Login() {
     password: "",
   });
   const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (field, value) => {
     setFormData({
@@ -101,13 +103,25 @@ export default function Login() {
       />
       {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-      <AuraTextInput
-        style={styles.input}
-        placeholder="Contraseña"
-        value={formData.password}
-        onChangeText={(text) => handleChange("password", text)}
-        secureTextEntry
-      />
+      <View style={styles.passwordContainer}>
+        <AuraTextInput
+          style={styles.passwordInput}
+          placeholder="Contraseña"
+          value={formData.password}
+          onChangeText={(text) => handleChange("password", text)}
+          secureTextEntry={!showPassword}
+        />
+        <TouchableOpacity
+          style={styles.eyeButton}
+          onPress={() => setShowPassword(!showPassword)}
+        >
+          <Ionicons
+            name={showPassword ? "eye" : "eye-off"}
+            size={24}
+            color="#919191"
+          />
+        </TouchableOpacity>
+      </View>
       {errors.password && (
         <Text style={styles.errorText}>{errors.password}</Text>
       )}
@@ -292,6 +306,36 @@ const createStyles = (theme) => {
       fontSize: 18,
       color: "#919191",
     },
+    passwordContainer: {
+      backgroundColor: "#DDD7C2",
+      borderRadius: 8,
+      padding: 4,
+      position: "relative",
+      width: "90%",
+      marginVertical: 8,
+      marginTop: 20,
+      fontSize: 18,
+      color: "#919191",
+    },
+    passwordInput: {
+      width: "100%",
+      paddingRight: 50, // Espacio para el icono
+      marginVertical: 0,
+      fontSize: 18,
+      color: "#919191",
+      outlineColor: "#DDD7C2",
+      outlineStyle: "none",
+      padding: 8,
+    },
+    eyeButton: {
+      position: "absolute",
+      right: 12,
+      top: "50%",
+      transform: [{ translateY: -12 }],
+      padding: 4,
+      zIndex: 1,
+      borderRadius: 4,
+    },
     errorText: {
       color: "red",
       fontSize: 12,
@@ -446,6 +490,25 @@ const localStyles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 15,
+  },
+  passwordContainer: {
+    position: "relative",
+    width: "100%",
+    marginBottom: 15,
+  },
+  passwordInput: {
+    width: "100%",
+    paddingRight: 50, // Espacio para el icono
+    marginBottom: 0,
+  },
+  eyeButton: {
+    position: "absolute",
+    right: 12,
+    top: "50%",
+    transform: [{ translateY: -12 }],
+    padding: 4,
+    zIndex: 1,
+    borderRadius: 4,
   },
   link: {
     fontSize: 12,
