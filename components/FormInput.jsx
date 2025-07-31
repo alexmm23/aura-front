@@ -15,6 +15,8 @@ const FormInput = React.forwardRef(
       error = "",
       onSubmitEditing,
       returnKeyType = "next",
+      style,
+      ...otherProps
     },
     ref
   ) => {
@@ -26,7 +28,7 @@ const FormInput = React.forwardRef(
         {/* {label ? <Text style={styles.label}>{label}</Text> : null} */}
         <TextInput
           ref={ref}
-          style={styles.input}
+          style={[styles.input, style]}
           placeholder={placeholder}
           value={value}
           onChangeText={onChangeText}
@@ -34,6 +36,7 @@ const FormInput = React.forwardRef(
           placeholderTextColor="#a0a0a0" // Light gray placeholder text
           returnKeyType={returnKeyType} // Set the return key type
           onSubmitEditing={onSubmitEditing} // Handle moving to the next input
+          {...otherProps}
         />
         {error ? (
           <AuraText

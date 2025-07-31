@@ -1,5 +1,12 @@
 import React, { useState, useRef } from "react";
-import { View, StyleSheet, useWindowDimensions, Text } from "react-native";
+import {
+  View,
+  StyleSheet,
+  useWindowDimensions,
+  Text,
+  TouchableOpacity,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import FormInput from "./FormInput";
 import PrimaryButton from "./PrimaryButton";
 import Link from "./Link";
@@ -16,6 +23,8 @@ const FormRegister = ({
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const apellidosInputRef = useRef(null);
   const emailInputRef = useRef(null);
@@ -34,13 +43,13 @@ const FormRegister = ({
   // Función para calcular fortaleza de contraseña (0 a 1)
   const checkPasswordStrength = (password) => {
     if (!password) return 0;
-    
+
     let strength = 0;
     if (password.length >= 8) strength += 0.3;
     if (/\d/.test(password)) strength += 0.3;
     if (/[A-Z]/.test(password)) strength += 0.2;
     if (/[^A-Za-z0-9]/.test(password)) strength += 0.2;
-    
+
     return Math.min(strength, 1); // Asegurar que no pase de 1
   };
 
@@ -59,11 +68,11 @@ const FormRegister = ({
   };
 
   return (
-    <View style={[styles.formContainer, isLandscape && styles.landscapeAdjustment]}>
-      {errors.general && (
-        <Text style={styles.errorText}>{errors.general}</Text>
-      )}
-      
+    <View
+      style={[styles.formContainer, isLandscape && styles.landscapeAdjustment]}
+    >
+      {errors.general && <Text style={styles.errorText}>{errors.general}</Text>}
+
       <FormInput
         placeholder="Nombre: "
         value={formData.nombre}
@@ -93,18 +102,31 @@ const FormRegister = ({
         error={errors.email}
       />
 
-      <FormInput
-        placeholder="Contraseña: "
-        value={formData.password}
-        onChangeText={(text) => {
-          handleChange("password", text);
-          setPasswordStrength(checkPasswordStrength(text));
-        }}
-        onSubmitEditing={() => confirmPasswordInputRef.current?.focus()}
-        secureTextEntry
-        ref={passwordInputRef}
-        error={errors.password}
-      />
+      <View style={styles.passwordContainer}>
+        <FormInput
+          placeholder="Contraseña: "
+          value={formData.password}
+          onChangeText={(text) => {
+            handleChange("password", text);
+            setPasswordStrength(checkPasswordStrength(text));
+          }}
+          onSubmitEditing={() => confirmPasswordInputRef.current?.focus()}
+          secureTextEntry={!showPassword}
+          ref={passwordInputRef}
+          error={errors.password}
+          style={styles.passwordInput}
+        />
+        <TouchableOpacity
+          style={styles.eyeButton}
+          onPress={() => setShowPassword(!showPassword)}
+        >
+          <Ionicons
+            name={showPassword ? "eye-off" : "eye"}
+            size={24}
+            color="#919191"
+          />
+        </TouchableOpacity>
+      </View>
 
       {formData.password.length > 0 && (
         <View style={styles.passwordStrengthContainer}>
@@ -112,24 +134,39 @@ const FormRegister = ({
             progress={passwordStrength}
             color={passwordStrengthColor(passwordStrength)}
           />
-          <Text style={[
-            styles.passwordStrengthText,
-            { color: passwordStrengthColor(passwordStrength) }
-          ]}>
+          <Text
+            style={[
+              styles.passwordStrengthText,
+              { color: passwordStrengthColor(passwordStrength) },
+            ]}
+          >
             {passwordStrengthText(passwordStrength)}
           </Text>
         </View>
       )}
 
-      <FormInput
-        placeholder="Confirmar Contraseña: "
-        value={formData.confirmPassword}
-        onChangeText={(text) => handleChange("confirmPassword", text)}
-        onSubmitEditing={handleSubmit}
-        secureTextEntry
-        ref={confirmPasswordInputRef}
-        error={errors.confirmPassword}
-      />
+      <View style={styles.passwordContainer}>
+        <FormInput
+          placeholder="Confirmar Contraseña: "
+          value={formData.confirmPassword}
+          onChangeText={(text) => handleChange("confirmPassword", text)}
+          onSubmitEditing={handleSubmit}
+          secureTextEntry={!showConfirmPassword}
+          ref={confirmPasswordInputRef}
+          error={errors.confirmPassword}
+          style={styles.passwordInput}
+        />
+        <TouchableOpacity
+          style={styles.eyeButton}
+          onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+        >
+          <Ionicons
+            name={showConfirmPassword ? "eye-off" : "eye"}
+            size={24}
+            color="#919191"
+          />
+        </TouchableOpacity>
+      </View>
 
       <PrimaryButton
         title="Registrarse"
@@ -156,20 +193,38 @@ const styles = StyleSheet.create({
     maxWidth: 700,
   },
   errorText: {
-    color: "red", 
-    fontSize: 16, 
+    color: "red",
+    fontSize: 16,
     marginBottom: 10,
     textAlign: "center",
   },
   passwordStrengthContainer: {
-    width: '100%',
+    width: "100%",
     marginTop: 5,
     marginBottom: 15,
+  },
+  passwordContainer: {
+    position: "relative",
+    width: "100%",
+    justifyContent: "center", // Ayuda a centrar el contenido
+  },
+  passwordInput: {
+    paddingRight: 50, // Espacio para el icono
+    marginBottom: 0, // Remover margen para que el contenedor lo maneje
+  },
+  eyeButton: {
+    position: "absolute",
+    right: 12,
+    top: "50%",
+    marginTop: -12, // La mitad del tamaño del icono (24px / 2 = 12px)
+    padding: 8,
+    zIndex: 1,
+    borderRadius: 4,
   },
   passwordStrengthText: {
     fontSize: 12,
     marginTop: 4,
-    textAlign: 'center',
+    textAlign: "center",
     // Agrega aquí la fuente que uses en tu app
     // fontFamily: 'TuFuente',
   },
