@@ -93,10 +93,9 @@ export default function Login() {
       await login(token, refreshToken);
 
       const decoded = decodeJWT(token);
-      console.log("Decoded JWT:", decoded);
 
       if (decoded && Number(decoded.role_id) === 3) {
-      router.replace("/register");
+      router.replace("/home_teacher");
       } else {
         router.replace("/home");
       }
