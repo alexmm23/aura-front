@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { KeyboardAvoidingView, Platform } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
@@ -22,6 +23,24 @@ import { AuraText } from "@/components/AuraText";
 import { AuraTextInput } from "@/components/AuraTextInput";
 import PrimaryButton from "@/components/PrimaryButton";
 import { GoogleIconSvg } from "@/components/LinkIcons";
+
+function decodeJWT(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    console.error("Manual JWT decode error:", e);
+    return null;
+  }
+}
+
 export default function Login() {
   const router = useRouter();
   const { height, width } = useWindowDimensions();
@@ -70,10 +89,18 @@ export default function Login() {
       });
       const data = await response.json();
       if (response.ok) {
-        const { token, refreshToken } = data;
-        await login(token, refreshToken);
-        router.replace("/home");
+      const { token, refreshToken } = data;
+      await login(token, refreshToken);
+
+      const decoded = decodeJWT(token);
+      console.log("Decoded JWT:", decoded);
+
+      if (decoded && Number(decoded.role_id) === 3) {
+      router.replace("/register");
       } else {
+        router.replace("/home");
+      }
+      }else {
         const { error } = data;
         console.error("Login error:", error);
         setErrors({ form: error });
