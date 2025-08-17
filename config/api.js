@@ -3,10 +3,10 @@ import { Platform } from 'react-native';
 import { API_URL } from '@env';
 
 // Get configuration from app.config.js and .env
-const { apiUrl, apiProduction } = Constants.expoConfig?.extra || {};
+const { apiUrl, apiProduction }=Constants.expoConfig?.extra||{};
 
 // Determine current environment
-const getCurrentEnvironment = () => {
+const getCurrentEnvironment=() => {
   // For Expo Go
   if (__DEV__) {
     return 'development';
@@ -16,25 +16,25 @@ const getCurrentEnvironment = () => {
 };
 
 // Get the base API URL depending on environment
-const getBaseUrl = () => {
-  const environment = getCurrentEnvironment();
+const getBaseUrl=() => {
+  const environment=getCurrentEnvironment();
   // For Android emulator, localhost refers to the emulator itself, not your machine
-  const devUrl = Platform.OS === 'android'
+  const devUrl=Platform.OS==='android'
     ? 'http://192.168.0.128:3000/api'
-    : 'http://localhost:3000/api'; // TODO: Change to your local dev URL
+    :'http://localhost:3000/api'; // TODO: Change to your local dev URL
   console.log('API URL:', devUrl);
 
   // Environments configuration
-  const urls = {
+  const urls={
     development: devUrl,
-    production: apiProduction || 'https://api.aura-app.com/api',
+    production: apiProduction||'https://api.aura-app.com/api',
   };
 
-  return urls[environment] || urls.development;
+  return urls[environment]||urls.development;
 };
 
 // API endpoints
-export const API = {
+export const API={
   BASE_URL: getBaseUrl(),
   ENDPOINTS: {
     // Auth endpoints
@@ -52,6 +52,12 @@ export const API = {
     // Student endpoints
     STUDENT: {
       HOMEWORK: '/student/homework',
+      NOTEBOOKS: '/notebook/list',
+      NOTEBOOK_DETAIL: '/notebook/detail',
+      NOTEBOOK_CREATE: '/notebook/add',
+      NOTEBOOK_UPDATE: '/notebook/edit',
+      NOTEBOOK_DELETE: '/notebook/delete',
+
     },
     // Profile endpoints
     PROFILE: {
@@ -63,7 +69,7 @@ export const API = {
 };
 
 // Helper function to build full API URLs
-export const buildApiUrl = (endpoint) => {
+export const buildApiUrl=(endpoint) => {
   return `${API.BASE_URL}${endpoint}`;
 };
 

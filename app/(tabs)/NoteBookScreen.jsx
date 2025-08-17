@@ -9,22 +9,60 @@ import {
   Image,
   useWindowDimensions,
   ScrollView,
+  Modal,
+  TextInput,
+  Alert,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NotebookCanvas from "../../components/notebook/NotebookCanvas";
 import FloatingAIMenu from "../../components/FloatingAIMenu";
 import { AuraText } from "../../components/AuraText";
+import { API, buildApiUrl } from "@/config/api";
 
 const NotebookScreen = () => {
   const [notes, setNotes] = useState([]);
   const [showCanvas, setShowCanvas] = useState(false);
+  const [noteBooks, setNoteBooks] = useState([]);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [notebookTitle, setNotebookTitle] = useState("");
   const { width, height } = useWindowDimensions();
   const isLargeScreen = width >= 928;
 
   useEffect(() => {
+    const loadNotes = async () => {
+      try {
+        const response = await fetchNotes();
+        console.log("Fetched notes:", response);
+        setNoteBooks(response);
+      } catch (error) {
+        console.error("Error fetching notes:", error);
+      }
+    };
+
     loadNotes();
   }, []);
+
+  useEffect(() => {
+    console.log("Modal state changed:", showCreateDialog);
+  }, [showCreateDialog]);
+
+  const fetchNotes = async () => {
+    const token = await AsyncStorage.getItem("userToken");
+    const response = await fetch(buildApiUrl(API.ENDPOINTS.STUDENT.NOTEBOOKS), {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error);
+    }
+    return await response.json();
+  };
 
   const loadNotes = async () => {
     try {
@@ -44,37 +82,86 @@ const NotebookScreen = () => {
     }
   };
 
-
   const handleShare = async () => {
-  try {
-    // Use the last PNG dataURL
-    const dataUrl = lastPngDataUrl || (notes[0] && notes[0].data);
-    if (!dataUrl) {
-      alert("No hay notas para compartir.");
+    try {
+      // Use the last PNG dataURL
+      const dataUrl = lastPngDataUrl || (notes[0] && notes[0].data);
+      if (!dataUrl) {
+        alert("No hay notas para compartir.");
+        return;
+      }
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: [400, 600],
+      });
+
+      pdf.addImage(dataUrl, "PNG", 0, 0, 400, 600);
+      pdf.save(`nota-${Date.now()}.pdf`);
+    } catch (error) {
+      alert("Error al compartir PDF");
+    }
+  };
+
+  const handleNoteSaved = (dataUrl) => {
+    // Save the note as before (if needed)
+    loadNotes();
+    setShowCanvas(false);
+
+    // Optionally, store the last PNG for sharing
+    setLastPngDataUrl(dataUrl);
+  };
+
+  const handleCreateNotebook = async () => {
+    if (!notebookTitle.trim()) {
+      Alert.alert("Error", "Por favor ingresa un título para el cuaderno");
       return;
     }
 
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "px",
-      format: [400, 600],
-    });
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      const response = await fetch(
+        buildApiUrl(API.ENDPOINTS.STUDENT.NOTEBOOK_CREATE),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title: notebookTitle.trim(),
+          }),
+        }
+      );
 
-    pdf.addImage(dataUrl, "PNG", 0, 0, 400, 600);
-    pdf.save(`nota-${Date.now()}.pdf`);
-  } catch (error) {
-    alert("Error al compartir PDF");
-  }
-};
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al crear el cuaderno");
+      }
 
-  const handleNoteSaved = (dataUrl) => {
-  // Save the note as before (if needed)
-  loadNotes();
-  setShowCanvas(false);
+      const newNotebook = await response.json();
+      console.log("Nuevo cuaderno creado:", newNotebook);
 
-  // Optionally, store the last PNG for sharing
-  setLastPngDataUrl(dataUrl);
-};
+      // Actualizar la lista de cuadernos
+      setNoteBooks((prev) => [newNotebook, ...prev]);
+
+      // Limpiar el formulario y cerrar el diálogo
+      setNotebookTitle("");
+      setShowCreateDialog(false);
+
+      Alert.alert("Éxito", "Cuaderno creado exitosamente");
+    } catch (error) {
+      console.error("Error creating notebook:", error);
+      Alert.alert("Error", "No se pudo crear el cuaderno");
+    }
+  };
+
+  const handleCancelCreate = () => {
+    console.log("Cerrando modal");
+    setNotebookTitle("");
+    setShowCreateDialog(false);
+  };
 
   const [lastPngDataUrl, setLastPngDataUrl] = useState(null);
 
@@ -105,42 +192,99 @@ const NotebookScreen = () => {
           resizeMode="contain"
           pointerEvents="none"
         />
-  
+
         <View style={responsiveStyles.contentWrapper}>
           <View style={responsiveStyles.header}>
-            <AuraText text={"Mis Notas"} style={responsiveStyles.title} />
-            <TouchableOpacity
-              style={responsiveStyles.newNoteButton}
-              onPress={() => setShowCanvas(true)}
-            >
-              <AuraText text={"+ Nueva Nota"} style={responsiveStyles.newNoteText} />
-            </TouchableOpacity>
+            <AuraText text={"Mis Cuadernos"} style={responsiveStyles.title} />
+            <View style={responsiveStyles.headerButtons}>
+              <TouchableOpacity
+                style={responsiveStyles.createNotebookButton}
+                onPress={() => {
+                  console.log("Abriendo modal crear cuaderno");
+                  setShowCreateDialog(true);
+                }}
+              >
+                <Ionicons name="add-circle" size={20} color="#fff" />
+                <AuraText
+                  text={"Crear Cuaderno"}
+                  style={responsiveStyles.createButtonText}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={responsiveStyles.newNoteButton}
+                onPress={() => setShowCanvas(true)}
+              >
+                <AuraText
+                  text={"+ Nueva Nota"}
+                  style={responsiveStyles.newNoteText}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
-  
+
           <FlatList
-            data={notes}
+            data={noteBooks}
             renderItem={renderNote}
             keyExtractor={(item) => item.id}
             numColumns={2}
             contentContainerStyle={responsiveStyles.notesList}
             showsVerticalScrollIndicator={false}
           />
-  
+
           {/* Add the share button here */}
           <TouchableOpacity
             style={styles.floatingHelpButton}
             onPress={handleShare}
           >
-            <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 24 }}>⇪</Text>
+            <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 24 }}>
+              ⇪
+            </Text>
           </TouchableOpacity>
-  
+
           <FloatingAIMenu />
         </View>
+
+        {/* Modal para crear cuaderno - Layout Landscape */}
+        <Modal
+          visible={showCreateDialog}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={handleCancelCreate}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Crear Nuevo Cuaderno</Text>
+
+              <TextInput
+                style={styles.titleInput}
+                placeholder="Título del cuaderno"
+                value={notebookTitle}
+                onChangeText={setNotebookTitle}
+                autoFocus
+                maxLength={50}
+              />
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={handleCancelCreate}
+                >
+                  <Text style={styles.cancelButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.createButton]}
+                  onPress={handleCreateNotebook}
+                >
+                  <Text style={styles.createButtonText}>Crear</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   }
-
-
 
   // Portrait / mobile layout
   return (
@@ -152,13 +296,25 @@ const NotebookScreen = () => {
         pointerEvents="none"
       />
       <View style={styles.header}>
-        <AuraText text={"Mis Notas"} style={styles.title} />
-        <TouchableOpacity
-          style={styles.newNoteButton}
-          onPress={() => setShowCanvas(true)}
-        >
-          <AuraText text={"+ Nueva Nota"} style={styles.newNoteText} />
-        </TouchableOpacity>
+        <AuraText text={"Mis Cuadernos"} style={styles.title} />
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            style={styles.createNotebookButton}
+            onPress={() => {
+              console.log("Abriendo modal crear cuaderno - Portrait");
+              setShowCreateDialog(true);
+            }}
+          >
+            <Ionicons name="add-circle" size={16} color="#fff" />
+            <AuraText text={"Crear"} style={styles.createButtonText} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.newNoteButton}
+            onPress={() => setShowCanvas(true)}
+          >
+            <AuraText text={"+ Nota"} style={styles.newNoteText} />
+          </TouchableOpacity>
+        </View>
       </View>
       <FlatList
         data={notes}
@@ -168,12 +324,51 @@ const NotebookScreen = () => {
         contentContainerStyle={styles.notesList}
         showsVerticalScrollIndicator={false}
       />
-      <TouchableOpacity
-        style={styles.floatingHelpButton}
-        onPress={handleShare}
-      ><Text style={{ color: "#fff", fontWeight: "bold", fontSize: 24 }}>⇪</Text>
+      <TouchableOpacity style={styles.floatingHelpButton} onPress={handleShare}>
+        <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 24 }}>
+          ⇪
+        </Text>
       </TouchableOpacity>
       <FloatingAIMenu />
+
+      {/* Modal para crear cuaderno */}
+      <Modal
+        visible={showCreateDialog}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleCancelCreate}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Crear Nuevo Cuaderno</Text>
+
+            <TextInput
+              style={styles.titleInput}
+              placeholder="Título del cuaderno"
+              value={notebookTitle}
+              onChangeText={setNotebookTitle}
+              autoFocus
+              maxLength={50}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={handleCancelCreate}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.createButton]}
+                onPress={handleCreateNotebook}
+              >
+                <Text style={styles.createButtonText}>Crear</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -191,10 +386,7 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     zIndex: 0,
-    transform: [
-      { rotate: "-45deg" },
-      { scale: 1.5 }
-    ],
+    transform: [{ rotate: "-45deg" }, { scale: 1.5 }],
   },
   header: {
     flexDirection: "row",
@@ -212,6 +404,24 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: "bold",
     color: "#CB8D27",
+  },
+  headerButtons: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  createNotebookButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#28a745",
+    borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  createButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
   },
   newNoteButton: {
     paddingHorizontal: 16,
@@ -267,6 +477,64 @@ const styles = StyleSheet.create({
     color: "#6c757d",
     textAlign: "center",
   },
+  // Estilos del modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 24,
+    width: "90%",
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  titleInput: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 20,
+    backgroundColor: "#f8f9fa",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#6c757d",
+  },
+  cancelButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  createButton: {
+    backgroundColor: "#28a745",
+  },
 });
 
 const responsiveStyles = StyleSheet.create({
@@ -304,6 +572,24 @@ const responsiveStyles = StyleSheet.create({
     borderBottomColor: "#e9ecef",
     width: "100%",
   },
+  headerButtons: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  createNotebookButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#28a745",
+    borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  createButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+  },
   title: {
     fontSize: 48,
     fontWeight: "bold",
@@ -329,7 +615,6 @@ const responsiveStyles = StyleSheet.create({
     marginRight: "5%",
     flex: 1,
   },
-
 });
 
 export default NotebookScreen;
