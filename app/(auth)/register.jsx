@@ -250,7 +250,7 @@ const createStyles = (theme, isLandscape) => {
       borderRadius: 20,
       padding: 20,
       width: "90%",
-      marginTop: 300,
+      marginTop: 0,
       alignSelf: "center",
       marginBottom: 50,
       //maxWidth: 650,
