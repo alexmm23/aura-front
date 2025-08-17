@@ -72,7 +72,7 @@ function createStyles(theme) {
       color: "red",
       fontSize: 12,
       marginLeft: 4,
-      marginTop: -6,
+      marginTop: 1,
       marginBottom: 6,
     },
   });
