@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import FormInput from "./FormInput";
+import FormSelect from "./FormSelect";
 import PrimaryButton from "./PrimaryButton";
 import Link from "./Link";
 import { useRouter } from "expo-router";
@@ -28,10 +29,17 @@ const FormRegister = ({
 
   const apellidosInputRef = useRef(null);
   const emailInputRef = useRef(null);
+  const roleSelectRef = useRef(null);
   const passwordInputRef = useRef(null);
   const confirmPasswordInputRef = useRef(null);
 
   const router = useRouter();
+
+  // Opciones para el selector de rol
+  const roleOptions = [
+    { value: "2", label: "Estudiante" },
+    { value: "3", label: "Maestro" },
+  ];
 
   const handleChange = (field, value) => {
     setFormData({
@@ -95,11 +103,20 @@ const FormRegister = ({
         placeholder="Correo Electrónico: "
         value={formData.email}
         onChangeText={(text) => handleChange("email", text)}
-        onSubmitEditing={() => passwordInputRef.current?.focus()}
+        onSubmitEditing={() => roleSelectRef.current?.focus()}
         ref={emailInputRef}
         keyboardType="email-address"
         autoCapitalize="none"
         error={errors.email}
+      />
+
+      <FormSelect
+        placeholder="Selecciona tu rol: "
+        value={formData.role}
+        onValueChange={(value) => handleChange("role", value)}
+        options={roleOptions}
+        ref={roleSelectRef}
+        error={errors.role}
       />
 
       <View style={styles.passwordContainer}>
@@ -206,7 +223,7 @@ const styles = StyleSheet.create({
   passwordContainer: {
     position: "relative",
     width: "100%",
-    justifyContent: "center", // Ayuda a centrar el contenido
+    marginBottom: 10,
   },
   passwordInput: {
     paddingRight: 50, // Espacio para el icono
@@ -215,18 +232,17 @@ const styles = StyleSheet.create({
   eyeButton: {
     position: "absolute",
     right: 12,
-    top: "50%",
-    marginTop: -12, // La mitad del tamaño del icono (24px / 2 = 12px)
-    padding: 8,
+    top: 10, // marginVertical del FormInput (10px)
+    height: 44, // Altura aproximada del input (padding 12 + fontSize 16 + padding 12 + un poco más)
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 4,
     zIndex: 1,
-    borderRadius: 4,
   },
   passwordStrengthText: {
     fontSize: 12,
     marginTop: 4,
     textAlign: "center",
-    // Agrega aquí la fuente que uses en tu app
-    // fontFamily: 'TuFuente',
   },
 });
 

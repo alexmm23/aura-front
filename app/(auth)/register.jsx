@@ -7,17 +7,17 @@ import {
   ScrollView,
   SafeAreaView,
   Platform,
-  Dimensions,
   useWindowDimensions,
+  Alert,
 } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
 import Svg, { Path } from "react-native-svg";
 import { StatusBar } from "expo-status-bar";
-import { useAuth } from "@/hooks/useAuth";
 import { Colors } from "@/constants/Colors";
 import FormRegister from "@/components/FormRegister";
 import { useRouter } from "expo-router";
 import { AuraText } from "@/components/AuraText";
+import Toast from "react-native-toast-message"; // Para mostrar mensajes de error
 
 export default function Register() {
   const Container = Platform.OS === "web" ? ScrollView : SafeAreaView;
@@ -37,6 +37,7 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
+    role: "2", // Estudiante por defecto
   });
 
   const [errors, setErrors] = useState({});
@@ -61,6 +62,9 @@ export default function Register() {
 
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Las contraseñas no coinciden";
+    }
+    if (formData.role === "") {
+      newErrors.role = "Selecciona un rol";
     }
 
     return newErrors;
@@ -95,12 +99,28 @@ export default function Register() {
         name: formData.nombre,
         lastname: formData.apellidos,
         password: formData.password,
-        role_id: 2,
+        role_id: formData.role,
       };
       const response = await registerUser(user);
+      Toast.show({
+        type: "success",
+        text1: "Registro exitoso",
+        text2: "Te has registrado correctamente",
+        visibilityTime: 5000,
+        autoHide: false,
+        swipeable: true,
+      });
+
+      setTimeout(() => {
+        router.push("/login");
+      }, 2000);
       console.log("Response:", response);
     } catch (error) {
-      console.error("Error:", error.message);
+      Toast.show({
+        type: "error",
+        text1: "Error de registro",
+        text2: error.message,
+      });
       setErrors({ general: error.message, ...formErrors });
     } finally {
       setIsSubmitting(false);
@@ -163,6 +183,7 @@ export default function Register() {
           </View>
         </>
       )}
+      <Toast />
     </Container>
   );
 }
