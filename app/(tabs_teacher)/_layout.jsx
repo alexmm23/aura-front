@@ -36,39 +36,39 @@ function TabsContent() {
   const insets = useSafeAreaInsets();
 
   // ...existing code...
-const MENU_ITEMS = [
-  {
-    name: "home_teacher",
-    icon: require("../../assets/images/home.png"),
-    text: "Inicio",
-    route: "(tabs_teacher)/home_teacher", // Remove the leading slash
-  },
-  {
-    name: "reminders",
-    icon: require("../../assets/images/recordatorio.png"),
-    text: "Recordatorios",
-    route: "(tabs_teacher)/reminders", // Remove the leading slash
-  },
-  {
-    name: "classes",
-    icon: require("../../assets/images/clases.png"),
-    text: "Clases",
-    route: "(tabs_teacher)/classes", // Remove the leading slash
-  },
-  {
-    name: "Chats",
-    icon: require("../../assets/images/chat.png"),
-    text: "Chats",
-    route: "(tabs_teacher)/chats", // Remove the leading slash
-  },
-  {
-    name: "profile",
-    icon: require("../../assets/images/perfil.png"),
-    text: "Perfil",
-    route: "(tabs_teacher)/profile", // Remove the leading slash
-  },
-];
-// ...existing code...
+  const MENU_ITEMS = [
+    {
+      name: "HomeTeacher",
+      icon: require("../../assets/images/home.png"),
+      text: "Inicio",
+      route: "(tabs_teacher)/HomeTeacher", // Remove the leading slash
+    },
+    {
+      name: "reminders",
+      icon: require("../../assets/images/recordatorio.png"),
+      text: "Recordatorios",
+      route: "(tabs_teacher)/reminders", // Remove the leading slash
+    },
+    {
+      name: "classes",
+      icon: require("../../assets/images/clases.png"),
+      text: "Clases",
+      route: "(tabs_teacher)/classes", // Remove the leading slash
+    },
+    {
+      name: "Chats",
+      icon: require("../../assets/images/chat.png"),
+      text: "Chats",
+      route: "(tabs_teacher)/chats", // Remove the leading slash
+    },
+    {
+      name: "profile",
+      icon: require("../../assets/images/perfil.png"),
+      text: "Perfil",
+      route: "(tabs_teacher)/profile", // Remove the leading slash
+    },
+  ];
+  // ...existing code...
 
   return (
     <Tabs
@@ -131,6 +131,5 @@ const MENU_ITEMS = [
         }}
       />
     </Tabs>
-    
   );
 }

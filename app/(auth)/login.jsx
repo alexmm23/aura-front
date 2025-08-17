@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { KeyboardAvoidingView, Platform } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
@@ -26,13 +25,13 @@ import { GoogleIconSvg } from "@/components/LinkIcons";
 
 function decodeJWT(token) {
   try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
     const jsonPayload = decodeURIComponent(
       atob(base64)
-        .split('')
-        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
     );
     return JSON.parse(jsonPayload);
   } catch (e) {
@@ -89,17 +88,17 @@ export default function Login() {
       });
       const data = await response.json();
       if (response.ok) {
-      const { token, refreshToken } = data;
-      await login(token, refreshToken);
+        const { token, refreshToken } = data;
+        await login(token, refreshToken);
 
-      const decoded = decodeJWT(token);
+        const decoded = decodeJWT(token);
 
-      if (decoded && Number(decoded.role_id) === 3) {
-      router.replace("/home_teacher");
+        if (decoded && Number(decoded.role_id) === 3) {
+          router.replace("/HomeTeacher");
+        } else {
+          router.replace("/home");
+        }
       } else {
-        router.replace("/home");
-      }
-      }else {
         const { error } = data;
         console.error("Login error:", error);
         setErrors({ form: error });
