@@ -8,7 +8,7 @@ const Background = ({ isLandscape }) => (
     <Svg
       width="100%"
       height="100%"
-      viewBox="15 -10 352 765"
+      viewBox="0 -10 352 765"
       preserveAspectRatio="xMidYMid slice"
     >
       <Path
