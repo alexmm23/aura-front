@@ -57,6 +57,7 @@ export const API={
       NOTEBOOK_CREATE: '/notebook/add',
       NOTEBOOK_UPDATE: '/notebook/edit',
       NOTEBOOK_DELETE: '/notebook/delete',
+      NOTES: '/note/list',
 
     },
     // Profile endpoints

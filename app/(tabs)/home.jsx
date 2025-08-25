@@ -18,6 +18,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HomeScreen() {
   const [homework, setHomework] = useState([]);
+  const [notes, setNotes] = useState([]);
   const { height, width } = useWindowDimensions();
   const colors = Colors.light;
   const isLandscape = width > height;
@@ -45,8 +46,31 @@ export default function HomeScreen() {
       console.error("Error fetching homework:", error);
     }
   };
+  const fetchNotes = async () => {
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      const response = await fetch(buildApiUrl(API.ENDPOINTS.STUDENT.NOTES), {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          origin: "your-app-name",
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      const data = await response.json();
+      const { data: newNotes } = data;
+      console.log("Notes data:", newNotes);
+      setNotes(newNotes);
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+    }
+  };
   useEffect(() => {
     fetchHomework();
+    fetchNotes();
   }, []);
 
   return (
@@ -72,20 +96,31 @@ export default function HomeScreen() {
             {/* Mis notas */}
             <View style={styles.card}>
               <AuraText style={styles.title} text="Mis Notas"></AuraText>
-              <View style={styles.noteCard}>
-                <AuraText style={styles.noteTitle} text="Nota #1"></AuraText>
-                <AuraText
-                  style={styles.noteText}
-                  text="Lorem Ipsum is simply dummy text of the printing and typesetting industry."
-                ></AuraText>
-              </View>
-              <View style={styles.noteCard}>
-                <AuraText style={styles.noteTitle} text="Nota #2"></AuraText>
-                <AuraText
-                  style={styles.noteText}
-                  text="Lorem Ipsum is simply dummy text of the printing and typesetting industry."
-                ></AuraText>
-              </View>
+              {notes.map((note, index) => (
+                <View key={index} style={styles.noteCard}>
+                  <AuraText
+                    style={styles.noteTitle}
+                    text={`Nota #${index + 1}`}
+                  ></AuraText>
+                  <AuraText
+                    style={styles.noteText}
+                    text={note.content}
+                  ></AuraText>
+                </View>
+              ))}
+
+              {notes.length === 0 && (
+                <View style={styles.noteCard}>
+                  <AuraText
+                    style={styles.noteTitle}
+                    text={"No hay notas por mostrar"}
+                  ></AuraText>
+                  <AuraText
+                    style={styles.noteText}
+                    text={"No hay contenido disponible"}
+                  ></AuraText>
+                </View>
+              )}
             </View>
 
             {/* Mis Tareas */}
@@ -98,7 +133,9 @@ export default function HomeScreen() {
                     <Text style={styles.taskDescription}>{task.title}</Text>
                     <Text style={styles.taskDueDate}>
                       {task.dueDate
-                        ? `${task.dueDate.day || 0}-${task.dueDate.month}-${task.dueDate.year}`
+                        ? `${task.dueDate.day || 0}-${task.dueDate.month}-${
+                            task.dueDate.year
+                          }`
                         : "Sin fecha"}
                     </Text>
                   </View>
@@ -303,5 +340,14 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     resizeMode: "contain",
+  },
+  emptyState: {
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100%",
+  },
+  emptyStateText: {
+    color: "#999",
+    fontSize: 16,
   },
 });
