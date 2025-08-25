@@ -14,7 +14,7 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
+import Toast from "react-native-toast-message";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NotebookCanvas from "../../components/notebook/NotebookCanvas";
 import FloatingAIMenu from "../../components/FloatingAIMenu";
@@ -115,12 +115,20 @@ const NotebookScreen = () => {
 
   const handleCreateNotebook = async () => {
     if (!notebookTitle.trim()) {
-      Alert.alert("Error", "Por favor ingresa un título para el cuaderno");
+      console.log("Error: Título vacío");
+      try {
+        Alert.alert("Error", "Por favor ingresa un título para el cuaderno");
+      } catch (e) {
+        console.error("Alert no disponible, usando console:", e);
+        alert("Error: Por favor ingresa un título para el cuaderno");
+      }
       return;
     }
 
     try {
       const token = await AsyncStorage.getItem("userToken");
+      console.log("Creando cuaderno con título:", notebookTitle.trim());
+
       const response = await fetch(
         buildApiUrl(API.ENDPOINTS.STUDENT.NOTEBOOK_CREATE),
         {
@@ -135,25 +143,53 @@ const NotebookScreen = () => {
         }
       );
 
+      const responseData = await response.json();
+
+      console.log("Response status:", response.status);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Error al crear el cuaderno");
+        console.log("Error del servidor:", responseData);
+        setShowCreateDialog(false);
+        if (response.status === 409) {
+          Toast.show({
+            type: "error",
+            text1: "Error",
+            text2: "Ya existe un cuaderno con ese título",
+          });
+          return;
+        }
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: responseData.error || "Error al crear el cuaderno",
+        });
+        return;
       }
 
-      const newNotebook = await response.json();
-      console.log("Nuevo cuaderno creado:", newNotebook);
+      console.log("Nuevo cuaderno creado:", responseData);
 
       // Actualizar la lista de cuadernos
-      setNoteBooks((prev) => [newNotebook, ...prev]);
+      setNoteBooks((prev) => [responseData, ...prev]);
 
       // Limpiar el formulario y cerrar el diálogo
       setNotebookTitle("");
       setShowCreateDialog(false);
 
-      Alert.alert("Éxito", "Cuaderno creado exitosamente");
+      try {
+        Alert.alert("Éxito", "Cuaderno creado exitosamente");
+      } catch (e) {
+        console.error("Alert no disponible, usando console:", e);
+        alert("Éxito: Cuaderno creado exitosamente");
+      }
     } catch (error) {
       console.error("Error creating notebook:", error);
-      Alert.alert("Error", "No se pudo crear el cuaderno");
+
+      try {
+        Alert.alert("Error", "No se pudo crear el cuaderno");
+      } catch (e) {
+        console.error("Alert no disponible, usando console:", e);
+        alert("Error: No se pudo crear el cuaderno");
+      }
     }
   };
 
@@ -167,10 +203,15 @@ const NotebookScreen = () => {
 
   const renderNote = ({ item }) => (
     <TouchableOpacity style={styles.noteItem}>
-      <Image source={{ uri: item.data }} style={styles.notePreview} />
-      <Text style={styles.noteDate}>
-        {new Date(item.timestamp).toLocaleDateString()}
-      </Text>
+      {/* <Image source={{ uri: item.data }} style={styles.notePreview} /> */}
+      <AuraText
+        text={item.title}
+        style={{ fontWeight: "bold", textAlign: "center" }}
+      />
+      <AuraText
+        style={styles.noteDate}
+        text={new Date(item.created_at).toLocaleDateString()}
+      />
     </TouchableOpacity>
   );
 
@@ -317,7 +358,7 @@ const NotebookScreen = () => {
         </View>
       </View>
       <FlatList
-        data={notes}
+        data={noteBooks}
         renderItem={renderNote}
         keyExtractor={(item) => item.id}
         numColumns={2}
@@ -369,6 +410,7 @@ const NotebookScreen = () => {
           </View>
         </View>
       </Modal>
+      <Toast />
     </View>
   );
 };
