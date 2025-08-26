@@ -25,7 +25,7 @@ const NotebookPages = () => {
       try {
         const token = await AsyncStorage.getItem("userToken");
         const response = await fetch(
-          buildApiUrl(`${API.ENDPOINTS.STUDENT.NOTES}?notebook_id=${notebookId}`),
+          buildApiUrl(`${API.ENDPOINTS.STUDENT.NOTES}/${notebookId}`),
           {
             method: "GET",
             headers: {
@@ -35,6 +35,7 @@ const NotebookPages = () => {
           }
         );
         const data = await response.json();
+        console.log(data);
         setPages(data);
       } catch (error) {
         console.error("Error fetching pages:", error);
@@ -48,14 +49,22 @@ const NotebookPages = () => {
   const renderPage = ({ item }) => (
     <TouchableOpacity
       style={styles.pageItem}
-      onPress={() => router.push({ pathname: "/(tabs)/notebookView", params: { pageId: item.id } })}
+      onPress={() =>
+        router.push({
+          pathname: "/(tabs)/notebookView",
+          params: { pageId: item.id },
+        })
+      }
     >
       {item.image_url ? (
         <Image source={{ uri: item.image_url }} style={styles.pageImage} />
       ) : (
         <Ionicons name="document-outline" size={48} color="#bbb" />
       )}
-      <AuraText style={styles.pageTitle} text={item.title || `Página ${item.page_number || ""}`} />
+      <AuraText
+        style={styles.pageTitle}
+        text={item.title || `Página ${item.page_number || ""}`}
+      />
     </TouchableOpacity>
   );
 
@@ -77,7 +86,9 @@ const NotebookPages = () => {
         numColumns={2}
         contentContainerStyle={styles.grid}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={<Text style={styles.emptyText}>No hay páginas en este cuaderno.</Text>}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No hay páginas en este cuaderno.</Text>
+        }
       />
     </View>
   );
@@ -141,4 +152,3 @@ const styles = StyleSheet.create({
 });
 
 export default NotebookPages;
-
