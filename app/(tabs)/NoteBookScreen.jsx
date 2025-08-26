@@ -20,6 +20,7 @@ import NotebookCanvas from "../../components/notebook/NotebookCanvas";
 import FloatingAIMenu from "../../components/FloatingAIMenu";
 import { AuraText } from "../../components/AuraText";
 import { API, buildApiUrl } from "@/config/api";
+import { useRouter } from "expo-router";
 
 const NotebookScreen = () => {
   const [notes, setNotes] = useState([]);
@@ -29,6 +30,7 @@ const NotebookScreen = () => {
   const [notebookTitle, setNotebookTitle] = useState("");
   const { width, height } = useWindowDimensions();
   const isLargeScreen = width >= 928;
+  const router = useRouter();
 
   useEffect(() => {
     const loadNotes = async () => {
@@ -202,7 +204,7 @@ const NotebookScreen = () => {
   const [lastPngDataUrl, setLastPngDataUrl] = useState(null);
 
   const renderNote = ({ item }) => (
-    <TouchableOpacity style={styles.noteItem}>
+    <TouchableOpacity style={styles.noteItem} onPress={() => router.push({ pathname: "/(tabs)/notebookPages", params: { notebookId: item.id } })}>
       {/* <Image source={{ uri: item.data }} style={styles.notePreview} /> */}
       <AuraText
         text={item.title}
