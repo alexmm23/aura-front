@@ -78,7 +78,13 @@ const NotebookPages = () => {
 
   return (
     <View style={styles.container}>
-      <AuraText text="Páginas del Cuaderno" style={styles.header} />
+      <View style={styles.headerContainer}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#CB8D27" />
+        </TouchableOpacity>
+        <AuraText text="Páginas del Cuaderno" style={styles.header} />
+        <View style={styles.spacer} />
+      </View>
       <FlatList
         data={pages}
         renderItem={renderPage}
@@ -100,12 +106,30 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8F9FA",
     padding: 16,
   },
+  headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
   header: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#CB8D27",
-    marginBottom: 16,
+    flex: 1,
     textAlign: "center",
+  },
+  spacer: {
+    width: 40, // Same width as the back button to center the title
   },
   grid: {
     paddingBottom: 32,

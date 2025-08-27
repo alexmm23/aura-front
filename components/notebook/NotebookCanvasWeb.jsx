@@ -1,5 +1,8 @@
 import React, { useRef, useState, useEffect } from "react";
-import { View, StyleSheet, Platform, Text, Image  } from "react-native";
+import { View, StyleSheet, Platform, Text, Image, Modal, TouchableOpacity, FlatList, ActivityIndicator } from "react-native";
+import { API, buildApiUrl } from "@/config/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import CanvaLiteBoard from "./CanvaLiteBoard";
 
 // Este componente usa Canvas HTML5 nativo para web
 const TOOL_PENCIL = "pen";
@@ -13,6 +16,13 @@ const brushSizes = [1, 2, 5, 10, 15];
 const textSizes = [12, 16, 20, 24, 32];
 
 const NotebookCanvasWeb = ({ onSave, onBack }) => {
+
+  // return (
+  //   <CanvaLiteBoard
+  //     onSave={onSave}
+  //     onBack={onBack}
+  //   />
+  // );
   const canvasRef = useRef();
   const fileInputRef = useRef();
   const [tool, setTool] = useState(TOOL_PENCIL);
@@ -32,6 +42,13 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   }); // Para guardar el estado del canvas
   const [showBrushSlider, setShowBrushSlider] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  
+  // Estados para el modal de selección de cuaderno
+  const [showNotebookModal, setShowNotebookModal] = useState(false);
+  const [notebooks, setNotebooks] = useState([]);
+  const [loadingNotebooks, setLoadingNotebooks] = useState(false);
+  const [savingNote, setSavingNote] = useState(false);
+  const [canvasDataToSave, setCanvasDataToSave] = useState(null);
 
   // Configuración inicial del canvas (solo una vez)
   useEffect(() => {
@@ -258,7 +275,185 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     link.click();
 
     onSave?.(dataURL);
-  }; // Toolbar UI
+  };
+
+  // Función para obtener los cuadernos del usuario
+  const fetchUserNotebooks = async () => {
+    setLoadingNotebooks(true);
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      const response = await fetch(
+        buildApiUrl(API.ENDPOINTS.STUDENT.NOTEBOOKS),
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Fetched notebooks:", data);
+        setNotebooks(data);
+      } else {
+        console.error("Error fetching notebooks:", response.status);
+        alert("Error al cargar los cuadernos");
+      }
+    } catch (error) {
+      console.error("Error fetching notebooks:", error);
+      alert("Error de conexión al cargar los cuadernos");
+    } finally {
+      setLoadingNotebooks(false);
+    }
+  };
+
+  // Función para guardar la nota en un cuaderno específico
+  const saveNoteToNotebook = async (notebookId) => {
+    if (!canvasDataToSave) return;
+
+    setSavingNote(true);
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      
+      // Convertir la imagen base64 a un blob para enviarla
+      const response = await fetch(canvasDataToSave);
+      const blob = await response.blob();
+      
+      // Crear FormData para enviar la imagen
+      const formData = new FormData();
+      formData.append('image', blob, `canvas-note-${Date.now()}.png`);
+      formData.append('notebook_id', notebookId.toString());
+      formData.append('title', `Nota del ${new Date().toLocaleDateString()}`);
+      
+      const saveResponse = await fetch(
+        buildApiUrl(API.ENDPOINTS.STUDENT.NOTE_CREATE),
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+      
+      if (saveResponse.ok) {
+        alert("Nota guardada exitosamente en el cuaderno");
+        setShowNotebookModal(false);
+        setCanvasDataToSave(null);
+        onSave?.(canvasDataToSave);
+      } else {
+        console.error("Error saving note:", saveResponse.status);
+        alert("Error al guardar la nota en el cuaderno");
+      }
+    } catch (error) {
+      console.error("Error saving note:", error);
+      alert("Error de conexión al guardar la nota");
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  // Función modificada para abrir el modal de selección
+  const openNotebookSelector = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+
+    // Guardar el contenido actual
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    // Rellenar fondo blanco
+    ctx.globalCompositeOperation = "destination-over";
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Obtener la imagen
+    const dataURL = canvas.toDataURL("image/png");
+
+    // Restaurar el contenido original
+    ctx.putImageData(imageData, 0, 0);
+    ctx.globalCompositeOperation = "source-over";
+
+    // Guardar la data del canvas y mostrar el modal
+    setCanvasDataToSave(dataURL);
+    setShowNotebookModal(true);
+    fetchUserNotebooks();
+  };
+
+  // Componente del modal para seleccionar cuaderno
+  const NotebookSelectorModal = () => (
+    <Modal
+      visible={showNotebookModal}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowNotebookModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Seleccionar Cuaderno</Text>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowNotebookModal(false)}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <Text style={styles.modalSubtitle}>
+            Selecciona en qué cuaderno quieres guardar tu nota:
+          </Text>
+
+          {loadingNotebooks ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#007bff" />
+              <Text style={styles.loadingText}>Cargando cuadernos...</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={notebooks}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.notebookItem}
+                  onPress={() => saveNoteToNotebook(item.id)}
+                  disabled={savingNote}
+                >
+                  <View style={styles.notebookInfo}>
+                    <Text style={styles.notebookName}>{item.title}</Text>
+                    <Text style={styles.notebookSubject}>{new Date(item.created_at).toLocaleDateString()}</Text>
+                  </View>
+                  {savingNote && (
+                    <ActivityIndicator size="small" color="#007bff" />
+                  )}
+                </TouchableOpacity>
+              )}
+              style={styles.notebookList}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>
+                    No tienes cuadernos disponibles.{'\n'}
+                    Crea un cuaderno primero para guardar tus notas.
+                  </Text>
+                </View>
+              }
+            />
+          )}
+
+          <View style={styles.modalFooter}>
+            <TouchableOpacity
+              style={[styles.footerButton, styles.downloadButton]}
+              onPress={saveCanvas}
+            >
+              <Text style={styles.downloadButtonText}>Descargar en su lugar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  ); // Toolbar UI
   const Toolbar = () => (
     <View style={styles.toolbar}>
       <button
@@ -283,7 +478,8 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         <Image
           source={require("../../assets/images/rectangulo.png")}
           style={{ width: 24, height: 24 }}
-        />      </button>
+        />{" "}
+      </button>
       <button
         onClick={() => handleToolChange(TOOL_ERASER)}
         style={{
@@ -294,7 +490,8 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         <Image
           source={require("../../assets/images/borrador.png")}
           style={{ width: 24, height: 24 }}
-        />      </button>
+        />{" "}
+      </button>
       <button
         onClick={() => handleToolChange(TOOL_TEXT)}
         style={{
@@ -305,7 +502,8 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         <Image
           source={require("../../assets/images/fuente.png")}
           style={{ width: 24, height: 24 }}
-        />      </button>
+        />{" "}
+      </button>
       <button
         onClick={() => handleToolChange(TOOL_IMAGE)}
         style={{
@@ -316,8 +514,8 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         <Image
           source={require("../../assets/images/agregarImagen.png")}
           style={{ width: 24, height: 24 }}
-        />      
-        </button>
+        />
+      </button>
       <button
         onClick={() => setShowBrushSlider((prev) => !prev)}
         style={styles.toolButton}
@@ -325,8 +523,8 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         <Image
           source={require("../../assets/images/anchura.png")}
           style={{ width: 24, height: 24 }}
-        />      
-        </button>
+        />
+      </button>
       {showBrushSlider && (
         <View style={styles.brushSliderPopover}>
           <Text style={styles.controlLabel}>Grosor: {brushSize}px</Text>
@@ -370,11 +568,10 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         <Image
           source={require("../../assets/images/color.png")}
           style={{ width: 24, height: 24 }}
-        /> 
+        />
       </button>
       {tool === TOOL_TEXT && (
         <>
-          
           <View style={styles.textSizePopover}>
             <Text style={styles.controlLabel}>Tamaño:</Text>
             <select
@@ -405,7 +602,13 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
           style={{ width: 24, height: 24 }}
         />
       </button>
-      <button onClick={saveCanvas} style={styles.actionButton}>
+      <button onClick={saveCanvas} style={{...styles.actionButton, ...styles.downloadBtn}} title="Descargar imagen">
+        <Image
+          source={require("../../assets/images/salvar.png")}
+          style={{ width: 24, height: 24 }}
+        />
+      </button>
+      <button onClick={openNotebookSelector} style={{...styles.actionButton, ...styles.saveToNotebookBtn}} title="Guardar en cuaderno">
         <Image
           source={require("../../assets/images/salvar.png")}
           style={{ width: 24, height: 24 }}
@@ -413,10 +616,10 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
       </button>
       {onBack && (
         <button onClick={onBack} style={styles.actionButton}>
-         <Image
-          source={require("../../assets/images/volver.png")}
-          style={{ width: 24, height: 24 }}
-        />
+          <Image
+            source={require("../../assets/images/volver.png")}
+            style={{ width: 24, height: 24 }}
+          />
         </button>
       )}
     </View>
@@ -485,6 +688,9 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
           />
         </View>
       </View>
+      
+      {/* Modal para seleccionar cuaderno */}
+      <NotebookSelectorModal />
     </View>
   );
 };
@@ -542,6 +748,14 @@ const styles = StyleSheet.create({
     cursor: "pointer",
     fontSize: 14,
     fontWeight: "500",
+  },
+  downloadBtn: {
+    backgroundColor: "#28a745",
+    borderColor: "#28a745",
+  },
+  saveToNotebookBtn: {
+    backgroundColor: "#007bff",
+    borderColor: "#007bff",
   },
   activeBtn: {
     backgroundColor: "#007bff",
@@ -611,7 +825,7 @@ const styles = StyleSheet.create({
   brushSliderPopover: {
     position: "absolute",
     left: "120%", // Justo a la derecha de la barra
-    top: 260,     // <-- Ajusta este valor según la altura de tus botones
+    top: 260, // <-- Ajusta este valor según la altura de tus botones
     backgroundColor: "#fff",
     border: "1px solid #dee2e6",
     borderRadius: 8,
@@ -641,7 +855,7 @@ const styles = StyleSheet.create({
   textSizePopover: {
     position: "absolute",
     left: "120%", // Justo a la derecha de la barra
-    top: 155,     // Ajusta este valor para alinearlo con el botón de texto
+    top: 155, // Ajusta este valor para alinearlo con el botón de texto
     backgroundColor: "#fff",
     border: "1px solid #dee2e6",
     borderRadius: 8,
@@ -652,6 +866,129 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     minWidth: 140,
+  },
+  
+  // Estilos para el modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: '90%',
+    maxWidth: 500,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    fontSize: 18,
+    color: '#6c757d',
+    fontWeight: 'bold',
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: '#6c757d',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6c757d',
+  },
+  notebookList: {
+    maxHeight: 300,
+    paddingHorizontal: 20,
+  },
+  notebookItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginVertical: 4,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+  },
+  notebookInfo: {
+    flex: 1,
+  },
+  notebookName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  notebookSubject: {
+    fontSize: 14,
+    color: '#6c757d',
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#6c757d',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  modalFooter: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
+  },
+  footerButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  downloadButton: {
+    backgroundColor: '#28a745',
+  },
+  downloadButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
