@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { View, StyleSheet, Platform, Text, Image, Modal, TouchableOpacity, FlatList, ActivityIndicator } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import CanvaLiteBoard from "./CanvaLiteBoard";
+// import CanvaLiteBoard from "./CanvaLiteBoard";
 
 // Este componente usa Canvas HTML5 nativo para web
 const TOOL_PENCIL = "pen";
