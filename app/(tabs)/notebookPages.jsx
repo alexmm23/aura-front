@@ -36,7 +36,8 @@ const NotebookPages = () => {
         );
         const data = await response.json();
         console.log(data);
-        setPages(data);
+
+        setPages(data.data);
       } catch (error) {
         console.error("Error fetching pages:", error);
       } finally {
@@ -56,8 +57,8 @@ const NotebookPages = () => {
         })
       }
     >
-      {item.image_url ? (
-        <Image source={{ uri: item.image_url }} style={styles.pageImage} />
+      {item.data ? (
+        <Image source={{ uri: `${item.data}` }} style={styles.pageImage} />
       ) : (
         <Ionicons name="document-outline" size={48} color="#bbb" />
       )}
