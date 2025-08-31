@@ -263,6 +263,70 @@ const TaskDetails = () => {
           </Text>
         </View>
 
+        {/* Rúbrica (si existe) */}
+        {task.rubric &&
+          task.rubric.criteria &&
+          task.rubric.criteria.length > 0 && (
+            <View style={styles.rubricSection}>
+              <Text style={styles.sectionTitle}>Rúbrica de Evaluación</Text>
+              <Text style={styles.rubricSubtitle}>
+                Criterios de evaluación para esta tarea
+              </Text>
+              {task.rubric.criteria.map((criterion, index) => {
+                const totalPoints =
+                  criterion.levels?.reduce(
+                    (sum, level) => sum + (level.points || 0),
+                    0
+                  ) || 0;
+                return (
+                  <View
+                    key={criterion.id || index}
+                    style={styles.criterionCard}
+                  >
+                    <View style={styles.criterionHeader}>
+                      <Text style={styles.criterionTitle}>
+                        {criterion.title}
+                      </Text>
+                      <View style={styles.totalPointsBadge}>
+                        <Text style={styles.totalPointsText}>
+                          {totalPoints} pts
+                        </Text>
+                      </View>
+                    </View>
+                    {criterion.levels && criterion.levels.length > 0 && (
+                      <View style={styles.levelsContainer}>
+                        {criterion.levels.map((level, levelIndex) => (
+                          <View
+                            key={level.id || levelIndex}
+                            style={styles.levelItem}
+                          >
+                            <View style={styles.pointsBadge}>
+                              <Text style={styles.pointsText}>
+                                {level.points} pts
+                              </Text>
+                            </View>
+                            <View style={styles.levelContent}>
+                              {level.title && (
+                                <Text style={styles.levelTitle}>
+                                  {level.title}
+                                </Text>
+                              )}
+                              {level.description && (
+                                <Text style={styles.levelDescription}>
+                                  {level.description}
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
         {/* Sección de entrega */}
         {!hasSubmission ? (
           <View style={styles.submissionSection}>
@@ -634,6 +698,94 @@ const styles = StyleSheet.create({
     color: "#007bff",
     marginLeft: 5,
     fontWeight: "500",
+  },
+  // Estilos para la rúbrica
+  rubricSection: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  rubricSubtitle: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 16,
+    fontStyle: "italic",
+  },
+  criterionCard: {
+    backgroundColor: "#F8F9FA",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: "#CB8D27",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  criterionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  criterionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    flex: 1,
+    marginRight: 10,
+  },
+  totalPointsBadge: {
+    backgroundColor: "#CB8D27",
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  totalPointsText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  levelsContainer: {
+    gap: 8,
+  },
+  levelItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
+  },
+  pointsBadge: {
+    backgroundColor: "#6C757D",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginRight: 12,
+    minWidth: 50,
+    alignItems: "center",
+  },
+  pointsText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  levelContent: {
+    flex: 1,
+  },
+  levelTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 4,
+  },
+  levelDescription: {
+    fontSize: 14,
+    color: "#666",
+    lineHeight: 20,
   },
 });
 
