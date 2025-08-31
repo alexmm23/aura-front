@@ -5,6 +5,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   Image,
+  TouchableOpacity,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -13,6 +14,7 @@ import { API, buildApiUrl } from "@/config/api";
 import Head from "expo-router/head";
 import Svg, { Path } from "react-native-svg";
 import { Colors } from "@/constants/Colors";
+import { useRouter } from "expo-router";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -22,6 +24,7 @@ export default function HomeScreen() {
   const { height, width } = useWindowDimensions();
   const colors = Colors.light;
   const isLandscape = width > height;
+  const router = useRouter();
   const fetchHomework = async () => {
     try {
       const token = await AsyncStorage.getItem("userToken");
@@ -127,7 +130,19 @@ export default function HomeScreen() {
             <View style={styles.card}>
               <AuraText style={styles.title} text="Mis Tareas"></AuraText>
               {homework.map((task, index) => (
-                <View key={index} style={styles.taskCard}>
+                <TouchableOpacity
+                  key={index}
+                  style={styles.taskCard}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/taskDetails",
+                      params: {
+                        courseId: task.courseId || index,
+                        courseWorkId: task.courseWorkId,
+                      },
+                    })
+                  }
+                >
                   <View>
                     <Text style={styles.taskSubject}>{task.courseName}</Text>
                     <Text style={styles.taskDescription}>{task.title}</Text>
@@ -143,7 +158,7 @@ export default function HomeScreen() {
                     source={getPlatformIcon(task.platform)}
                     style={styles.platformIcon}
                   />
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           </ScrollView>

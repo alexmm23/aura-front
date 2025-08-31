@@ -141,6 +141,12 @@ function TabsContent() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="taskDetails"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

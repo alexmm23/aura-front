@@ -1,0 +1,640 @@
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  Platform,
+} from "react-native";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { API, buildApiUrl } from "@/config/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AuraText } from "@/components/AuraText";
+import * as DocumentPicker from "expo-document-picker";
+
+const TaskDetails = () => {
+  const router = useRouter();
+  const { courseId, courseWorkId } = useLocalSearchParams();
+
+  // Estados para los datos de la tarea
+  const [task, setTask] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Estados para el formulario de entrega
+  const [submissionText, setSubmissionText] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [hasSubmission, setHasSubmission] = useState(false);
+
+  // Cargar detalles de la tarea
+  useEffect(() => {
+    const fetchTaskDetails = async () => {
+      try {
+        const token = await AsyncStorage.getItem("userToken");
+        const response = await fetch(
+          buildApiUrl(
+            `${API.ENDPOINTS.STUDENT.HOMEWORK}/${courseId}/${courseWorkId}`
+          ),
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setTask(data);
+          console.log("Task data:", data);
+          setHasSubmission(!!data.submission);
+          if (data.submission) {
+            setSubmissionText(data.submission.text || "");
+          }
+        } else {
+          console.error("Error fetching task details:", response.status);
+          Alert.alert("Error", "No se pudo cargar los detalles de la tarea");
+        }
+      } catch (error) {
+        console.error("Error fetching task details:", error);
+        Alert.alert("Error", "Error de conexión al cargar la tarea");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (courseId && courseWorkId) {
+      fetchTaskDetails();
+    }
+  }, [courseId, courseWorkId]);
+
+  // Función para seleccionar archivo
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          "application/pdf",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "image/*",
+        ],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setSelectedFile(result.assets[0]);
+      }
+    } catch (error) {
+      console.error("Error picking document:", error);
+      Alert.alert("Error", "No se pudo seleccionar el archivo");
+    }
+  };
+
+  // Función para enviar la tarea
+  const submitTask = async () => {
+    if (!submissionText.trim() && !selectedFile) {
+      Alert.alert(
+        "Error",
+        "Debes escribir un comentario o adjuntar un archivo"
+      );
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      const formData = new FormData();
+
+      formData.append("homework_id", taskId.toString());
+      formData.append("text", submissionText);
+
+      if (selectedFile) {
+        formData.append("file", {
+          uri: selectedFile.uri,
+          type: selectedFile.mimeType,
+          name: selectedFile.name,
+        });
+      }
+
+      const response = await fetch(
+        buildApiUrl(API.ENDPOINTS.STUDENT.SUBMISSIONS),
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (response.ok) {
+        Alert.alert("Éxito", "Tarea entregada correctamente", [
+          { text: "OK", onPress: () => router.back() },
+        ]);
+      } else {
+        console.error("Error submitting task:", response.status);
+        Alert.alert("Error", "No se pudo entregar la tarea");
+      }
+    } catch (error) {
+      console.error("Error submitting task:", error);
+      Alert.alert("Error", "Error de conexión al entregar la tarea");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Función para formatear fecha
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  // Función para determinar el estado de la tarea
+  const getTaskStatus = () => {
+    if (hasSubmission) return { text: "Entregada", color: "#28a745" };
+
+    const dueDate = new Date(task.due_date);
+    const today = new Date();
+
+    if (dueDate < today) {
+      return { text: "Vencida", color: "#dc3545" };
+    } else {
+      return { text: "Pendiente", color: "#ffc107" };
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#CB8D27" />
+        <Text style={styles.loadingText}>Cargando tarea...</Text>
+      </View>
+    );
+  }
+
+  if (!task) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>No se pudo cargar la tarea</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>Volver</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const status = getTaskStatus();
+
+  return (
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Header con ilustración */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#CB8D27" />
+          </TouchableOpacity>
+          <View style={styles.headerIllustration}>
+            <Image
+              source={require("../../assets/images/books-illustration.png")}
+              style={styles.booksImage}
+              resizeMode="contain"
+            />
+          </View>
+        </View>
+        <AuraText
+          text={task.courseName || "Análisis de Datos"}
+          style={styles.headerTitle}
+        />
+      </View>
+
+      {/* Card principal de la tarea */}
+      <View style={styles.taskCard}>
+        <View style={styles.taskHeader}>
+          <View style={styles.taskIcon}>
+            <Ionicons name="document-text-outline" size={24} color="#CB8D27" />
+          </View>
+          <View style={styles.taskInfo}>
+            <Text style={styles.taskTitle}>{task.title}</Text>
+            <Text style={styles.taskSubject}>{task.subject}</Text>
+            <View style={styles.dueDateContainer}>
+              <Ionicons name="calendar-outline" size={16} color="#666" />
+              <Text style={styles.dueDate}>
+                Fecha de entrega:{" "}
+                {formatDate(
+                  task.dueDate.year +
+                    "-" +
+                    task.dueDate.month +
+                    "-" +
+                    task.dueDate.day
+                )}
+              </Text>
+            </View>
+            <View
+              style={[styles.statusBadge, { backgroundColor: status.color }]}
+            >
+              <Text style={styles.statusText}>{status.text}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Descripción de la tarea */}
+        <View style={styles.descriptionSection}>
+          <Text style={styles.sectionTitle}>Descripción</Text>
+          <Text style={styles.description}>
+            {task.description ||
+              "Lorem ipsum is simply dummy text of the printing and typesetting industry. Lorem ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book."}
+          </Text>
+        </View>
+
+        {/* Sección de entrega */}
+        {!hasSubmission ? (
+          <View style={styles.submissionSection}>
+            <Text style={styles.sectionTitle}>Entregar Tarea</Text>
+
+            {/* Campo de texto para comentarios */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Comentarios (opcional)</Text>
+              <TextInput
+                style={styles.textArea}
+                value={submissionText}
+                onChangeText={setSubmissionText}
+                placeholder="Escribe comentarios sobre tu entrega..."
+                multiline={true}
+                numberOfLines={4}
+                placeholderTextColor="#999"
+              />
+            </View>
+
+            {/* Selector de archivo */}
+            <View style={styles.fileSection}>
+              <TouchableOpacity
+                style={styles.filePickerButton}
+                onPress={pickDocument}
+              >
+                <Ionicons name="attach-outline" size={20} color="#007bff" />
+                <Text style={styles.filePickerText}>
+                  {selectedFile ? "Cambiar archivo" : "Adjuntar archivo"}
+                </Text>
+              </TouchableOpacity>
+
+              {selectedFile && (
+                <View style={styles.selectedFileContainer}>
+                  <Ionicons name="document-outline" size={16} color="#28a745" />
+                  <Text style={styles.selectedFileName}>
+                    {selectedFile.name}
+                  </Text>
+                  <TouchableOpacity onPress={() => setSelectedFile(null)}>
+                    <Ionicons name="close-circle" size={20} color="#dc3545" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* Botón de entrega */}
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                (submitting || (!submissionText.trim() && !selectedFile)) &&
+                  styles.submitButtonDisabled,
+              ]}
+              onPress={submitTask}
+              disabled={submitting || (!submissionText.trim() && !selectedFile)}
+            >
+              {submitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.submitButtonText}>Entregar Tarea</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.submittedSection}>
+            <View style={styles.submittedHeader}>
+              <Ionicons name="checkmark-circle" size={24} color="#28a745" />
+              <Text style={styles.submittedTitle}>Tarea Entregada</Text>
+            </View>
+            <Text style={styles.submittedDate}>
+              Entregada el:{" "}
+              {formatDate(task.submission?.submitted_at || new Date())}
+            </Text>
+            {task.submission?.text && (
+              <View style={styles.submissionContent}>
+                <Text style={styles.submissionLabel}>Comentarios:</Text>
+                <Text style={styles.submissionText}>
+                  {task.submission.text}
+                </Text>
+              </View>
+            )}
+            {task.submission?.file_url && (
+              <TouchableOpacity style={styles.downloadButton}>
+                <Ionicons name="download-outline" size={16} color="#007bff" />
+                <Text style={styles.downloadText}>Ver archivo entregado</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </View>
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F8F9FA",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F8F9FA",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#666",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F8F9FA",
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#dc3545",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  backButton: {
+    backgroundColor: "#CB8D27",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  header: {
+    backgroundColor: "#CB8D27",
+    paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  headerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 15,
+  },
+  headerIllustration: {
+    flex: 1,
+    alignItems: "center",
+  },
+  booksImage: {
+    width: 120,
+    height: 80,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#fff",
+    textAlign: "center",
+  },
+  taskCard: {
+    margin: 20,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  taskHeader: {
+    flexDirection: "row",
+    marginBottom: 20,
+  },
+  taskIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#FFF3CD",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 15,
+  },
+  taskInfo: {
+    flex: 1,
+  },
+  taskTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 4,
+  },
+  taskSubject: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 8,
+  },
+  dueDateContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  dueDate: {
+    fontSize: 14,
+    color: "#666",
+    marginLeft: 5,
+  },
+  statusBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 12,
+    color: "#fff",
+    fontWeight: "600",
+  },
+  descriptionSection: {
+    marginBottom: 25,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E9ECEF",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 12,
+  },
+  description: {
+    fontSize: 16,
+    color: "#666",
+    lineHeight: 24,
+  },
+  submissionSection: {
+    marginTop: 10,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#333",
+    marginBottom: 8,
+  },
+  textArea: {
+    borderWidth: 1,
+    borderColor: "#DEE2E6",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: "#333",
+    backgroundColor: "#F8F9FA",
+    minHeight: 100,
+    textAlignVertical: "top",
+  },
+  fileSection: {
+    marginBottom: 25,
+  },
+  filePickerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F8F9FA",
+    borderWidth: 2,
+    borderColor: "#007bff",
+    borderStyle: "dashed",
+    borderRadius: 8,
+    padding: 20,
+  },
+  filePickerText: {
+    fontSize: 16,
+    color: "#007bff",
+    marginLeft: 8,
+    fontWeight: "500",
+  },
+  selectedFileContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#D4EDDA",
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  selectedFileName: {
+    flex: 1,
+    fontSize: 14,
+    color: "#155724",
+    marginLeft: 8,
+  },
+  submitButton: {
+    backgroundColor: "#CB8D27",
+    borderRadius: 12,
+    paddingVertical: 15,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  submitButtonDisabled: {
+    backgroundColor: "#CCC",
+  },
+  submitButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  submittedSection: {
+    backgroundColor: "#D4EDDA",
+    padding: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#C3E6CB",
+  },
+  submittedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  submittedTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#155724",
+    marginLeft: 8,
+  },
+  submittedDate: {
+    fontSize: 14,
+    color: "#155724",
+    marginBottom: 15,
+  },
+  submissionContent: {
+    marginBottom: 15,
+  },
+  submissionLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#155724",
+    marginBottom: 5,
+  },
+  submissionText: {
+    fontSize: 14,
+    color: "#155724",
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    padding: 10,
+    borderRadius: 6,
+  },
+  downloadButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#007bff",
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+  },
+  downloadText: {
+    fontSize: 14,
+    color: "#007bff",
+    marginLeft: 5,
+    fontWeight: "500",
+  },
+});
+
+export default TaskDetails;

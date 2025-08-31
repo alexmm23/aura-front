@@ -59,7 +59,13 @@ export const API={
       NOTEBOOK_DELETE: '/notebook/delete',
       NOTES: '/note/list',
       NOTE_CREATE: '/note/images/upload',
-
+    },
+    // Task endpoints
+    TASKS: {
+      LIST: '/tasks/list',
+      DETAIL: '/tasks/detail',
+      SUBMIT: '/tasks/submit',
+      SUBMISSIONS: '/tasks/submissions',
     },
     // Profile endpoints
     PROFILE: {
