@@ -139,6 +139,7 @@ export default function HomeScreen() {
                       params: {
                         courseId: task.courseId || index,
                         courseWorkId: task.courseWorkId,
+                        submissionId: task.submissionId,
                       },
                     })
                   }

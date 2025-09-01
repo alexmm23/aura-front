@@ -20,7 +20,7 @@ import * as DocumentPicker from "expo-document-picker";
 
 const TaskDetails = () => {
   const router = useRouter();
-  const { courseId, courseWorkId } = useLocalSearchParams();
+  const { courseId, courseWorkId, submissionId } = useLocalSearchParams();
 
   // Estados para los datos de la tarea
   const [task, setTask] = useState(null);
@@ -71,6 +71,7 @@ const TaskDetails = () => {
     };
 
     if (courseId && courseWorkId) {
+      console.log("Fetching task details...");
       fetchTaskDetails();
     }
   }, [courseId, courseWorkId]);
@@ -111,26 +112,58 @@ const TaskDetails = () => {
     try {
       const token = await AsyncStorage.getItem("userToken");
       const formData = new FormData();
-
-      formData.append("homework_id", taskId.toString());
-      formData.append("text", submissionText);
-
+      // Si hay archivo, convertirlo a base64
+      let fileBase64 = null;
       if (selectedFile) {
-        formData.append("file", {
-          uri: selectedFile.uri,
-          type: selectedFile.mimeType,
-          name: selectedFile.name,
-        });
+        try {
+          const response = await fetch(selectedFile.uri);
+          const blob = await response.blob();
+          const reader = new FileReader();
+
+          fileBase64 = await new Promise((resolve, reject) => {
+            reader.onloadend = () => resolve(reader.result.split(",")[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (error) {
+          console.error("Error converting file to base64:", error);
+          Alert.alert("Error", "No se pudo procesar el archivo");
+          return;
+        }
       }
 
+      const requestData = {
+        submissionId: submissionId,
+        courseId: courseId,
+        courseWorkId: courseWorkId,
+        text: submissionText.trim(),
+        submittedAt: new Date().toISOString(),
+        metadata: {
+          platform: Platform.OS,
+          version: "1.0",
+        },
+        file: selectedFile
+          ? {
+              name: selectedFile.name,
+              mimeType: selectedFile.mimeType,
+              size: selectedFile.size,
+              data: fileBase64,
+            }
+          : null,
+      };
+
       const response = await fetch(
-        buildApiUrl(API.ENDPOINTS.STUDENT.SUBMISSIONS),
+        buildApiUrl(
+          `${API.ENDPOINTS.STUDENT.HOMEWORK}/${courseId}/${courseWorkId}/submit-file`
+        ),
         {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            // NO incluir Content-Type para FormData - React Native lo maneja automáticamente
           },
-          body: formData,
+          body: JSON.stringify(requestData),
         }
       );
 
