@@ -154,7 +154,7 @@ const TaskDetails = () => {
 
       const response = await fetch(
         buildApiUrl(
-          `${API.ENDPOINTS.STUDENT.HOMEWORK}/${courseId}/${courseWorkId}/submit-file`
+          `${API.ENDPOINTS.STUDENT.HOMEWORK}/${courseId}/${courseWorkId}/attach-file`
         ),
         {
           method: "POST",
