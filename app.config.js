@@ -5,8 +5,8 @@ const getEnvironment = () => {
     return {
         name: isProduction ? "AURA" : "AURA Dev",
         apiUrl: isProduction
-            ? "https://api.aura-production.com/api"
-            : "https://dev-api.aura-app.com/api",
+            ? "https://back.aurapp.com.mx/api"
+            : "http://localhost:3000/api",
         // Otras variables específicas del entorno
     };
 };

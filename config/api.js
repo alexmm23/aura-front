@@ -27,7 +27,7 @@ const getBaseUrl=() => {
   // Environments configuration
   const urls={
     development: devUrl,
-    production: apiProduction||'https://api.aura-app.com/api',
+    production: apiProduction||'https://back.aurapp.com.mx/api',
   };
 
   return urls[environment]||urls.development;

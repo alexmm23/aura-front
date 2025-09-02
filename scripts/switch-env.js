@@ -12,7 +12,7 @@ config();
 
 const ENV_PATH = join(__dirname, '..', '.env');
 const ENV_DEV = '# API Configuration\nAPI_URL=http://localhost:3000/api';
-const ENV_PROD = '# API Configuration\nAPI_URL=https://api.aura-app.com/api'; // Cambiar por la URL de producción real
+const ENV_PROD = '# API Configuration\nAPI_URL=https://back.aurapp.com.mx/api'; // Cambiar por la URL de producción real
 
 // Determinar el entorno a cambiar
 const targetEnv = process.argv[2] ? process.argv[2].toLowerCase() : null;
