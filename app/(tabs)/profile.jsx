@@ -6,8 +6,6 @@ import {
   StyleSheet,
   useWindowDimensions,
   TouchableOpacity,
-  Modal,
-  Alert,
 } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
 import fetchWithAuth from "@/utils/fetchWithAuth";
@@ -17,108 +15,17 @@ import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { useAuth } from "@/hooks/useAuth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAuth } from "@/hooks/useAuth"; // Hook para manejar la autenticación
+import AsyncStorage from "@react-native-async-storage/async-storage"; // Para manejar el almacenamiento local
 import * as Linking from "expo-linking";
 
-// Importaciones de Stripe para React Native
-import { StripeProvider, CardField, useStripe } from "@stripe/stripe-react-native";
-
-// ⚠️ Pega aquí tu clave pública de Stripe
-const STRIPE_PUBLISHABLE_KEY = "pk_test_xxx"; // Reemplaza con tu clave real
-
-// Componente para manejar el formulario de pago
-function StripePaymentForm({ clientSecret, onSuccess, onCancel }) {
-  const { confirmSetupIntent } = useStripe();
-  const [loading, setLoading] = useState(false);
-  const [cardComplete, setCardComplete] = useState(false);
-
-  const handlePayment = async () => {
-    if (!clientSecret || !cardComplete) {
-      Alert.alert("Error", "Por favor completa la información de la tarjeta");
-      return;
-    }
-
-    setLoading(true);
-    
-    try {
-      const { error, setupIntent } = await confirmSetupIntent(clientSecret, {
-        paymentMethodType: 'Card',
-      });
-
-      if (error) {
-        Alert.alert("Error de pago", error.message);
-      } else if (setupIntent?.status === 'succeeded') {
-        Alert.alert(
-          "¡Éxito!", 
-          "Método de pago actualizado correctamente",
-          [{ text: "OK", onPress: onSuccess }]
-        );
-      }
-    } catch (err) {
-      Alert.alert("Error", "Ocurrió un error inesperado");
-      console.error("Error en pago:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <View style={styles.paymentFormContainer}>
-      <AuraText style={styles.paymentTitle} text="Actualizar método de pago" />
-      
-      <CardField
-        postalCodeEnabled={false}
-        placeholders={{
-          number: '4242 4242 4242 4242',
-        }}
-        cardStyle={{
-          backgroundColor: '#FFFFFF',
-          textColor: '#000000',
-        }}
-        style={styles.cardField}
-        onCardChange={(cardDetails) => {
-          setCardComplete(cardDetails.complete);
-        }}
-      />
-
-      <View style={styles.paymentButtonsContainer}>
-        <TouchableOpacity
-          style={[styles.paymentButton, styles.cancelButton]}
-          onPress={onCancel}
-        >
-          <AuraText style={styles.cancelButtonText} text="Cancelar" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[
-            styles.paymentButton, 
-            styles.confirmButton,
-            (!cardComplete || loading) && styles.disabledButton
-          ]}
-          onPress={handlePayment}
-          disabled={!cardComplete || loading}
-        >
-          <AuraText 
-            style={styles.confirmButtonText} 
-            text={loading ? "Procesando..." : "Actualizar tarjeta"} 
-          />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
-
 export default function Profile() {
-  const { logout } = useAuth();
+  const { logout } = useAuth(); // Hook para manejar la autenticación
   const [profileData, setProfileData] = useState(null);
-  const [showStripeModal, setShowStripeModal] = useState(false);
-  const [clientSecret, setClientSecret] = useState("");
 
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
   const router = useRouter();
-
   const googleLogin = async () => {
     try {
       const response = await fetchWithAuth(
@@ -159,8 +66,7 @@ export default function Profile() {
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
-      Alert.alert(
-        "Error",
+      alert(
         "Error al obtener el perfil. Por favor, inténtalo de nuevo más tarde."
       );
     }
@@ -182,66 +88,20 @@ export default function Profile() {
       if (data.url) {
         Linking.openURL(data.url);
       } else {
-        Alert.alert("Error", "No se pudo iniciar sesión con Teams");
+        alert("No se pudo iniciar sesión con Teams");
       }
     } catch (error) {
       console.error("Error during Teams login:", error);
     }
   };
 
-  // Función para manejar la administración de suscripción con Stripe
-  const handleAdminSubscription = async () => {
-    try {
-      // ⚠️ Aquí llamas a tu backend para crear el SetupIntent
-      // Ajusta la URL según tu API
-      const response = await fetchWithAuth(
-        buildApiUrl("/api/subscription/create-setup-intent"), // Ajusta esta URL
-        {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ 
-            // Incluye los datos necesarios, como el ID del customer de Stripe
-            customerId: profileData?.stripeCustomerId || null,
-            // o cualquier otro dato que necesite tu backend
-          }),
-        }
-      );
-      
-      const data = await response.json();
-      
-      if (data.clientSecret) {
-        setClientSecret(data.clientSecret);
-        setShowStripeModal(true);
-      } else {
-        Alert.alert("Error", "No se pudo inicializar el proceso de pago");
-      }
-    } catch (error) {
-      console.error("Error creating setup intent:", error);
-      Alert.alert("Error", "Error al procesar la solicitud de pago");
-    }
-  };
-
-  const handlePaymentSuccess = () => {
-    setShowStripeModal(false);
-    setClientSecret("");
-    // Opcional: refrescar los datos del perfil
-    fetchProfile();
-  };
-
-  const handlePaymentCancel = () => {
-    setShowStripeModal(false);
-    setClientSecret("");
-  };
-
   useEffect(() => {
+    // Verifica si el usuario ya está vinculado al perfil
     fetchProfile();
   }, [router]);
 
   return (
-    <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
+    <>
       <Head>
         <title>Mi Perfil</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -256,7 +116,7 @@ export default function Profile() {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.cardheader}
-        />
+        ></LinearGradient>
 
         {/* Imagen de perfil superpuesta */}
         <View style={styles.profileImageContainer}>
@@ -271,9 +131,8 @@ export default function Profile() {
           <View style={styles.card}>
             <AuraText style={styles.title} text="Mi Perfil" />
             {profileData && (
-              <AuraText style={styles.title} text={profileData.user.email} />
+              <AuraText sryle={styles.title} text={profileData.user.email} />
             )}
-            
             {/* Íconos de plataformas */}
             <View style={styles.iconRow}>
               <TouchableOpacity onPress={() => googleLogin()}>
@@ -289,8 +148,7 @@ export default function Profile() {
                 />
               </TouchableOpacity>
             </View>
-
-            {/* Botones */}
+            {/* /* Botones */}
             <TouchableOpacity
               style={styles.button}
               onPress={() =>
@@ -301,18 +159,12 @@ export default function Profile() {
             >
               <AuraText style={styles.buttonText} text="Editar Perfil" />
             </TouchableOpacity>
-
-            {/* Botón de administrar suscripción - modificado para usar Stripe */}
-            <TouchableOpacity 
-              style={styles.button}
-              onPress={handleAdminSubscription}
-            >
+            <TouchableOpacity style={styles.button}>
               <AuraText
                 style={styles.buttonText}
                 text="Administrar Suscripción"
               />
             </TouchableOpacity>
-
             <TouchableOpacity
               style={[styles.button, styles.logoutButton]}
               onPress={() => logout()}
@@ -322,31 +174,14 @@ export default function Profile() {
           </View>
         </ScrollView>
 
-        {/* Modal de Stripe */}
-        <Modal
-          visible={showStripeModal}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={handlePaymentCancel}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              {clientSecret && (
-                <StripePaymentForm
-                  clientSecret={clientSecret}
-                  onSuccess={handlePaymentSuccess}
-                  onCancel={handlePaymentCancel}
-                />
-              )}
-            </View>
-          </View>
-        </Modal>
+        {/* Navbar persistente */}
+        {/* <Navbar /> */}
       </View>
-    </StripeProvider>
+    </>
   );
 }
 
-// Componente PortraitHeader (sin cambios)
+// Componente PortraitHeader
 const PortraitHeader = () => (
   <View style={styles.backgroundContainer}>
     <Svg
@@ -393,7 +228,7 @@ const styles = StyleSheet.create({
     marginRight: 20,
     height: "30%",
     backgroundColor: "linear-gradient(90deg, #B065C4 0%, #F4A45B 100%)",
-    backgroundImage: "linear-gradient(90deg, #B065C4, #F4A45B)",
+    backgroundImage: "linear-gradient(90deg, #B065C4, #F4A45B)", // Web fallback
     justifyContent: "flex-start",
     alignItems: "flex-start",
     paddingTop: 40,
@@ -512,83 +347,51 @@ const styles = StyleSheet.create({
     height: "80%",
     maxHeight: 500,
   },
+  // Estilos para modo horizontal
+  backgroundContainerLandscape: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: "40%", // El header ocupa solo una parte del ancho en modo horizontal
+    height: "100%",
+  },
+  svg: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   headerContent: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    height: 350,
+    height: 350, // igual que el contenedor
     justifyContent: "center",
     alignItems: "center",
-    paddingTop: 40,
+    paddingTop: 40, //mas espacio arriba
+  },
+  headerContentLandscape: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 30, // mas espacio al rededor
   },
   headerImage: {
     width: "90%",
-    height: 250,
+    height: 250, //altura aumentada
     marginBottom: 20,
     marginTop: 15,
   },
-  // Nuevos estilos para Stripe Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 20,
-    width: "90%",
-    maxWidth: 400,
-  },
-  paymentFormContainer: {
-    alignItems: "center",
-  },
-  paymentTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#D29828",
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  cardField: {
-    width: "100%",
-    height: 50,
-    marginBottom: 20,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  paymentButtonsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    gap: 10,
-  },
-  paymentButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  cancelButton: {
-    backgroundColor: "#E1A3CE",
-  },
-  cancelButtonText: {
-    color: "#822C7D",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  confirmButton: {
-    backgroundColor: "#F4A45B",
-  },
-  confirmButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  disabledButton: {
-    backgroundColor: "#ccc",
+  headerImageLandscape: {
+    width: "100%", // Ocupa todo el ancho disponible
+    height: "80%",// Ocupa más altura
+    maxHeight: 500 // Límite para pantallas grandes
   },
 });
