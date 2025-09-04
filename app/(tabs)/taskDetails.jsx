@@ -17,6 +17,7 @@ import { API, buildApiUrl } from "@/config/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AuraText } from "@/components/AuraText";
 import * as DocumentPicker from "expo-document-picker";
+import { apiGet, apiPost } from "../../utils/fetchWithAuth";
 
 const TaskDetails = () => {
   const router = useRouter();
@@ -36,18 +37,8 @@ const TaskDetails = () => {
   useEffect(() => {
     const fetchTaskDetails = async () => {
       try {
-        const token = await AsyncStorage.getItem("userToken");
-        const response = await fetch(
-          buildApiUrl(
-            `${API.ENDPOINTS.STUDENT.HOMEWORK}/${courseId}/${courseWorkId}`
-          ),
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
+        const response = await apiGet(
+          `${API.ENDPOINTS.STUDENT.HOMEWORK}/${courseId}/${courseWorkId}`
         );
 
         if (response.ok) {
@@ -152,20 +143,7 @@ const TaskDetails = () => {
           : null,
       };
 
-      const response = await fetch(
-        buildApiUrl(
-          `${API.ENDPOINTS.STUDENT.HOMEWORK}/${courseId}/${courseWorkId}/attach-file`
-        ),
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            // NO incluir Content-Type para FormData - React Native lo maneja automáticamente
-          },
-          body: JSON.stringify(requestData),
-        }
-      );
+      const response = await apiPost(API.ENDPOINTS.STUDENT.SUBMIT_TASK, requestData);
 
       if (response.ok) {
         Alert.alert("Éxito", "Tarea entregada correctamente", [

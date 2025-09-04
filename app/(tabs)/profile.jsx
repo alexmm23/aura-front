@@ -18,6 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/hooks/useAuth"; // Hook para manejar la autenticación
 import AsyncStorage from "@react-native-async-storage/async-storage"; // Para manejar el almacenamiento local
 import * as Linking from "expo-linking";
+import { apiGet } from "../../utils/fetchWithAuth";
 
 export default function Profile() {
   const { logout } = useAuth(); // Hook para manejar la autenticación
@@ -49,16 +50,10 @@ export default function Profile() {
 
   const fetchProfile = async () => {
     try {
-      const response = await fetchWithAuth(
-        buildApiUrl(API.ENDPOINTS.PROFILE.INFO),
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await apiGet(API.ENDPOINTS.PROFILE.INFO);
+      if (!response.ok) {
+        throw new Error("Error fetching profile");
+      }
       const data = await response.json();
       console.log("Perfil obtenido:", data);
       if (data) {

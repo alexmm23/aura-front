@@ -15,6 +15,7 @@ import Svg, { Path } from "react-native-svg";
 import { Colors } from "@/constants/Colors";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { apiGet } from "../../utils/fetchWithAuth";
 
 export default function HomeTeacher() {
   const [homework, setHomework] = useState([]);
@@ -24,16 +25,7 @@ export default function HomeTeacher() {
   const fetchHomework = async () => {
     try {
       const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(
-        buildApiUrl(API.ENDPOINTS.STUDENT.HOMEWORK),
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await apiGet(API.ENDPOINTS.TEACHER.HOMEWORK);
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }

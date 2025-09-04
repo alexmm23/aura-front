@@ -1,10 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { buildApiUrl, API } from '../config/api';
+import { buildApiUrl, API, isWeb, createFetchOptions } from '../config/api';
 
 /**
- * Wrapper para fetch que maneja automáticamente tokens y redirecciones
- * cuando el usuario no está autenticado
+ * Wrapper universal para fetch que maneja automáticamente:
+ * - Web: cookies httpOnly (credentials: 'include')
+ * - Móvil: tokens JWT en headers Authorization
  * 
  * @param {string} url - URL de la API
  * @param {Object} options - Opciones de fetch
@@ -12,88 +13,175 @@ import { buildApiUrl, API } from '../config/api';
  */
 export const fetchWithAuth = async (url, options = {}) => {
     try {
-        // Obtener token de autenticación
-        const token = await AsyncStorage.getItem('userToken');
+        let authOptions = { ...options };
 
-        // Si hay token, añadirlo a los headers
-        if (token) {
-            options.headers = {
-                ...options.headers,
-                'Authorization': `Bearer ${token}`
-            };
+        if (isWeb()) {
+            // Para web: usar cookies httpOnly automáticamente
+            authOptions = createFetchOptions(authOptions);
+        } else {
+            // Para móvil: añadir token JWT en headers
+            const token = await AsyncStorage.getItem('userToken');
+            if (token) {
+                authOptions.headers = {
+                    'Content-Type': 'application/json',
+                    ...authOptions.headers,
+                    'Authorization': `Bearer ${token}`
+                };
+            }
         }
 
         // Realizar la petición
-        const response = await fetch(url, options);
+        const response = await fetch(url, authOptions);
 
-        // Si la respuesta es 401 (Unauthorized), intentar renovar el token
+        // Si la respuesta es 401 (Unauthorized)
         if (response.status === 401) {
-            console.log('Token expirado o inválido, intentando renovar...');
+            console.log('Sesión expirada o inválida...');
 
-            const refreshToken = await AsyncStorage.getItem('refreshToken');
-            if (!refreshToken) {
-                // Si no hay refresh token, redirigir al login
-                await handleLogout();
-                return response;
+            if (isWeb()) {
+                // En web, redirigir al login (las cookies se limpiarán automáticamente)
+                if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+                    window.location.href = '/login';
+                }
+            } else {
+                // En móvil, intentar renovar el token
+                const refreshToken = await AsyncStorage.getItem('refreshToken');
+                if (!refreshToken) {
+                    await handleMobileLogout();
+                    return response;
+                }
+
+                // Intentar renovar el token
+                const refreshResponse = await fetch(buildApiUrl(API.ENDPOINTS.AUTH.REFRESH_TOKEN), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refreshToken }),
+                });
+
+                if (!refreshResponse.ok) {
+                    await handleMobileLogout();
+                    return response;
+                }
+
+                const { accessToken: newToken, refreshToken: newRefreshToken } = await refreshResponse.json();
+
+                // Guardar los nuevos tokens
+                await AsyncStorage.setItem('userToken', newToken);
+                await AsyncStorage.setItem('refreshToken', newRefreshToken);
+
+                // Reintentar la petición original con el nuevo token
+                authOptions.headers = {
+                    ...authOptions.headers,
+                    'Authorization': `Bearer ${newToken}`
+                };
+
+                return fetch(url, authOptions);
             }
-
-            // Intentar renovar el token
-            const refreshResponse = await fetch(buildApiUrl(API.ENDPOINTS.AUTH.REFRESH_TOKEN), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refreshToken }),
-            });
-
-            if (!refreshResponse.ok) {
-                // Si no se puede renovar, redirigir al login
-                await handleLogout();
-                return response;
-            }
-
-            const { accessToken: newToken, refreshToken: newRefreshToken } = await refreshResponse.json();
-
-            // Guardar los nuevos tokens
-            await AsyncStorage.setItem('userToken', newToken);
-            await AsyncStorage.setItem('refreshToken', newRefreshToken);
-
-            // Reintentar la petición original con el nuevo token
-            options.headers = {
-                ...options.headers,
-                'Authorization': `Bearer ${newToken}`
-            };
-
-            return fetch(url, options);
         }
 
         return response;
 
     } catch (error) {
         console.error('Error en fetchWithAuth:', error);
-        // Si hay un error no controlado, es mejor redireccionar al login
-        // en lugar de permitir comportamientos inesperados
-        await handleLogout();
+        
+        // En caso de error, limpiar sesión apropiadamente
+        if (!isWeb()) {
+            await handleMobileLogout();
+        }
+        
         throw error;
     }
 };
 
-// Función auxiliar para manejar el cierre de sesión
-const handleLogout = async () => {
+// Función auxiliar para manejar el logout en móvil
+const handleMobileLogout = async () => {
     try {
         await AsyncStorage.removeItem('userToken');
         await AsyncStorage.removeItem('refreshToken');
 
-        // Redireccionar solo si estamos en un contexto de navegación
-        // (evita errores si se llama en contextos donde router no está disponible)
-        const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
-        if (pathname.startsWith('/login')) {
-            return; // Ya estamos en la página de login, no hacemos nada
-        }
+        // Redireccionar solo si no estamos ya en login
         if (router && router.replace) {
-            router.replace('/login');
+            const currentRoute = router.pathname || '';
+            if (!currentRoute.includes('/login')) {
+                router.replace('/login');
+            }
         }
     } catch (error) {
-        console.error('Error al manejar el logout:', error);
+        console.error('Error al manejar el logout móvil:', error);
     }
+};
+
+/**
+ * Función helper para hacer requests con autenticación automática
+ * Usa automáticamente cookies para web y tokens para móvil
+ */
+export const apiRequest = async (endpoint, options = {}) => {
+    const url = buildApiUrl(endpoint);
+    return fetchWithAuth(url, options);
+};
+
+/**
+ * Función helper para requests GET con autenticación
+ */
+export const apiGet = async (endpoint, options = {}) => {
+    return apiRequest(endpoint, {
+        method: 'GET',
+        ...options
+    });
+};
+
+/**
+ * Función helper para requests POST con autenticación
+ */
+export const apiPost = async (endpoint, data = null, options = {}) => {
+    const requestOptions = {
+        method: 'POST',
+        ...options
+    };
+
+    if (data) {
+        requestOptions.body = JSON.stringify(data);
+    }
+
+    return apiRequest(endpoint, requestOptions);
+};
+
+/**
+ * Función helper para requests PUT con autenticación
+ */
+export const apiPut = async (endpoint, data = null, options = {}) => {
+    const requestOptions = {
+        method: 'PUT',
+        ...options
+    };
+
+    if (data) {
+        requestOptions.body = JSON.stringify(data);
+    }
+
+    return apiRequest(endpoint, requestOptions);
+};
+
+/**
+ * Función helper para requests DELETE con autenticación
+ */
+export const apiDelete = async (endpoint, options = {}) => {
+    return apiRequest(endpoint, {
+        method: 'DELETE',
+        ...options
+    });
+};
+
+export const apiPatch = async (endpoint, data = null, options = {}) => {
+    const requestOptions = {
+        method: 'PATCH',
+        ...options
+    };
+
+    if (data) {
+        requestOptions.body = JSON.stringify(data);
+    }
+
+    return apiRequest(endpoint, requestOptions);
 };
 
 export default fetchWithAuth;

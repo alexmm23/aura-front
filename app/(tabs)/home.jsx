@@ -10,7 +10,8 @@ import {
 import React, { useEffect, useState } from "react";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { AuraText } from "@/components/AuraText";
-import { API, buildApiUrl } from "@/config/api";
+import { fetchWithAuth, apiGet } from "../../utils/fetchWithAuth";
+import { API } from "../../config/api";
 import Head from "expo-router/head";
 import Svg, { Path } from "react-native-svg";
 import { Colors } from "@/constants/Colors";
@@ -27,17 +28,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const fetchHomework = async () => {
     try {
-      const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(
-        buildApiUrl(API.ENDPOINTS.STUDENT.HOMEWORK),
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await apiGet(API.ENDPOINTS.STUDENT.HOMEWORK);
+      
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
@@ -51,15 +43,8 @@ export default function HomeScreen() {
   };
   const fetchNotes = async () => {
     try {
-      const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(buildApiUrl(API.ENDPOINTS.STUDENT.NOTES), {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          origin: "your-app-name",
-        },
-      });
+      const response = await apiGet(API.ENDPOINTS.STUDENT.NOTES);
+      
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }

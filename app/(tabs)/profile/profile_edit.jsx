@@ -19,9 +19,9 @@ import { useAuth } from "@/hooks/useAuth"; // Hook para manejar la autenticació
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage"; // Para manejar el almacenamiento local
 import Toast from "react-native-toast-message"; // Para mostrar mensajes de error
+import { apiGet, apiPatch } from "../../../utils/fetchWithAuth";
 
 export default function Profile() {
-  const { logout, userToken } = useAuth(); // Hook para manejar la autenticación
   const { height, width } = useWindowDimensions();
   const { ENDPOINTS } = API;
   const [formData, setFormData] = useState({
@@ -35,16 +35,9 @@ export default function Profile() {
   const isLargeScreen = width >= 928;
   const shouldUseLandscapeLayout = isLargeScreen || isLandscape;
 
-  const getProfile = async (token) => {
+  const getProfile = async () => {
     try {
-      const response = await fetch(buildApiUrl(ENDPOINTS.PROFILE.INFO), {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await apiGet(ENDPOINTS.PROFILE.INFO);
 
       if (!response.ok) {
         throw new Error("Error fetching profile");
@@ -67,11 +60,6 @@ export default function Profile() {
   };
 
   const saveProfile = async () => {
-    const token = await AsyncStorage.getItem("userToken");
-    if (!token) {
-      console.error("No user token found");
-      return;
-    }
     // Solo tomar los campos que el usuario ha modificado y no estén vacíos
     const updateFields = {};
     if (formData.name) updateFields.name = formData.name;
@@ -84,14 +72,21 @@ export default function Profile() {
     }
 
     try {
-      const response = await fetch(buildApiUrl(ENDPOINTS.PROFILE.UPDATE), {
-        method: "PATCH",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updateFields),
+      const response = await apiPatch(ENDPOINTS.PROFILE.UPDATE, updateFields);
+      if (!response.ok) {
+        console.error("Error updating profile:", response.statusText);
+        Toast.show({
+          type: "error",
+          text1: "Error al actualizar el perfil",
+          text2:
+            "Error al actualizar el perfil. Por favor, inténtalo de nuevo.",
+        });
+        return;
+      }
+      // Si la respuesta es exitosa, puedes manejar la respuesta aquí
+      Toast.show({
+        type: "success",
+        text1: "Perfil actualizado correctamente",
       });
       if (!response.ok) {
         console.error("Error updating profile:", response.statusText);
@@ -166,13 +161,7 @@ export default function Profile() {
     </>
   );
   useEffect(() => {
-    const fetchProfile = async () => {
-      const token = await AsyncStorage.getItem("userToken");
-      if (token) {
-        getProfile(token);
-      }
-    };
-    fetchProfile();
+    getProfile();
   }, []);
 
   return (

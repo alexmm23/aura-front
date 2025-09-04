@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -10,9 +10,9 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { API, buildApiUrl } from "@/config/api";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API} from "@/config/api";
 import { AuraText } from "../../components/AuraText";
+import { apiGet } from "../../utils/fetchWithAuth";
 
 const NotebookPages = () => {
   const router = useRouter();
@@ -23,17 +23,11 @@ const NotebookPages = () => {
   useEffect(() => {
     const fetchPages = async () => {
       try {
-        const token = await AsyncStorage.getItem("userToken");
-        const response = await fetch(
-          buildApiUrl(`${API.ENDPOINTS.STUDENT.NOTES}/${notebookId}`),
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const response = await apiGet(`${API.ENDPOINTS.STUDENT.NOTES}/${notebookId}`);
+        if (!response.ok) {
+          throw new Error(response.statusText || "Error fetching pages");
+        }
+
         const data = await response.json();
         console.log(data);
 

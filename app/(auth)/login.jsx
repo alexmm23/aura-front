@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { KeyboardAvoidingView, Platform } from "react-native";
-import { API, buildApiUrl } from "@/config/api";
+import { API, buildApiUrl, isWeb, getLoginEndpoint } from "@/config/api";
+import { apiGet } from "@/utils/fetchWithAuth";
 import { Ionicons } from "@expo/vector-icons";
 
 import {
@@ -76,36 +77,48 @@ export default function Login() {
     }
 
     try {
-      const response = await fetch(buildApiUrl(API.ENDPOINTS.AUTH.LOGIN), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
+      // Usar el sistema unificado de login
+      const result = await login({
+        email: formData.email,
+        password: formData.password,
       });
-      const data = await response.json();
-      if (response.ok) {
-        const { token, refreshToken } = data;
-        await login(token, refreshToken);
 
-        const decoded = decodeJWT(token);
-
-        if (decoded && Number(decoded.role_id) === 3) {
-          router.replace("/HomeTeacher");
+      if (result.success) {
+        // Si el login fue exitoso, obtener info del usuario para redirección
+        if (isWeb()) {
+          // En web, hacer request para obtener perfil del usuario
+          try {
+            const profileResponse = await apiGet(API.ENDPOINTS.AUTH.PROFILE);
+            
+            if (profileResponse.ok) {
+              const userData = await profileResponse.json();
+              // Redirigir basado en el rol
+              if (userData.role_id === 3) {
+                router.replace("/HomeTeacher");
+              } else {
+                router.replace("/home");
+              }
+            } else {
+              // Si no se puede obtener el perfil, ir a home por defecto
+              router.replace("/home");
+            }
+          } catch (error) {
+            console.error("Error obteniendo perfil:", error);
+            router.replace("/home");
+          }
         } else {
+          // En móvil, usar el token para decodificar el rol
+          // Nota: Esto requiere que el backend incluya el rol en el token
+          // Por ahora, ir a home por defecto
           router.replace("/home");
         }
       } else {
-        const { error } = data;
-        console.error("Login error:", error);
-        setErrors({ form: error });
+        // Mostrar error del login
+        setErrors({ form: result.error || "Error de autenticación" });
       }
     } catch (error) {
+      console.error("Login error:", error);
       setErrors({ form: "Error de conexión" });
-      logout();
     }
   };
 

@@ -21,6 +21,7 @@ import FloatingAIMenu from "../../components/FloatingAIMenu";
 import { AuraText } from "../../components/AuraText";
 import { API, buildApiUrl } from "@/config/api";
 import { useRouter } from "expo-router";
+import { apiPost, apiGet } from "../../utils/fetchWithAuth";
 
 const NotebookScreen = () => {
   const [notes, setNotes] = useState([]);
@@ -51,14 +52,8 @@ const NotebookScreen = () => {
   }, [showCreateDialog]);
 
   const fetchNotes = async () => {
-    const token = await AsyncStorage.getItem("userToken");
-    const response = await fetch(buildApiUrl(API.ENDPOINTS.STUDENT.NOTEBOOKS), {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await apiGet(API.ENDPOINTS.STUDENT.NOTEBOOKS);
+        
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error);
@@ -131,19 +126,9 @@ const NotebookScreen = () => {
       const token = await AsyncStorage.getItem("userToken");
       console.log("Creando cuaderno con título:", notebookTitle.trim());
 
-      const response = await fetch(
-        buildApiUrl(API.ENDPOINTS.STUDENT.NOTEBOOK_CREATE),
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            title: notebookTitle.trim(),
-          }),
-        }
-      );
+      const response = await apiPost(API.ENDPOINTS.STUDENT.NOTEBOOKS, {
+        title: notebookTitle.trim(),
+      });
 
       const responseData = await response.json();
 

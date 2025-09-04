@@ -15,6 +15,7 @@ import Svg, { Path } from "react-native-svg";
 import { AuraText } from "@/components/AuraText";
 import { AuraTextInput } from "@/components/AuraTextInput";
 import { Image } from "react-native";
+import { apiPost } from "../../utils/fetchWithAuth";
 const LandscapeHeader = ({ colors, styles, children }) => {
   return (
     <View style={localStyles.container}>
@@ -96,20 +97,11 @@ export default function ForgotPassword() {
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
-    }    try {
-      const response = await fetch(
-        buildApiUrl(API.ENDPOINTS.AUTH.RESET_PASSWORD),
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email }),
-        }
-      );
-      const data = await response.json();
+    } try {
+      const response = await apiPost(API.ENDPOINTS.AUTH.FORGOT_PASSWORD, { email });
+      // Aquí puedes manejar la respuesta
       if (!response.ok) {
-        setErrors({ form: data.message || "Error al enviar el correo" });
+        setErrors({ form: response.data.message || "Error al enviar el correo" });
         return;
       }
       setEmail("");
