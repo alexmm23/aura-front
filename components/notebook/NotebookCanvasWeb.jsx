@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, memo, useCallback } from "react";
 import { View, StyleSheet, Platform, Text, Image, Modal, TouchableOpacity, FlatList, ActivityIndicator } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -15,6 +15,25 @@ const colors = ["black", "red", "blue", "green", "orange"];
 const brushSizes = [1, 2, 5, 10, 15];
 const textSizes = [12, 16, 20, 24, 32];
 
+// Pre-cargar assets como constantes para evitar re-carga
+const ASSETS = {
+  PENCIL: require("../../assets/images/lapiz.png"),
+  RECTANGLE: require("../../assets/images/rectangulo.png"),
+  ERASER: require("../../assets/images/borrador.png"),
+  TEXT: require("../../assets/images/fuente.png"),
+  IMAGE: require("../../assets/images/agregarImagen.png"),
+  BRUSH_SIZE: require("../../assets/images/anchura.png"),
+  COLOR: require("../../assets/images/color.png"),
+  CLEAR: require("../../assets/images/limpiar.png"),
+  SAVE: require("../../assets/images/salvar.png"),
+  BACK: require("../../assets/images/volver.png"),
+};
+
+// Estilo constante para imágenes
+const IMAGE_STYLE = { width: 24, height: 24 };
+
+
+
 const NotebookCanvasWeb = ({ onSave, onBack }) => {
 
   // return (
@@ -29,17 +48,24 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   const [color, setColor] = useState(colors[0]);
   const [brushSize, setBrushSize] = useState(2);
   const [textSize, setTextSize] = useState(16);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [lastPoint, setLastPoint] = useState({ x: 0, y: 0 });
-  const [rectStart, setRectStart] = useState(null);
-  const [canvasState, setCanvasState] = useState(null);
+  // Usar useRef para estados que no afectan el render del UI
+  const isDrawingRef = useRef(false);
+  const lastPointRef = useRef({ x: 0, y: 0 });
+  const rectStartRef = useRef(null);
+  const canvasStateRef = useRef(null);
+  const textInputRef = useRef({
+    visible: false,
+    x: 0,
+    y: 0,
+    text: "",
+  });
   const [pendingImage, setPendingImage] = useState(null);
   const [textInput, setTextInput] = useState({
     visible: false,
     x: 0,
     y: 0,
     text: "",
-  }); // Para guardar el estado del canvas
+  }); // Solo para el render del input visual
   const [showBrushSlider, setShowBrushSlider] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   
@@ -49,6 +75,54 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   const [loadingNotebooks, setLoadingNotebooks] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
   const [canvasDataToSave, setCanvasDataToSave] = useState(null);
+
+  // Callbacks memoizados para evitar re-renders del Toolbar
+  const setBrushSizeCallback = useCallback((value) => {
+    if (typeof value === 'function') {
+      setBrushSize(value);
+    } else {
+      setBrushSize(value);
+    }
+  }, []);
+
+  const setColorCallback = useCallback((value) => {
+    if (typeof value === 'function') {
+      setColor(value);
+    } else {
+      setColor(value);
+    }
+  }, []);
+
+  const setTextSizeCallback = useCallback((value) => {
+    if (typeof value === 'function') {
+      setTextSize(value);
+    } else {
+      setTextSize(value);
+    }
+  }, []);
+
+  const setShowBrushSliderCallback = useCallback((value) => {
+    if (typeof value === 'function') {
+      setShowBrushSlider(value);
+    } else {
+      setShowBrushSlider(value);
+    }
+  }, []);
+
+  const setShowColorPickerCallback = useCallback((value) => {
+    if (typeof value === 'function') {
+      setShowColorPicker(value);
+    } else {
+      setShowColorPicker(value);
+    }
+  }, []);
+
+  // Callback para manejar cambios en el texto sin causar re-renders del toolbar
+  const handleTextInputChange = useCallback((e) => {
+    const newText = e.target.value;
+    textInputRef.current = { ...textInputRef.current, text: newText };
+    setTextInput(prev => ({ ...prev, text: newText }));
+  }, []);
 
   // Configuración inicial del canvas (solo una vez)
   useEffect(() => {
@@ -82,12 +156,14 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
 
     if (tool === TOOL_TEXT) {
       // Mostrar input de texto en la posición clickeada
-      setTextInput({
+      textInputRef.current = {
         visible: true,
         x: pos.x,
         y: pos.y,
         text: "",
-      });
+      };
+      // Forzar re-render solo para mostrar el input de texto
+      setTextInput({...textInputRef.current});
       return;
     }
 
@@ -103,12 +179,12 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
       return;
     }
 
-    setIsDrawing(true);
-    setLastPoint(pos);
+    isDrawingRef.current = true;
+    lastPointRef.current = pos;
     if (tool === TOOL_RECT) {
-      setRectStart(pos);
+      rectStartRef.current = pos;
       // Guardar el estado actual del canvas
-      setCanvasState(ctx.getImageData(0, 0, canvas.width, canvas.height));
+      canvasStateRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
     } else if (tool === TOOL_PENCIL) {
       ctx.globalCompositeOperation = "source-over";
       ctx.strokeStyle = color;
@@ -124,7 +200,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   };
 
   const draw = (e) => {
-    if (!isDrawing) return;
+    if (!isDrawingRef.current) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
@@ -135,28 +211,28 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
       ctx.stroke();
       ctx.beginPath();
       ctx.moveTo(pos.x, pos.y);
-    } else if (tool === TOOL_RECT && rectStart && canvasState) {
+    } else if (tool === TOOL_RECT && rectStartRef.current && canvasStateRef.current) {
       // Restaurar el estado original del canvas
-      ctx.putImageData(canvasState, 0, 0);
+      ctx.putImageData(canvasStateRef.current, 0, 0);
 
       // Dibujar el rectángulo preview
       ctx.globalCompositeOperation = "source-over";
       ctx.strokeStyle = color;
       ctx.lineWidth = brushSize;
       ctx.strokeRect(
-        rectStart.x,
-        rectStart.y,
-        pos.x - rectStart.x,
-        pos.y - rectStart.y
+        rectStartRef.current.x,
+        rectStartRef.current.y,
+        pos.x - rectStartRef.current.x,
+        pos.y - rectStartRef.current.y
       );
     }
 
-    setLastPoint(pos);
+    lastPointRef.current = pos;
   };
   const stopDrawing = () => {
-    setIsDrawing(false);
-    setRectStart(null);
-    setCanvasState(null); // Limpiar el estado guardado
+    isDrawingRef.current = false;
+    rectStartRef.current = null;
+    canvasStateRef.current = null; // Limpiar el estado guardado
 
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext("2d");
@@ -178,12 +254,14 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     ctx.fillText(text, textInput.x, textInput.y);
 
     // Ocultar el input de texto
+    textInputRef.current = { visible: false, x: 0, y: 0, text: "" };
     setTextInput({ visible: false, x: 0, y: 0, text: "" });
   };
   const handleTextKeyPress = (e) => {
     if (e.key === "Enter") {
       addTextToCanvas(textInput.text);
     } else if (e.key === "Escape") {
+      textInputRef.current = { visible: false, x: 0, y: 0, text: "" };
       setTextInput({ visible: false, x: 0, y: 0, text: "" });
     }
   };
@@ -193,7 +271,8 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     if (file && file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const img = new Image();
+        // Usar HTMLImageElement específicamente para evitar conflictos con React Native
+        const img = new window.Image();
         img.onload = () => {
           setPendingImage(img);
         };
@@ -234,22 +313,22 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     return "crosshair";
   };
 
-  const handleToolChange = (newTool) => {
+  const handleToolChange = useCallback((newTool) => {
     // Si hay una imagen pendiente y se cambia de herramienta, cancelarla
     if (tool === TOOL_IMAGE && newTool !== TOOL_IMAGE && pendingImage) {
       setPendingImage(null);
     }
     setTool(newTool);
-  };
+  }, [tool, pendingImage]);
 
-  const clearCanvas = () => {
+  const clearCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-  };
+  }, []);
 
-  const saveCanvas = () => {
+  const saveCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
@@ -275,7 +354,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     link.click();
 
     onSave?.(dataURL);
-  };
+  }, [onSave]);
 
   // Función para obtener los cuadernos del usuario
   const fetchUserNotebooks = async () => {
@@ -356,7 +435,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   };
 
   // Función modificada para abrir el modal de selección
-  const openNotebookSelector = () => {
+  const openNotebookSelector = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
@@ -379,7 +458,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     setCanvasDataToSave(dataURL);
     setShowNotebookModal(true);
     fetchUserNotebooks();
-  };
+  }, []);
 
   // Componente del modal para seleccionar cuaderno
   const NotebookSelectorModal = () => (
@@ -453,177 +532,219 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         </View>
       </View>
     </Modal>
-  ); // Toolbar UI
-  const Toolbar = () => (
-    <View style={styles.toolbar}>
+  ); 
+
+  // Componentes individuales memoizados para el toolbar
+  const ToolButtons = memo(({ tool, onToolChange }) => (
+    <>
       <button
-        onClick={() => handleToolChange(TOOL_PENCIL)}
+        onClick={() => onToolChange(TOOL_PENCIL)}
         style={{
           ...styles.toolButton,
           ...(tool === TOOL_PENCIL ? styles.activeBtn : {}),
         }}
       >
-        <Image
-          source={require("../../assets/images/lapiz.png")}
-          style={{ width: 24, height: 24 }}
-        />
+        <Image source={ASSETS.PENCIL} style={IMAGE_STYLE} />
       </button>
       <button
-        onClick={() => handleToolChange(TOOL_RECT)}
+        onClick={() => onToolChange(TOOL_RECT)}
         style={{
           ...styles.toolButton,
           ...(tool === TOOL_RECT ? styles.activeBtn : {}),
         }}
       >
-        <Image
-          source={require("../../assets/images/rectangulo.png")}
-          style={{ width: 24, height: 24 }}
-        />{" "}
+        <Image source={ASSETS.RECTANGLE} style={IMAGE_STYLE} />
       </button>
       <button
-        onClick={() => handleToolChange(TOOL_ERASER)}
+        onClick={() => onToolChange(TOOL_ERASER)}
         style={{
           ...styles.toolButton,
           ...(tool === TOOL_ERASER ? styles.activeBtn : {}),
         }}
       >
-        <Image
-          source={require("../../assets/images/borrador.png")}
-          style={{ width: 24, height: 24 }}
-        />{" "}
+        <Image source={ASSETS.ERASER} style={IMAGE_STYLE} />
       </button>
       <button
-        onClick={() => handleToolChange(TOOL_TEXT)}
+        onClick={() => onToolChange(TOOL_TEXT)}
         style={{
           ...styles.toolButton,
           ...(tool === TOOL_TEXT ? styles.activeBtn : {}),
         }}
       >
-        <Image
-          source={require("../../assets/images/fuente.png")}
-          style={{ width: 24, height: 24 }}
-        />{" "}
+        <Image source={ASSETS.TEXT} style={IMAGE_STYLE} />
       </button>
       <button
-        onClick={() => handleToolChange(TOOL_IMAGE)}
+        onClick={() => onToolChange(TOOL_IMAGE)}
         style={{
           ...styles.toolButton,
           ...(tool === TOOL_IMAGE ? styles.activeBtn : {}),
         }}
       >
-        <Image
-          source={require("../../assets/images/agregarImagen.png")}
-          style={{ width: 24, height: 24 }}
-        />
+        <Image source={ASSETS.IMAGE} style={IMAGE_STYLE} />
       </button>
-      <button
-        onClick={() => setShowBrushSlider((prev) => !prev)}
-        style={styles.toolButton}
-      >
-        <Image
-          source={require("../../assets/images/anchura.png")}
-          style={{ width: 24, height: 24 }}
-        />
-      </button>
-      {showBrushSlider && (
-        <View style={styles.brushSliderPopover}>
-          <Text style={styles.controlLabel}>Grosor: {brushSize}px</Text>
-          <input
-            type="range"
-            min="1"
-            max="20"
-            step="1"
-            value={brushSize}
-            onChange={(e) => setBrushSize(parseInt(e.target.value))}
-            style={{
-              width: 120,
-              marginLeft: 8,
-              cursor: "pointer",
-            }}
-          />
-        </View>
-      )}
-      {showColorPicker && (
-        <div style={styles.colorPickerPopover}>
-          <input
-            type="color"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-            style={{
-              width: 40,
-              height: 40,
-              border: "none",
-              background: "none",
-              cursor: "pointer",
-            }}
-            autoFocus
-            onBlur={() => setShowColorPicker(false)}
-          />
-        </div>
-      )}
-      <button
-        onClick={() => setShowColorPicker((prev) => !prev)}
-        style={styles.toolButton}
-      >
-        <Image
-          source={require("../../assets/images/color.png")}
-          style={{ width: 24, height: 24 }}
-        />
-      </button>
-      {tool === TOOL_TEXT && (
-        <>
-          <View style={styles.textSizePopover}>
-            <Text style={styles.controlLabel}>Tamaño:</Text>
-            <select
-              value={textSize}
-              onChange={(e) => setTextSize(parseInt(e.target.value))}
-              style={styles.selectInput}
-            >
-              {textSizes.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
+    </>
+  ), [tool]);
+
+  const BrushControls = memo(({ showBrushSlider, setShowBrushSlider, brushSize, setBrushSize }) => {
+    const handleToggle = useCallback(() => {
+      setShowBrushSlider(prev => !prev);
+    }, [setShowBrushSlider]);
+
+    const handleChange = useCallback((e) => {
+      setBrushSize(parseInt(e.target.value));
+    }, [setBrushSize]);
+
+    return (
+      <>
+        <button onClick={handleToggle} style={styles.toolButton}>
+          <Image source={ASSETS.BRUSH_SIZE} style={IMAGE_STYLE} />
+        </button>
+        {showBrushSlider && (
+          <View style={styles.brushSliderPopover}>
+            <Text style={styles.controlLabel}>Grosor: {brushSize}px</Text>
+            <input
+              type="range"
+              min="1"
+              max="20"
+              step="1"
+              value={brushSize}
+              onChange={handleChange}
+              style={{
+                width: 120,
+                marginLeft: 8,
+                cursor: "pointer",
+              }}
+            />
           </View>
-        </>
-      )}
-      {tool === TOOL_IMAGE && pendingImage && (
-        <View>
-          <View style={styles.separator} />
-          <Text style={styles.pendingImageText}>
-            📷 Imagen cargada - Haz clic en el canvas para colocarla
-          </Text>
-        </View>
-      )}
-      <button onClick={clearCanvas} style={styles.actionButton}>
-        <Image
-          source={require("../../assets/images/limpiar.png")}
-          style={{ width: 24, height: 24 }}
-        />
+        )}
+      </>
+    );
+  }, [showBrushSlider, brushSize]);
+
+  const ColorControls = memo(({ showColorPicker, setShowColorPicker, color, setColor }) => {
+    const handleToggle = useCallback(() => {
+      setShowColorPicker(prev => !prev);
+    }, [setShowColorPicker]);
+
+    const handleChange = useCallback((e) => {
+      setColor(e.target.value);
+    }, [setColor]);
+
+    const handleBlur = useCallback(() => {
+      setShowColorPicker(false);
+    }, [setShowColorPicker]);
+
+    return (
+      <>
+        {showColorPicker && (
+          <div style={styles.colorPickerPopover}>
+            <input
+              type="color"
+              value={color}
+              onChange={handleChange}
+              style={{
+                width: 40,
+                height: 40,
+                border: "none",
+                background: "none",
+                cursor: "pointer",
+              }}
+              autoFocus
+              onBlur={handleBlur}
+            />
+          </div>
+        )}
+        <button onClick={handleToggle} style={styles.toolButton}>
+          <Image source={ASSETS.COLOR} style={IMAGE_STYLE} />
+        </button>
+      </>
+    );
+  }, [showColorPicker, color]);
+
+  const TextControls = memo(({ tool, textSize, setTextSize }) => {
+    const handleChange = useCallback((e) => {
+      setTextSize(parseInt(e.target.value));
+    }, [setTextSize]);
+
+    if (tool !== TOOL_TEXT) return null;
+
+    return (
+      <View style={styles.textSizePopover}>
+        <Text style={styles.controlLabel}>Tamaño:</Text>
+        <select value={textSize} onChange={handleChange} style={styles.selectInput}>
+          {textSizes.map((size) => (
+            <option key={size} value={size}>
+              {size}
+            </option>
+          ))}
+        </select>
+      </View>
+    );
+  }, [tool, textSize]);
+
+  const ImageControls = memo(({ tool, pendingImage }) => {
+    if (tool !== TOOL_IMAGE || !pendingImage) return null;
+
+    return (
+      <View>
+        <View style={styles.separator} />
+        <Text style={styles.pendingImageText}>
+          📷 Imagen cargada - Haz clic en el canvas para colocarla
+        </Text>
+      </View>
+    );
+  }, [tool, pendingImage]);
+
+  const ActionButtons = memo(({ onClearCanvas, onSaveCanvas, onOpenNotebookSelector, onBack }) => (
+    <>
+      <button onClick={onClearCanvas} style={styles.actionButton}>
+        <Image source={ASSETS.CLEAR} style={IMAGE_STYLE} />
       </button>
-      <button onClick={saveCanvas} style={{...styles.actionButton, ...styles.downloadBtn}} title="Descargar imagen">
-        <Image
-          source={require("../../assets/images/salvar.png")}
-          style={{ width: 24, height: 24 }}
-        />
+      <button onClick={onSaveCanvas} style={{...styles.actionButton, ...styles.downloadBtn}} title="Descargar imagen">
+        <Image source={ASSETS.SAVE} style={IMAGE_STYLE} />
       </button>
-      <button onClick={openNotebookSelector} style={{...styles.actionButton, ...styles.saveToNotebookBtn}} title="Guardar en cuaderno">
-        <Image
-          source={require("../../assets/images/salvar.png")}
-          style={{ width: 24, height: 24 }}
-        />
+      <button onClick={onOpenNotebookSelector} style={{...styles.actionButton, ...styles.saveToNotebookBtn}} title="Guardar en cuaderno">
+        <Image source={ASSETS.SAVE} style={IMAGE_STYLE} />
       </button>
       {onBack && (
         <button onClick={onBack} style={styles.actionButton}>
-          <Image
-            source={require("../../assets/images/volver.png")}
-            style={{ width: 24, height: 24 }}
-          />
+          <Image source={ASSETS.BACK} style={IMAGE_STYLE} />
         </button>
       )}
+    </>
+  ), []);
+
+  // Toolbar dividido en componentes granulares
+  const Toolbar = memo(() => (
+    <View style={styles.toolbar}>
+      <ToolButtons tool={tool} onToolChange={handleToolChange} />
+      <BrushControls 
+        showBrushSlider={showBrushSlider} 
+        setShowBrushSlider={setShowBrushSliderCallback}
+        brushSize={brushSize}
+        setBrushSize={setBrushSizeCallback}
+      />
+      <ColorControls 
+        showColorPicker={showColorPicker}
+        setShowColorPicker={setShowColorPickerCallback}
+        color={color}
+        setColor={setColorCallback}
+      />
+      <TextControls tool={tool} textSize={textSize} setTextSize={setTextSizeCallback} />
+      <ImageControls tool={tool} pendingImage={pendingImage} />
+      <ActionButtons 
+        onClearCanvas={clearCanvas}
+        onSaveCanvas={saveCanvas}
+        onOpenNotebookSelector={openNotebookSelector}
+        onBack={onBack}
+      />
     </View>
-  );
+  ), []);
+
+  // Componente Toolbar memoizado para evitar re-renders
+  const MemoizedToolbar = memo(() => (
+    <Toolbar />
+  ), []);
   if (Platform.OS !== "web") {
     return (
       <View style={styles.fallbackContainer}>
@@ -637,7 +758,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     <View style={styles.container}>
       <View style={styles.mainContent}>
         <View style={styles.toolbarContainer}>
-          <Toolbar />
+          <MemoizedToolbar />
         </View>
         <View style={styles.canvasContainer}>
           <canvas
@@ -657,9 +778,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
             <input
               type="text"
               value={textInput.text}
-              onChange={(e) =>
-                setTextInput({ ...textInput, text: e.target.value })
-              }
+              onChange={handleTextInputChange}
               onKeyDown={handleTextKeyPress}
               onBlur={() => addTextToCanvas(textInput.text)}
               autoFocus
