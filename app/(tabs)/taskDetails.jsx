@@ -10,11 +10,13 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  Modal,
+  Linking,
+  Clipboard,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { API, buildApiUrl } from "@/config/api";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AuraText } from "@/components/AuraText";
 import * as DocumentPicker from "expo-document-picker";
 import { apiGet, apiPost } from "../../utils/fetchWithAuth";
@@ -32,6 +34,10 @@ const TaskDetails = () => {
   const [submissionText, setSubmissionText] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [hasSubmission, setHasSubmission] = useState(false);
+
+  // Estados para el modal de entrega manual
+  const [showManualSubmissionModal, setShowManualSubmissionModal] = useState(false);
+  const [manualSubmissionData, setManualSubmissionData] = useState(null);
 
   // Cargar detalles de la tarea
   useEffect(() => {
@@ -101,21 +107,28 @@ const TaskDetails = () => {
 
     setSubmitting(true);
     try {
-      const token = await AsyncStorage.getItem("userToken");
-      const formData = new FormData();
+      // Preparar datos de la solicitud
+      let fileData = null;
+      
       // Si hay archivo, convertirlo a base64
-      let fileBase64 = null;
       if (selectedFile) {
         try {
           const response = await fetch(selectedFile.uri);
           const blob = await response.blob();
           const reader = new FileReader();
 
-          fileBase64 = await new Promise((resolve, reject) => {
+          const fileBase64 = await new Promise((resolve, reject) => {
             reader.onloadend = () => resolve(reader.result.split(",")[1]);
             reader.onerror = reject;
             reader.readAsDataURL(blob);
           });
+
+          fileData = {
+            name: selectedFile.name,
+            mimeType: selectedFile.mimeType,
+            size: selectedFile.size,
+            data: fileBase64,
+          };
         } catch (error) {
           console.error("Error converting file to base64:", error);
           Alert.alert("Error", "No se pudo procesar el archivo");
@@ -125,33 +138,69 @@ const TaskDetails = () => {
 
       const requestData = {
         submissionId: submissionId,
-        courseId: courseId,
-        courseWorkId: courseWorkId,
-        text: submissionText.trim(),
-        submittedAt: new Date().toISOString(),
+        text: submissionText.trim() || null,
+        file: fileData,
         metadata: {
           platform: Platform.OS,
           version: "1.0",
+          submittedAt: new Date().toISOString(),
         },
-        file: selectedFile
-          ? {
-              name: selectedFile.name,
-              mimeType: selectedFile.mimeType,
-              size: selectedFile.size,
-              data: fileBase64,
-            }
-          : null,
       };
 
-      const response = await apiPost(API.ENDPOINTS.STUDENT.SUBMIT_TASK, requestData);
+      // Construir la URL del endpoint con parámetros
+      const endpoint = API.ENDPOINTS.STUDENT.HOMEWORK_SUBMIT_FILE
+        .replace(':courseId', courseId)
+        .replace(':courseWorkId', courseWorkId);
+
+      console.log('Submitting assignment:', {
+        endpoint,
+        courseId,
+        courseWorkId,
+        submissionId,
+        hasFile: !!fileData,
+        hasText: !!requestData.text,
+        fileSize: fileData?.size,
+      });
+
+      const response = await apiPost(endpoint, requestData);
 
       if (response.ok) {
-        Alert.alert("Éxito", "Tarea entregada correctamente", [
-          { text: "OK", onPress: () => router.back() },
-        ]);
+        const result = await response.json();
+        console.log('Submission successful:', result);
+        
+        // Si la respuesta indica que se necesita entrega manual
+        if (result.message?.includes("manual submission required") || result.fileInfo) {
+          console.log('Manual submission required:', result);
+          setManualSubmissionData(result);
+          setShowManualSubmissionModal(true);
+        } else {
+          // Entrega exitosa normal
+          let message = "Tarea entregada correctamente";
+          
+          // Mostrar mensaje específico basado en la respuesta
+          if (result.fileLink) {
+            message += "\n\nNota: Es posible que necesites compartir el archivo manualmente con tu profesor.";
+          }
+          
+          if (result.instructions) {
+            message += `\n\n${result.instructions}`;
+          }
+
+          Alert.alert("Éxito", message, [
+            { text: "OK", onPress: () => router.back() },
+          ]);
+        }
       } else {
         console.error("Error submitting task:", response.status);
-        Alert.alert("Error", "No se pudo entregar la tarea");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Error details:", errorData);
+        
+        let errorMessage = "No se pudo entregar la tarea";
+        if (errorData.error) {
+          errorMessage += `\n\n${errorData.error}`;
+        }
+        
+        Alert.alert("Error", errorMessage);
       }
     } catch (error) {
       console.error("Error submitting task:", error);
@@ -169,6 +218,70 @@ const TaskDetails = () => {
       month: "long",
       year: "numeric",
     });
+  };
+
+  // Funciones para el modal de entrega manual
+  const copyToClipboard = async (text) => {
+    try {
+      if (Platform.OS === 'web') {
+        await navigator.clipboard.writeText(text);
+      } else {
+        await Clipboard.setString(text);
+      }
+      Alert.alert("Copiado", "Link copiado al portapapeles");
+    } catch (error) {
+      console.error("Error copying to clipboard:", error);
+      Alert.alert("Error", "No se pudo copiar el link");
+    }
+  };
+
+  const openGoogleClassroom = () => {
+    // URL específica para la tarea en Google Classroom
+    const classroomTaskUrl = `https://classroom.google.com/c/${courseId}/a/${courseWorkId}/submissions/by-status/and-sort-name/all`;
+    Linking.openURL(classroomTaskUrl).catch(() => {
+      // Fallback a la URL general de Classroom si falla
+      const classroomUrl = 'https://classroom.google.com';
+      Linking.openURL(classroomUrl).catch(() => {
+        Alert.alert("Error", "No se pudo abrir Google Classroom");
+      });
+    });
+  };
+
+  const openTaskSubmission = () => {
+    // URL directa para entregar la tarea específica
+    const taskSubmissionUrl = `https://classroom.google.com/c/${courseId}/a/${courseWorkId}`;
+    Linking.openURL(taskSubmissionUrl).catch(() => {
+      Alert.alert("Error", "No se pudo abrir la tarea en Google Classroom");
+    });
+  };
+
+  const copyTaskUrl = async () => {
+    const taskUrl = `https://classroom.google.com/c/${courseId}/a/${courseWorkId}`;
+    try {
+      if (Platform.OS === 'web') {
+        await navigator.clipboard.writeText(taskUrl);
+      } else {
+        await Clipboard.setString(taskUrl);
+      }
+      Alert.alert("Copiado", "Link de la tarea copiado al portapapeles");
+    } catch (error) {
+      console.error("Error copying task URL:", error);
+      Alert.alert("Error", "No se pudo copiar el link de la tarea");
+    }
+  };
+
+  const openFileLink = (url) => {
+    Linking.openURL(url).catch(() => {
+      Alert.alert("Error", "No se pudo abrir el archivo");
+    });
+  };
+
+  const handleManualSubmissionComplete = () => {
+    setShowManualSubmissionModal(false);
+    setManualSubmissionData(null);
+    Alert.alert("¡Perfecto!", "Recuerda entregar el archivo en Google Classroom usando el link proporcionado", [
+      { text: "OK", onPress: () => router.back() },
+    ]);
   };
 
   // Función para determinar el estado de la tarea
@@ -426,6 +539,186 @@ const TaskDetails = () => {
           </View>
         )}
       </View>
+
+      {/* Modal de entrega manual */}
+      <Modal
+        visible={showManualSubmissionModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowManualSubmissionModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Header del modal */}
+              <View style={styles.modalHeader}>
+                <View style={styles.modalIcon}>
+                  <Ionicons name="cloud-upload-outline" size={32} color="#CB8D27" />
+                </View>
+                <Text style={styles.modalTitle}>Archivo Subido a Drive</Text>
+                <Text style={styles.modalSubtitle}>Entrega manual requerida</Text>
+              </View>
+
+              {/* Información del archivo */}
+              {manualSubmissionData?.fileInfo && (
+                <View style={styles.fileInfoSection}>
+                  <Text style={styles.sectionTitle}>Archivo Subido</Text>
+                  <View style={styles.fileInfoCard}>
+                    <View style={styles.fileIconContainer}>
+                      <Ionicons name="document-outline" size={24} color="#28a745" />
+                    </View>
+                    <View style={styles.fileDetails}>
+                      <Text style={styles.fileName}>{manualSubmissionData.fileInfo.name}</Text>
+                      <Text style={styles.fileSize}>
+                        {Math.round(manualSubmissionData.fileInfo.size / 1024)} KB
+                      </Text>
+                      <Text style={styles.fileMimeType}>
+                        {manualSubmissionData.fileInfo.mimeType}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* Instrucciones */}
+              <View style={styles.instructionsSection}>
+                <Text style={styles.sectionTitle}>Instrucciones</Text>
+                {manualSubmissionData?.instructions?.map((instruction, index) => (
+                  <View key={index} style={styles.instructionItem}>
+                    <View style={styles.instructionNumber}>
+                      <Text style={styles.instructionNumberText}>{index + 1}</Text>
+                    </View>
+                    <Text style={styles.instructionText}>{instruction}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Links del archivo */}
+              <View style={styles.linksSection}>
+                <Text style={styles.sectionTitle}>Enlaces del Archivo</Text>
+                
+                {/* Link de visualización */}
+                <View style={styles.linkCard}>
+                  <View style={styles.linkHeader}>
+                    <Ionicons name="eye-outline" size={20} color="#007bff" />
+                    <Text style={styles.linkTitle}>Ver Archivo</Text>
+                  </View>
+                  <Text style={styles.linkUrl} numberOfLines={2}>
+                    {manualSubmissionData?.fileInfo?.viewLink}
+                  </Text>
+                  <View style={styles.linkActions}>
+                    <TouchableOpacity
+                      style={styles.copyButton}
+                      onPress={() => copyToClipboard(manualSubmissionData?.fileInfo?.viewLink)}
+                    >
+                      <Ionicons name="copy-outline" size={16} color="#fff" />
+                      <Text style={styles.copyButtonText}>Copiar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.openButton}
+                      onPress={() => openFileLink(manualSubmissionData?.fileInfo?.viewLink)}
+                    >
+                      <Ionicons name="open-outline" size={16} color="#007bff" />
+                      <Text style={styles.openButtonText}>Abrir</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Link de descarga */}
+                <View style={styles.linkCard}>
+                  <View style={styles.linkHeader}>
+                    <Ionicons name="download-outline" size={20} color="#28a745" />
+                    <Text style={styles.linkTitle}>Descargar Archivo</Text>
+                  </View>
+                  <Text style={styles.linkUrl} numberOfLines={2}>
+                    {manualSubmissionData?.fileInfo?.downloadLink}
+                  </Text>
+                  <View style={styles.linkActions}>
+                    <TouchableOpacity
+                      style={styles.copyButton}
+                      onPress={() => copyToClipboard(manualSubmissionData?.fileInfo?.downloadLink)}
+                    >
+                      <Ionicons name="copy-outline" size={16} color="#fff" />
+                      <Text style={styles.copyButtonText}>Copiar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.openButton}
+                      onPress={() => openFileLink(manualSubmissionData?.fileInfo?.downloadLink)}
+                    >
+                      <Ionicons name="download-outline" size={16} color="#28a745" />
+                      <Text style={styles.openButtonText}>Descargar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Enlace directo a la tarea */}
+              <View style={styles.taskLinkSection}>
+                <Text style={styles.sectionTitle}>Enlace a la Tarea</Text>
+                
+                <View style={styles.taskLinkCard}>
+                  <View style={styles.linkHeader}>
+                    <Ionicons name="school-outline" size={20} color="#4285F4" />
+                    <Text style={styles.linkTitle}>Ir a la Tarea en Google Classroom</Text>
+                  </View>
+                  <Text style={styles.taskDescription}>
+                    Este enlace te llevará directamente a la tarea donde podrás adjuntar tu archivo
+                  </Text>
+                  <Text style={styles.linkUrl} numberOfLines={2}>
+                    https://classroom.google.com/c/{courseId}/a/{courseWorkId}
+                  </Text>
+                  <View style={styles.linkActions}>
+                    <TouchableOpacity
+                      style={styles.copyButton}
+                      onPress={copyTaskUrl}
+                    >
+                      <Ionicons name="copy-outline" size={16} color="#fff" />
+                      <Text style={styles.copyButtonText}>Copiar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.taskOpenButton}
+                      onPress={openTaskSubmission}
+                    >
+                      <Ionicons name="open-outline" size={16} color="#fff" />
+                      <Text style={styles.taskOpenButtonText}>Ir a Tarea</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Nota importante */}
+              {manualSubmissionData?.note && (
+                <View style={styles.noteSection}>
+                  <View style={styles.noteHeader}>
+                    <Ionicons name="information-circle-outline" size={20} color="#ffc107" />
+                    <Text style={styles.noteTitle}>Nota Importante</Text>
+                  </View>
+                  <Text style={styles.noteText}>{manualSubmissionData.note}</Text>
+                </View>
+              )}
+
+              {/* Botones de acción */}
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.taskSubmissionButton}
+                  onPress={openTaskSubmission}
+                >
+                  <Ionicons name="add-circle-outline" size={20} color="#fff" />
+                  <Text style={styles.taskSubmissionButtonText}>Ir a Entregar Tarea</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.completeButton}
+                  onPress={handleManualSubmissionComplete}
+                >
+                  <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                  <Text style={styles.completeButtonText}>Entendido</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -797,6 +1090,290 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     lineHeight: 20,
+  },
+  // Estilos para el modal de entrega manual
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContainer: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "90%",
+    paddingTop: 20,
+  },
+  modalHeader: {
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E9ECEF",
+  },
+  modalIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#FFF3CD",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+  },
+  fileInfoSection: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E9ECEF",
+  },
+  fileInfoCard: {
+    flexDirection: "row",
+    backgroundColor: "#F8F9FA",
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
+  },
+  fileIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#D4EDDA",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  fileDetails: {
+    flex: 1,
+  },
+  fileName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 4,
+  },
+  fileSize: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 2,
+  },
+  fileMimeType: {
+    fontSize: 12,
+    color: "#999",
+  },
+  instructionsSection: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E9ECEF",
+  },
+  instructionItem: {
+    flexDirection: "row",
+    marginBottom: 12,
+    alignItems: "flex-start",
+  },
+  instructionNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#CB8D27",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+    marginTop: 2,
+  },
+  instructionNumberText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  instructionText: {
+    flex: 1,
+    fontSize: 15,
+    color: "#333",
+    lineHeight: 22,
+  },
+  linksSection: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E9ECEF",
+  },
+  linkCard: {
+    backgroundColor: "#F8F9FA",
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
+  },
+  linkHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  linkTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginLeft: 8,
+  },
+  linkUrl: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 12,
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+  },
+  linkActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  copyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#6C757D",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    flex: 1,
+    justifyContent: "center",
+  },
+  copyButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "500",
+    marginLeft: 4,
+  },
+  openButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#007bff",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    flex: 1,
+    justifyContent: "center",
+  },
+  openButtonText: {
+    color: "#007bff",
+    fontSize: 14,
+    fontWeight: "500",
+    marginLeft: 4,
+  },
+  noteSection: {
+    padding: 20,
+    backgroundColor: "#FFF3CD",
+    margin: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#FFECB5",
+  },
+  noteHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  noteTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#856404",
+    marginLeft: 8,
+  },
+  noteText: {
+    fontSize: 14,
+    color: "#856404",
+    lineHeight: 20,
+  },
+  modalActions: {
+    padding: 20,
+    gap: 12,
+  },
+  classroomButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#4285F4",
+    paddingVertical: 15,
+    borderRadius: 12,
+  },
+  classroomButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+  completeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#28a745",
+    paddingVertical: 15,
+    borderRadius: 12,
+  },
+  completeButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+  // Estilos para la sección del enlace a la tarea
+  taskLinkSection: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E9ECEF",
+  },
+  taskLinkCard: {
+    backgroundColor: "#F0F8FF",
+    borderRadius: 12,
+    padding: 15,
+    borderWidth: 2,
+    borderColor: "#4285F4",
+  },
+  taskDescription: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 10,
+    fontStyle: "italic",
+  },
+  taskOpenButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#4285F4",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    flex: 1,
+    justifyContent: "center",
+  },
+  taskOpenButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "500",
+    marginLeft: 4,
+  },
+  taskSubmissionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#CB8D27",
+    paddingVertical: 15,
+    borderRadius: 12,
+  },
+  taskSubmissionButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
   },
 });
 

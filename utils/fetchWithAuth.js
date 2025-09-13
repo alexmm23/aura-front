@@ -23,7 +23,8 @@ export const fetchWithAuth = async (url, options = {}) => {
             const token = await AsyncStorage.getItem('userToken');
             if (token) {
                 authOptions.headers = {
-                    'Content-Type': 'application/json',
+                    // Solo añadir Content-Type si no es FormData
+                    ...(!(authOptions.body instanceof FormData) && { 'Content-Type': 'application/json' }),
                     ...authOptions.headers,
                     'Authorization': `Bearer ${token}`
                 };
@@ -140,6 +141,24 @@ export const apiPost = async (endpoint, data = null, options = {}) => {
 
     if (data) {
         requestOptions.body = JSON.stringify(data);
+    }
+
+    return apiRequest(endpoint, requestOptions);
+};
+
+/**
+ * Función helper para requests POST multipart/form-data con autenticación
+ */
+export const apiPostMultipart = async (endpoint, formData, options = {}) => {
+    const requestOptions = {
+        method: 'POST',
+        body: formData,
+        ...options
+    };
+
+    // No establecer Content-Type para FormData, el browser lo hará automáticamente
+    if (requestOptions.headers && requestOptions.headers['Content-Type']) {
+        delete requestOptions.headers['Content-Type'];
     }
 
     return apiRequest(endpoint, requestOptions);

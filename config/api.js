@@ -55,6 +55,7 @@ export const API={
     // Student endpoints
     STUDENT: {
       HOMEWORK: '/student/homework',
+      HOMEWORK_SUBMIT_FILE: '/student/homework/:courseId/:courseWorkId/submit-file',
       COURSES: '/student/courses/list',
       NOTEBOOKS: '/notebook/list',
       NOTEBOOK_DETAIL: '/notebook/detail',
