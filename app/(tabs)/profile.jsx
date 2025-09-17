@@ -154,7 +154,12 @@ export default function Profile() {
             >
               <AuraText style={styles.buttonText} text="Editar Perfil" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.button}>
+            <TouchableOpacity style={styles.button}
+            onPress={() =>
+                router.push({
+                  pathname: "/payment",
+                })
+              }>
               <AuraText
                 style={styles.buttonText}
                 text="Administrar Suscripción"
