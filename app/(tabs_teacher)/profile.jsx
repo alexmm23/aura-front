@@ -27,6 +27,18 @@ export default function Profile() {
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
   const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      // Redirigir al login después del logout
+      router.replace("/(auth)/login");
+    } catch (error) {
+      console.error("Error durante logout:", error);
+      // Aún así redirigir en caso de error
+      router.replace("/(auth)/login");
+    }
+  };
   const googleLogin = async () => {
     try {
       const response = await fetchWithAuth(
@@ -168,7 +180,7 @@ export default function Profile() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, styles.logoutButton]}
-              onPress={() => logout()}
+              onPress={handleLogout}
             >
               <AuraText style={styles.logoutText} text="Cerrar Sesión" />
             </TouchableOpacity>
@@ -392,7 +404,7 @@ const styles = StyleSheet.create({
   },
   headerImageLandscape: {
     width: "100%", // Ocupa todo el ancho disponible
-    height: "80%",// Ocupa más altura
-    maxHeight: 500 // Límite para pantallas grandes
+    height: "80%", // Ocupa más altura
+    maxHeight: 500, // Límite para pantallas grandes
   },
 });

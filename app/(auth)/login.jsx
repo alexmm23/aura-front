@@ -89,10 +89,11 @@ export default function Login() {
           // En web, hacer request para obtener perfil del usuario
           try {
             const profileResponse = await apiGet(API.ENDPOINTS.AUTH.PROFILE);
-            
+
             if (profileResponse.ok) {
               const userData = await profileResponse.json();
               // Redirigir basado en el rol
+              console.log("User data:", userData);
               if (userData.role_id === 3) {
                 router.replace("/HomeTeacher");
               } else {
