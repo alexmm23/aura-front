@@ -1,6 +1,17 @@
 import React, { useRef, useState, useEffect, memo, useCallback } from "react";
-import { View, StyleSheet, Platform, Text, Image, Modal, TouchableOpacity, FlatList, ActivityIndicator } from "react-native";
+import {
+  View,
+  StyleSheet,
+  Platform,
+  Text,
+  Image,
+  Modal,
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+} from "react-native";
 import { API, buildApiUrl } from "@/config/api";
+import { apiGet, apiPostMultipart } from "../../utils/fetchWithAuth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 // import CanvaLiteBoard from "./CanvaLiteBoard";
 
@@ -27,15 +38,13 @@ const ASSETS = {
   CLEAR: require("../../assets/images/limpiar.png"),
   SAVE: require("../../assets/images/salvar.png"),
   BACK: require("../../assets/images/volver.png"),
+  TEXTURE: require("../../assets/images/textura_lapiz.jpg"),
 };
 
 // Estilo constante para imágenes
 const IMAGE_STYLE = { width: 24, height: 24 };
 
-
-
 const NotebookCanvasWeb = ({ onSave, onBack }) => {
-
   // return (
   //   <CanvaLiteBoard
   //     onSave={onSave}
@@ -48,6 +57,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   const [color, setColor] = useState(colors[0]);
   const [brushSize, setBrushSize] = useState(2);
   const [textSize, setTextSize] = useState(16);
+  const [pencilTexture, setPencilTexture] = useState(false);
   // Usar useRef para estados que no afectan el render del UI
   const isDrawingRef = useRef(false);
   const lastPointRef = useRef({ x: 0, y: 0 });
@@ -68,17 +78,18 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   }); // Solo para el render del input visual
   const [showBrushSlider, setShowBrushSlider] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  
+
   // Estados para el modal de selección de cuaderno
   const [showNotebookModal, setShowNotebookModal] = useState(false);
   const [notebooks, setNotebooks] = useState([]);
   const [loadingNotebooks, setLoadingNotebooks] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
   const [canvasDataToSave, setCanvasDataToSave] = useState(null);
+  const texturePatternRef = useRef(null);
 
   // Callbacks memoizados para evitar re-renders del Toolbar
   const setBrushSizeCallback = useCallback((value) => {
-    if (typeof value === 'function') {
+    if (typeof value === "function") {
       setBrushSize(value);
     } else {
       setBrushSize(value);
@@ -86,7 +97,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   }, []);
 
   const setColorCallback = useCallback((value) => {
-    if (typeof value === 'function') {
+    if (typeof value === "function") {
       setColor(value);
     } else {
       setColor(value);
@@ -94,7 +105,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   }, []);
 
   const setTextSizeCallback = useCallback((value) => {
-    if (typeof value === 'function') {
+    if (typeof value === "function") {
       setTextSize(value);
     } else {
       setTextSize(value);
@@ -102,7 +113,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   }, []);
 
   const setShowBrushSliderCallback = useCallback((value) => {
-    if (typeof value === 'function') {
+    if (typeof value === "function") {
       setShowBrushSlider(value);
     } else {
       setShowBrushSlider(value);
@@ -110,10 +121,18 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   }, []);
 
   const setShowColorPickerCallback = useCallback((value) => {
-    if (typeof value === 'function') {
+    if (typeof value === "function") {
       setShowColorPicker(value);
     } else {
       setShowColorPicker(value);
+    }
+  }, []);
+
+  const setPencilTextureCallback = useCallback((value) => {
+    if (typeof value === "function") {
+      setPencilTexture(value);
+    } else {
+      setPencilTexture(value);
     }
   }, []);
 
@@ -121,7 +140,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   const handleTextInputChange = useCallback((e) => {
     const newText = e.target.value;
     textInputRef.current = { ...textInputRef.current, text: newText };
-    setTextInput(prev => ({ ...prev, text: newText }));
+    setTextInput((prev) => ({ ...prev, text: newText }));
   }, []);
 
   // Configuración inicial del canvas (solo una vez)
@@ -138,6 +157,15 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
       // Limpiar canvas solo al inicio
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Pre-cargar la textura de lápiz
+      const textureImg = new window.Image();
+      textureImg.onload = () => {
+        texturePatternRef.current = ctx.createPattern(textureImg, "repeat");
+      };
+      textureImg.src = ASSETS.TEXTURE;
+      console.log("Texture image loading initiated", ASSETS.TEXTURE);
+      console.log("Canvas initialized", canvas, textureImg);
     }
   }, []); // Solo ejecutar una vez al montar el componente
 
@@ -163,7 +191,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         text: "",
       };
       // Forzar re-render solo para mostrar el input de texto
-      setTextInput({...textInputRef.current});
+      setTextInput({ ...textInputRef.current });
       return;
     }
 
@@ -184,10 +212,23 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     if (tool === TOOL_RECT) {
       rectStartRef.current = pos;
       // Guardar el estado actual del canvas
-      canvasStateRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      canvasStateRef.current = ctx.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
     } else if (tool === TOOL_PENCIL) {
       ctx.globalCompositeOperation = "source-over";
-      ctx.strokeStyle = color;
+
+      // Aplicar textura si está activada y disponible
+      if (pencilTexture && texturePatternRef.current) {
+        console.log("Applying pencil texture");
+        ctx.strokeStyle = texturePatternRef.current;
+      } else {
+        ctx.strokeStyle = color;
+      }
+
       ctx.lineWidth = brushSize;
       ctx.beginPath();
       ctx.moveTo(pos.x, pos.y);
@@ -211,7 +252,11 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
       ctx.stroke();
       ctx.beginPath();
       ctx.moveTo(pos.x, pos.y);
-    } else if (tool === TOOL_RECT && rectStartRef.current && canvasStateRef.current) {
+    } else if (
+      tool === TOOL_RECT &&
+      rectStartRef.current &&
+      canvasStateRef.current
+    ) {
       // Restaurar el estado original del canvas
       ctx.putImageData(canvasStateRef.current, 0, 0);
 
@@ -313,13 +358,16 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     return "crosshair";
   };
 
-  const handleToolChange = useCallback((newTool) => {
-    // Si hay una imagen pendiente y se cambia de herramienta, cancelarla
-    if (tool === TOOL_IMAGE && newTool !== TOOL_IMAGE && pendingImage) {
-      setPendingImage(null);
-    }
-    setTool(newTool);
-  }, [tool, pendingImage]);
+  const handleToolChange = useCallback(
+    (newTool) => {
+      // Si hay una imagen pendiente y se cambia de herramienta, cancelarla
+      if (tool === TOOL_IMAGE && newTool !== TOOL_IMAGE && pendingImage) {
+        setPendingImage(null);
+      }
+      setTool(newTool);
+    },
+    [tool, pendingImage]
+  );
 
   const clearCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -360,18 +408,8 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   const fetchUserNotebooks = async () => {
     setLoadingNotebooks(true);
     try {
-      const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(
-        buildApiUrl(API.ENDPOINTS.STUDENT.NOTEBOOKS),
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      
+      const response = await apiGet(API.ENDPOINTS.STUDENT.NOTEBOOKS);
+
       if (response.ok) {
         const data = await response.json();
         console.log("Fetched notebooks:", data);
@@ -394,29 +432,21 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
 
     setSavingNote(true);
     try {
-      const token = await AsyncStorage.getItem("userToken");
-      
       // Convertir la imagen base64 a un blob para enviarla
       const response = await fetch(canvasDataToSave);
       const blob = await response.blob();
-      
+
       // Crear FormData para enviar la imagen
       const formData = new FormData();
-      formData.append('image', blob, `canvas-note-${Date.now()}.png`);
-      formData.append('notebook_id', notebookId.toString());
-      formData.append('title', `Nota del ${new Date().toLocaleDateString()}`);
-      
-      const saveResponse = await fetch(
-        buildApiUrl(API.ENDPOINTS.STUDENT.NOTE_CREATE),
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        }
+      formData.append("image", blob, `canvas-note-${Date.now()}.png`);
+      formData.append("notebook_id", notebookId.toString());
+      formData.append("title", `Nota del ${new Date().toLocaleDateString()}`);
+
+      const saveResponse = await apiPostMultipart(
+        API.ENDPOINTS.STUDENT.NOTE_CREATE,
+        formData
       );
-      
+
       if (saveResponse.ok) {
         alert("Nota guardada exitosamente en el cuaderno");
         setShowNotebookModal(false);
@@ -472,14 +502,14 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Seleccionar Cuaderno</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setShowNotebookModal(false)}
             >
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
-          
+
           <Text style={styles.modalSubtitle}>
             Selecciona en qué cuaderno quieres guardar tu nota:
           </Text>
@@ -501,7 +531,9 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
                 >
                   <View style={styles.notebookInfo}>
                     <Text style={styles.notebookName}>{item.title}</Text>
-                    <Text style={styles.notebookSubject}>{new Date(item.created_at).toLocaleDateString()}</Text>
+                    <Text style={styles.notebookSubject}>
+                      {new Date(item.created_at).toLocaleDateString()}
+                    </Text>
                   </View>
                   {savingNote && (
                     <ActivityIndicator size="small" color="#007bff" />
@@ -513,7 +545,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
                   <Text style={styles.emptyText}>
-                    No tienes cuadernos disponibles.{'\n'}
+                    No tienes cuadernos disponibles.{"\n"}
                     Crea un cuaderno primero para guardar tus notas.
                   </Text>
                 </View>
@@ -526,225 +558,306 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
               style={[styles.footerButton, styles.downloadButton]}
               onPress={saveCanvas}
             >
-              <Text style={styles.downloadButtonText}>Descargar en su lugar</Text>
+              <Text style={styles.downloadButtonText}>
+                Descargar en su lugar
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
     </Modal>
-  ); 
+  );
 
   // Componentes individuales memoizados para el toolbar
-  const ToolButtons = memo(({ tool, onToolChange }) => (
-    <>
-      <button
-        onClick={() => onToolChange(TOOL_PENCIL)}
-        style={{
-          ...styles.toolButton,
-          ...(tool === TOOL_PENCIL ? styles.activeBtn : {}),
-        }}
-      >
-        <Image source={ASSETS.PENCIL} style={IMAGE_STYLE} />
-      </button>
-      <button
-        onClick={() => onToolChange(TOOL_RECT)}
-        style={{
-          ...styles.toolButton,
-          ...(tool === TOOL_RECT ? styles.activeBtn : {}),
-        }}
-      >
-        <Image source={ASSETS.RECTANGLE} style={IMAGE_STYLE} />
-      </button>
-      <button
-        onClick={() => onToolChange(TOOL_ERASER)}
-        style={{
-          ...styles.toolButton,
-          ...(tool === TOOL_ERASER ? styles.activeBtn : {}),
-        }}
-      >
-        <Image source={ASSETS.ERASER} style={IMAGE_STYLE} />
-      </button>
-      <button
-        onClick={() => onToolChange(TOOL_TEXT)}
-        style={{
-          ...styles.toolButton,
-          ...(tool === TOOL_TEXT ? styles.activeBtn : {}),
-        }}
-      >
-        <Image source={ASSETS.TEXT} style={IMAGE_STYLE} />
-      </button>
-      <button
-        onClick={() => onToolChange(TOOL_IMAGE)}
-        style={{
-          ...styles.toolButton,
-          ...(tool === TOOL_IMAGE ? styles.activeBtn : {}),
-        }}
-      >
-        <Image source={ASSETS.IMAGE} style={IMAGE_STYLE} />
-      </button>
-    </>
-  ), [tool]);
-
-  const BrushControls = memo(({ showBrushSlider, setShowBrushSlider, brushSize, setBrushSize }) => {
-    const handleToggle = useCallback(() => {
-      setShowBrushSlider(prev => !prev);
-    }, [setShowBrushSlider]);
-
-    const handleChange = useCallback((e) => {
-      setBrushSize(parseInt(e.target.value));
-    }, [setBrushSize]);
-
-    return (
+  const ToolButtons = memo(
+    ({ tool, onToolChange }) => (
       <>
-        <button onClick={handleToggle} style={styles.toolButton}>
-          <Image source={ASSETS.BRUSH_SIZE} style={IMAGE_STYLE} />
+        <button
+          onClick={() => onToolChange(TOOL_PENCIL)}
+          style={{
+            ...styles.toolButton,
+            ...(tool === TOOL_PENCIL ? styles.activeBtn : {}),
+          }}
+        >
+          <Image source={ASSETS.PENCIL} style={IMAGE_STYLE} />
         </button>
-        {showBrushSlider && (
-          <View style={styles.brushSliderPopover}>
-            <Text style={styles.controlLabel}>Grosor: {brushSize}px</Text>
-            <input
-              type="range"
-              min="1"
-              max="20"
-              step="1"
-              value={brushSize}
-              onChange={handleChange}
-              style={{
-                width: 120,
-                marginLeft: 8,
-                cursor: "pointer",
-              }}
-            />
-          </View>
-        )}
-      </>
-    );
-  }, [showBrushSlider, brushSize]);
-
-  const ColorControls = memo(({ showColorPicker, setShowColorPicker, color, setColor }) => {
-    const handleToggle = useCallback(() => {
-      setShowColorPicker(prev => !prev);
-    }, [setShowColorPicker]);
-
-    const handleChange = useCallback((e) => {
-      setColor(e.target.value);
-    }, [setColor]);
-
-    const handleBlur = useCallback(() => {
-      setShowColorPicker(false);
-    }, [setShowColorPicker]);
-
-    return (
-      <>
-        {showColorPicker && (
-          <div style={styles.colorPickerPopover}>
-            <input
-              type="color"
-              value={color}
-              onChange={handleChange}
-              style={{
-                width: 40,
-                height: 40,
-                border: "none",
-                background: "none",
-                cursor: "pointer",
-              }}
-              autoFocus
-              onBlur={handleBlur}
-            />
-          </div>
-        )}
-        <button onClick={handleToggle} style={styles.toolButton}>
-          <Image source={ASSETS.COLOR} style={IMAGE_STYLE} />
+        <button
+          onClick={() => onToolChange(TOOL_RECT)}
+          style={{
+            ...styles.toolButton,
+            ...(tool === TOOL_RECT ? styles.activeBtn : {}),
+          }}
+        >
+          <Image source={ASSETS.RECTANGLE} style={IMAGE_STYLE} />
+        </button>
+        <button
+          onClick={() => onToolChange(TOOL_ERASER)}
+          style={{
+            ...styles.toolButton,
+            ...(tool === TOOL_ERASER ? styles.activeBtn : {}),
+          }}
+        >
+          <Image source={ASSETS.ERASER} style={IMAGE_STYLE} />
+        </button>
+        <button
+          onClick={() => onToolChange(TOOL_TEXT)}
+          style={{
+            ...styles.toolButton,
+            ...(tool === TOOL_TEXT ? styles.activeBtn : {}),
+          }}
+        >
+          <Image source={ASSETS.TEXT} style={IMAGE_STYLE} />
+        </button>
+        <button
+          onClick={() => onToolChange(TOOL_IMAGE)}
+          style={{
+            ...styles.toolButton,
+            ...(tool === TOOL_IMAGE ? styles.activeBtn : {}),
+          }}
+        >
+          <Image source={ASSETS.IMAGE} style={IMAGE_STYLE} />
         </button>
       </>
-    );
-  }, [showColorPicker, color]);
+    ),
+    [tool]
+  );
 
-  const TextControls = memo(({ tool, textSize, setTextSize }) => {
-    const handleChange = useCallback((e) => {
-      setTextSize(parseInt(e.target.value));
-    }, [setTextSize]);
+  const BrushControls = memo(
+    ({ showBrushSlider, setShowBrushSlider, brushSize, setBrushSize }) => {
+      const handleToggle = useCallback(() => {
+        setShowBrushSlider((prev) => !prev);
+      }, [setShowBrushSlider]);
 
-    if (tool !== TOOL_TEXT) return null;
+      const handleChange = useCallback(
+        (e) => {
+          setBrushSize(parseInt(e.target.value));
+        },
+        [setBrushSize]
+      );
 
-    return (
-      <View style={styles.textSizePopover}>
-        <Text style={styles.controlLabel}>Tamaño:</Text>
-        <select value={textSize} onChange={handleChange} style={styles.selectInput}>
-          {textSizes.map((size) => (
-            <option key={size} value={size}>
-              {size}
-            </option>
-          ))}
-        </select>
-      </View>
-    );
-  }, [tool, textSize]);
+      return (
+        <>
+          <button onClick={handleToggle} style={styles.toolButton}>
+            <Image source={ASSETS.BRUSH_SIZE} style={IMAGE_STYLE} />
+          </button>
+          {showBrushSlider && (
+            <View style={styles.brushSliderPopover}>
+              <Text style={styles.controlLabel}>Grosor: {brushSize}px</Text>
+              <input
+                type="range"
+                min="1"
+                max="20"
+                step="1"
+                value={brushSize}
+                onChange={handleChange}
+                style={{
+                  width: 120,
+                  marginLeft: 8,
+                  cursor: "pointer",
+                }}
+              />
+            </View>
+          )}
+        </>
+      );
+    },
+    [showBrushSlider, brushSize]
+  );
 
-  const ImageControls = memo(({ tool, pendingImage }) => {
-    if (tool !== TOOL_IMAGE || !pendingImage) return null;
+  const ColorControls = memo(
+    ({ showColorPicker, setShowColorPicker, color, setColor }) => {
+      const handleToggle = useCallback(() => {
+        setShowColorPicker((prev) => !prev);
+      }, [setShowColorPicker]);
 
-    return (
-      <View>
-        <View style={styles.separator} />
-        <Text style={styles.pendingImageText}>
-          📷 Imagen cargada - Haz clic en el canvas para colocarla
-        </Text>
-      </View>
-    );
-  }, [tool, pendingImage]);
+      const handleChange = useCallback(
+        (e) => {
+          setColor(e.target.value);
+        },
+        [setColor]
+      );
 
-  const ActionButtons = memo(({ onClearCanvas, onSaveCanvas, onOpenNotebookSelector, onBack }) => (
-    <>
-      <button onClick={onClearCanvas} style={styles.actionButton}>
-        <Image source={ASSETS.CLEAR} style={IMAGE_STYLE} />
-      </button>
-      <button onClick={onSaveCanvas} style={{...styles.actionButton, ...styles.downloadBtn}} title="Descargar imagen">
-        <Image source={ASSETS.SAVE} style={IMAGE_STYLE} />
-      </button>
-      <button onClick={onOpenNotebookSelector} style={{...styles.actionButton, ...styles.saveToNotebookBtn}} title="Guardar en cuaderno">
-        <Image source={ASSETS.SAVE} style={IMAGE_STYLE} />
-      </button>
-      {onBack && (
-        <button onClick={onBack} style={styles.actionButton}>
-          <Image source={ASSETS.BACK} style={IMAGE_STYLE} />
+      const handleBlur = useCallback(() => {
+        setShowColorPicker(false);
+      }, [setShowColorPicker]);
+
+      return (
+        <>
+          {showColorPicker && (
+            <div style={styles.colorPickerPopover}>
+              <input
+                type="color"
+                value={color}
+                onChange={handleChange}
+                style={{
+                  width: 40,
+                  height: 40,
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                }}
+                autoFocus
+                onBlur={handleBlur}
+              />
+            </div>
+          )}
+          <button onClick={handleToggle} style={styles.toolButton}>
+            <Image source={ASSETS.COLOR} style={IMAGE_STYLE} />
+          </button>
+        </>
+      );
+    },
+    [showColorPicker, color]
+  );
+
+  const TextureControls = memo(
+    ({ pencilTexture, setPencilTexture }) => {
+      const handleToggle = useCallback(() => {
+        setPencilTexture((prev) => !prev);
+      }, [setPencilTexture]);
+
+      return (
+        <button
+          onClick={handleToggle}
+          style={{
+            ...styles.toolButton,
+            ...(pencilTexture ? styles.activeBtn : {}),
+          }}
+          title="Textura de lápiz"
+        >
+          <div
+            style={{
+              width: 24,
+              height: 24,
+              background: `url(${ASSETS.TEXTURE})`,
+              backgroundSize: "cover",
+              borderRadius: 3,
+              border: pencilTexture ? "2px solid #007bff" : "1px solid #ccc",
+            }}
+          />
         </button>
-      )}
-    </>
-  ), []);
+      );
+    },
+    [pencilTexture]
+  );
+
+  const TextControls = memo(
+    ({ tool, textSize, setTextSize }) => {
+      const handleChange = useCallback(
+        (e) => {
+          setTextSize(parseInt(e.target.value));
+        },
+        [setTextSize]
+      );
+
+      if (tool !== TOOL_TEXT) return null;
+
+      return (
+        <View style={styles.textSizePopover}>
+          <Text style={styles.controlLabel}>Tamaño:</Text>
+          <select
+            value={textSize}
+            onChange={handleChange}
+            style={styles.selectInput}
+          >
+            {textSizes.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </View>
+      );
+    },
+    [tool, textSize]
+  );
+
+  const ImageControls = memo(
+    ({ tool, pendingImage }) => {
+      if (tool !== TOOL_IMAGE || !pendingImage) return null;
+
+      return (
+        <View>
+          <View style={styles.separator} />
+          <Text style={styles.pendingImageText}>
+            📷 Imagen cargada - Haz clic en el canvas para colocarla
+          </Text>
+        </View>
+      );
+    },
+    [tool, pendingImage]
+  );
+
+  const ActionButtons = memo(
+    ({ onClearCanvas, onSaveCanvas, onOpenNotebookSelector, onBack }) => (
+      <>
+        <button onClick={onClearCanvas} style={styles.actionButton}>
+          <Image source={ASSETS.CLEAR} style={IMAGE_STYLE} />
+        </button>
+        <button
+          onClick={onSaveCanvas}
+          style={{ ...styles.actionButton, ...styles.downloadBtn }}
+          title="Descargar imagen"
+        >
+          <Image source={ASSETS.SAVE} style={IMAGE_STYLE} />
+        </button>
+        <button
+          onClick={onOpenNotebookSelector}
+          style={{ ...styles.actionButton, ...styles.saveToNotebookBtn }}
+          title="Guardar en cuaderno"
+        >
+          <Image source={ASSETS.SAVE} style={IMAGE_STYLE} />
+        </button>
+        {onBack && (
+          <button onClick={onBack} style={styles.actionButton}>
+            <Image source={ASSETS.BACK} style={IMAGE_STYLE} />
+          </button>
+        )}
+      </>
+    ),
+    []
+  );
 
   // Toolbar dividido en componentes granulares
-  const Toolbar = memo(() => (
-    <View style={styles.toolbar}>
-      <ToolButtons tool={tool} onToolChange={handleToolChange} />
-      <BrushControls 
-        showBrushSlider={showBrushSlider} 
-        setShowBrushSlider={setShowBrushSliderCallback}
-        brushSize={brushSize}
-        setBrushSize={setBrushSizeCallback}
-      />
-      <ColorControls 
-        showColorPicker={showColorPicker}
-        setShowColorPicker={setShowColorPickerCallback}
-        color={color}
-        setColor={setColorCallback}
-      />
-      <TextControls tool={tool} textSize={textSize} setTextSize={setTextSizeCallback} />
-      <ImageControls tool={tool} pendingImage={pendingImage} />
-      <ActionButtons 
-        onClearCanvas={clearCanvas}
-        onSaveCanvas={saveCanvas}
-        onOpenNotebookSelector={openNotebookSelector}
-        onBack={onBack}
-      />
-    </View>
-  ), []);
+  const Toolbar = memo(
+    () => (
+      <View style={styles.toolbar}>
+        <ToolButtons tool={tool} onToolChange={handleToolChange} />
+        <BrushControls
+          showBrushSlider={showBrushSlider}
+          setShowBrushSlider={setShowBrushSliderCallback}
+          brushSize={brushSize}
+          setBrushSize={setBrushSizeCallback}
+        />
+        <ColorControls
+          showColorPicker={showColorPicker}
+          setShowColorPicker={setShowColorPickerCallback}
+          color={color}
+          setColor={setColorCallback}
+        />
+        <TextureControls
+          pencilTexture={pencilTexture}
+          setPencilTexture={setPencilTextureCallback}
+        />
+        <TextControls
+          tool={tool}
+          textSize={textSize}
+          setTextSize={setTextSizeCallback}
+        />
+        <ImageControls tool={tool} pendingImage={pendingImage} />
+        <ActionButtons
+          onClearCanvas={clearCanvas}
+          onSaveCanvas={saveCanvas}
+          onOpenNotebookSelector={openNotebookSelector}
+          onBack={onBack}
+        />
+      </View>
+    ),
+    []
+  );
 
   // Componente Toolbar memoizado para evitar re-renders
-  const MemoizedToolbar = memo(() => (
-    <Toolbar />
-  ), []);
+  const MemoizedToolbar = memo(() => <Toolbar />, []);
   if (Platform.OS !== "web") {
     return (
       <View style={styles.fallbackContainer}>
@@ -807,7 +920,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
           />
         </View>
       </View>
-      
+
       {/* Modal para seleccionar cuaderno */}
       <NotebookSelectorModal />
     </View>
@@ -986,128 +1099,128 @@ const styles = StyleSheet.create({
     alignItems: "center",
     minWidth: 140,
   },
-  
+
   // Estilos para el modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   modalContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 16,
-    width: '90%',
+    width: "90%",
     maxWidth: 500,
-    maxHeight: '80%',
-    shadowColor: '#000',
+    maxHeight: "80%",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: "#e9ecef",
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   closeButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f8f9fa',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f8f9fa",
+    justifyContent: "center",
+    alignItems: "center",
   },
   closeButtonText: {
     fontSize: 18,
-    color: '#6c757d',
-    fontWeight: 'bold',
+    color: "#6c757d",
+    fontWeight: "bold",
   },
   modalSubtitle: {
     fontSize: 16,
-    color: '#6c757d',
+    color: "#6c757d",
     paddingHorizontal: 20,
     paddingVertical: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   loadingContainer: {
     padding: 40,
-    alignItems: 'center',
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#6c757d',
+    color: "#6c757d",
   },
   notebookList: {
     maxHeight: 300,
     paddingHorizontal: 20,
   },
   notebookItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 16,
     paddingHorizontal: 16,
     marginVertical: 4,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: "#dee2e6",
   },
   notebookInfo: {
     flex: 1,
   },
   notebookName: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
     marginBottom: 4,
   },
   notebookSubject: {
     fontSize: 14,
-    color: '#6c757d',
+    color: "#6c757d",
   },
   emptyContainer: {
     padding: 40,
-    alignItems: 'center',
+    alignItems: "center",
   },
   emptyText: {
     fontSize: 16,
-    color: '#6c757d',
-    textAlign: 'center',
+    color: "#6c757d",
+    textAlign: "center",
     lineHeight: 22,
   },
   modalFooter: {
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
+    borderTopColor: "#e9ecef",
   },
   footerButton: {
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   downloadButton: {
-    backgroundColor: '#28a745',
+    backgroundColor: "#28a745",
   },
   downloadButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 

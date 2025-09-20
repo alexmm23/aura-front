@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import jsPDF from "jspdf";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import {
   View,
   StyleSheet,
@@ -53,7 +54,7 @@ const NotebookScreen = () => {
 
   const fetchNotes = async () => {
     const response = await apiGet(API.ENDPOINTS.STUDENT.NOTEBOOKS);
-        
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error);
@@ -88,16 +89,30 @@ const NotebookScreen = () => {
         return;
       }
 
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "px",
-        format: [400, 600],
+      // Convertir data URL a archivo temporal
+      const filename = `nota-${Date.now()}.png`;
+      const path = `${FileSystem.documentDirectory}${filename}`;
+
+      // Extraer los datos base64 del dataURL
+      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
+
+      // Escribir el archivo
+      await FileSystem.writeAsStringAsync(path, base64Data, {
+        encoding: FileSystem.EncodingType.Base64,
       });
 
-      pdf.addImage(dataUrl, "PNG", 0, 0, 400, 600);
-      pdf.save(`nota-${Date.now()}.pdf`);
+      // Compartir la imagen
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(path, {
+          mimeType: "image/png",
+          dialogTitle: "Compartir nota",
+        });
+      } else {
+        alert("La función de compartir no está disponible en este dispositivo");
+      }
     } catch (error) {
-      alert("Error al compartir PDF");
+      console.error("Error al compartir:", error);
+      alert("Error al compartir nota: " + error.message);
     }
   };
 
@@ -189,7 +204,15 @@ const NotebookScreen = () => {
   const [lastPngDataUrl, setLastPngDataUrl] = useState(null);
 
   const renderNote = ({ item }) => (
-    <TouchableOpacity style={styles.noteItem} onPress={() => router.push({ pathname: "/(tabs)/notebookPages", params: { notebookId: item.id } })}>
+    <TouchableOpacity
+      style={styles.noteItem}
+      onPress={() =>
+        router.push({
+          pathname: "/(tabs)/notebookPages",
+          params: { notebookId: item.id },
+        })
+      }
+    >
       {/* <Image source={{ uri: item.data }} style={styles.notePreview} /> */}
       <AuraText
         text={item.title}
