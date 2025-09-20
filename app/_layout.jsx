@@ -8,6 +8,7 @@ import { useEffect } from "react";
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  console.log("RootLayout rendered");
   const [fontsLoaded] = useFonts({
     "fredoka-regular": require("../assets/fonts/Fredoka-Regular.ttf"),
     "fredoka-bold": require("../assets/fonts/Fredoka-Bold.ttf"),
@@ -32,10 +33,11 @@ export default function RootLayout() {
           headerShown: false,
         }}
       >
-        <Stack.Screen name="index" />
-        <Stack name="(auth)"></Stack>
-        <Stack.Screen name="(tabs)" screenOptions={{ headerShown: false }} />
-        <Slot />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs_teacher)" options={{ headerShown: false }} />
+        <Stack.Screen name="(profile)" options={{ headerShown: false }} />
       </Stack>
     </>
   );

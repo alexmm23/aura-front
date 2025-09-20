@@ -1,13 +1,31 @@
 import { useEffect, useState, useLayoutEffect } from "react";
-import { ScrollView, Text, View, Platform } from "react-native";
+import {
+  ScrollView,
+  Text,
+  View,
+  Platform,
+  ActivityIndicator,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../hooks/useAuth";
 import PrimaryButton from "@/components/PrimaryButton";
 
 export default function Index() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
+  const [debugInfo, setDebugInfo] = useState("");
   const Container = Platform.OS === "web" ? ScrollView : View;
+
+  // Añadir información de debug
+  useEffect(() => {
+    setDebugInfo(
+      `Platform: ${
+        Platform.OS
+      }, Loading: ${isLoading}, Auth: ${isAuthenticated}, User: ${
+        user ? "yes" : "no"
+      }`
+    );
+  }, [isLoading, isAuthenticated, user]);
 
   // Usamos useLayoutEffect en lugar de useEffect para navegaciones
   // Esto garantiza que la navegación ocurra antes del pintado
@@ -16,10 +34,16 @@ export default function Index() {
     if (!isLoading) {
       // Pequeño retraso para garantizar que el layout esté montado
       const timer = setTimeout(() => {
-        if (isAuthenticated) {
-          router.replace("/(tabs)/home");
-        } else {
-          router.replace("/(auth)/login");
+        try {
+          if (isAuthenticated) {
+            console.log("Navegando a /home");
+            router.replace("/home");
+          } else {
+            console.log("Navegando a /login");
+            router.replace("/login");
+          }
+        } catch (error) {
+          console.error("Error en navegación:", error);
         }
       }, 100);
 
@@ -30,12 +54,62 @@ export default function Index() {
   // Renderizamos una pantalla de carga mientras se verifica el estado de autenticación
   return (
     <Container style={{ flex: 1, marginHorizontal: 0, marginVertical: "auto" }}>
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          padding: 20,
+        }}
+      >
         {isLoading ? (
-          <Text>Cargando...</Text>
+          <>
+            <ActivityIndicator size="large" color="#CB8D27" />
+            <Text style={{ marginTop: 16, textAlign: "center" }}>
+              Verificando autenticación...
+            </Text>
+            <Text
+              style={{
+                marginTop: 8,
+                fontSize: 12,
+                color: "gray",
+                textAlign: "center",
+              }}
+            >
+              {debugInfo}
+            </Text>
+          </>
         ) : (
           <>
-            <Text>Redirigiendo...</Text>
+            <ActivityIndicator size="large" color="#CB8D27" />
+            <Text style={{ marginTop: 16, textAlign: "center" }}>
+              Redirigiendo...
+            </Text>
+            <Text
+              style={{
+                marginTop: 8,
+                fontSize: 12,
+                color: "gray",
+                textAlign: "center",
+              }}
+            >
+              {debugInfo}
+            </Text>
+            {/* Botón de emergencia por si la navegación falla */}
+            <View style={{ marginTop: 20 }}>
+              <PrimaryButton
+                title="Ir a Login (Manual)"
+                // onPress={() => {}}
+                onPress={() => router.push("/login")}
+                style={{ marginBottom: 10 }}
+              />
+              <PrimaryButton
+                title="Ir a Home (Manual)"
+                // onPress={() => {}}
+                onPress={() => router.push("/home")}
+                style={{}}
+              />
+            </View>
           </>
         )}
       </View>

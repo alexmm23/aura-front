@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import jwtDecode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 import { API, buildApiUrl, isWeb } from '../config/api';
 
 function getPathname() {
@@ -60,6 +60,8 @@ export function useAuth() {
     useEffect(() => {
         const checkAuthStatus = async () => {
             try {
+                setIsLoading(true);
+                
                 if (isWeb()) {
                     // Para web, verificar cookies con el servidor
                     try {

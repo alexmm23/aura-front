@@ -1,41 +1,44 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
-import { API_URL } from '@env';
 
-// Get configuration from app.config.js and .env
-const { apiUrl, apiProduction }=Constants.expoConfig?.extra||{};
-
-// Determine current environment
-const getCurrentEnvironment=() => {
-  // For Expo Go
-  if (__DEV__) {
-    return 'development';
-  }
-  // For production builds
-  return 'production';
-};
+// Get configuration from app.config.js and environment variables
+const { apiUrl, environment, customConfig }=Constants.expoConfig?.extra||{};
 
 // Get the base API URL depending on environment
 const getBaseUrl=() => {
-  const environment=getCurrentEnvironment();
-  // For Android emulator, localhost refers to the emulator itself, not your machine
+  // 1. Primero intentamos usar la variable de entorno del sistema directamente
+  if (typeof process!=='undefined'&&process.env.API_URL) {
+    console.log('API URL from process.env:', process.env.API_URL);
+    return process.env.API_URL;
+  }
+
+  // 2. Luego intentamos obtener la URL desde app.config.js
+  if (apiUrl) {
+    console.log('API URL from config:', apiUrl);
+    return apiUrl;
+  }
+
+  // 3. Fallback para desarrollo cuando no hay configuración
   const devUrl=Platform.OS==='android'
     ? 'http://192.168.0.128:3000/api'
-    :'http://localhost:3000/api'; // TODO: Change to your local dev URL
-  console.log('API URL:', devUrl);
+    :'http://localhost:3000/api';
 
-  // Environments configuration
-  const urls={
-    development: devUrl,
-    production: apiProduction||'https://back.aurapp.com.mx/api',
-  };
+  console.log('API URL fallback:', devUrl);
+  return devUrl;
+};
 
-  return urls[environment]||urls.development;
+// Configuración de debug y logging
+export const CONFIG={
+  API_URL: getBaseUrl(),
+  ENVIRONMENT: environment||'development',
+  DEBUG_MODE: customConfig?.debugMode||__DEV__,
+  LOG_LEVEL: customConfig?.logLevel||'info',
+  API_TIMEOUT: customConfig?.apiTimeout||5000
 };
 
 // API endpoints
 export const API={
-  BASE_URL: getBaseUrl(),
+  BASE_URL: CONFIG.API_URL,
   ENDPOINTS: {
     // Auth endpoints
     AUTH: {
