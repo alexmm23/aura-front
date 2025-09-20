@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
-import { apiGet, apiPostMultipart } from "../../utils/fetchWithAuth";
+import { apiGet, apiPostMultipart, apiPost } from "../../utils/fetchWithAuth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 // import CanvaLiteBoard from "./CanvaLiteBoard";
 
@@ -436,15 +436,16 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
       const response = await fetch(canvasDataToSave);
       const blob = await response.blob();
 
-      // Crear FormData para enviar la imagen
-      const formData = new FormData();
-      formData.append("image", blob, `canvas-note-${Date.now()}.png`);
-      formData.append("notebook_id", notebookId.toString());
-      formData.append("title", `Nota del ${new Date().toLocaleDateString()}`);
+      // Crear el objeto JSON para enviar la imagen en base64
+      const noteData = {
+        image: canvasDataToSave, // Ya es base64
+        notebook_id: notebookId,
+        title: `Nota del ${new Date().toLocaleDateString()}`,
+      };
 
-      const saveResponse = await apiPostMultipart(
+      const saveResponse = await apiPost(
         API.ENDPOINTS.STUDENT.NOTE_CREATE,
-        formData
+        noteData
       );
 
       if (saveResponse.ok) {
