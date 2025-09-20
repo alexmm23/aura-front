@@ -14,7 +14,9 @@
     "app/(auth)/_layout.jsx",
     "app/_layout.jsx",
     "app/(auth)/login.jsx",
-    "app/index.jsx",
-    "constants/Colors.js"
+    "app/index.tsx",
+    "constants/Colors.js",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
   ]
 }
