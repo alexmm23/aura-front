@@ -1,17 +1,22 @@
-const getEnvironment = () => {
-  const isProduction = process.env.APP_ENV === 'production';
+const getEnvironment=() => {
+  // Leer variables de entorno del sistema
+  const isProduction=process.env.NODE_ENV==='production'||process.env.APP_ENV==='production';
+  const customApiUrl=process.env.API_URL; // Variable de entorno personalizada
+
   return {
-    name: isProduction ? "AURA" : "AURA Dev",
-    apiUrl: isProduction
+    name: isProduction? "AURA":"AURA Dev",
+    apiUrl: customApiUrl||(isProduction
       ? "https://back.aurapp.com.mx/api"
-      : "http://localhost:3000/api",
+      :"http://localhost:3000/api"),
+    environment: isProduction? 'production':'development'
   };
 };
 
-const env = getEnvironment();
+const env=getEnvironment();
 
-module.exports = {
+module.exports={
   expo: {
+    entryPoint: "node_modules/expo-router/entry.js",
     name: env.name,
     slug: "aura-front",
     version: "1.0.0",
@@ -19,7 +24,7 @@ module.exports = {
     icon: "./assets/images/icon.png",
     scheme: "myapp",
     userInterfaceStyle: "automatic",
-    newArchEnabled: true,
+    newArchEnabled: false,
     ios: {
       supportsTablet: true
     },
@@ -39,6 +44,7 @@ module.exports = {
     },
     plugins: [
       "expo-router",
+      "expo-dev-client",
       [
         "expo-splash-screen",
         {
@@ -59,7 +65,15 @@ module.exports = {
       eas: {
         projectId: "c3118355-cc9b-41fd-9ce0-4ea410d8128c"
       },
-      apiUrl: env.apiUrl
+      // Configuraciones de entorno
+      apiUrl: env.apiUrl,
+      environment: env.environment,
+      // Pasar variables de entorno adicionales si existen
+      customConfig: {
+        debugMode: process.env.DEBUG_MODE==='true',
+        logLevel: process.env.LOG_LEVEL||'info',
+        apiTimeout: parseInt(process.env.API_TIMEOUT||'5000')
+      }
     }
   }
 };

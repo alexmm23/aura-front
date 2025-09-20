@@ -1,11 +1,8 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     }
   },
   "include": [
@@ -14,9 +11,10 @@
     "app/(auth)/_layout.jsx",
     "app/_layout.jsx",
     "app/(auth)/login.jsx",
-    "app/index.tsx",
+    "app/index.jsx",
     "constants/Colors.js",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-  ]
+  ],
+  "extends": "expo/tsconfig.base"
 }
