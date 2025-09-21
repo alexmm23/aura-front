@@ -29,7 +29,7 @@ export default function HomeScreen() {
   const fetchHomework = async () => {
     try {
       const response = await apiGet(API.ENDPOINTS.STUDENT.HOMEWORK);
-      
+
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
@@ -44,7 +44,7 @@ export default function HomeScreen() {
   const fetchNotes = async () => {
     try {
       const response = await apiGet(API.ENDPOINTS.STUDENT.NOTES);
-      
+
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
@@ -129,7 +129,7 @@ export default function HomeScreen() {
                     })
                   }
                 >
-                  <View>
+                  <View style={{ flex: 1, marginRight: 10 }}>
                     <Text style={styles.taskSubject}>{task.courseName}</Text>
                     <Text style={styles.taskDescription}>{task.title}</Text>
                     <Text style={styles.taskDueDate}>
