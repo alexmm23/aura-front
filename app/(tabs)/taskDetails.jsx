@@ -36,7 +36,8 @@ const TaskDetails = () => {
   const [hasSubmission, setHasSubmission] = useState(false);
 
   // Estados para el modal de entrega manual
-  const [showManualSubmissionModal, setShowManualSubmissionModal] = useState(false);
+  const [showManualSubmissionModal, setShowManualSubmissionModal] =
+    useState(false);
   const [manualSubmissionData, setManualSubmissionData] = useState(null);
 
   // Cargar detalles de la tarea
@@ -109,7 +110,7 @@ const TaskDetails = () => {
     try {
       // Preparar datos de la solicitud
       let fileData = null;
-      
+
       // Si hay archivo, convertirlo a base64
       if (selectedFile) {
         try {
@@ -148,11 +149,12 @@ const TaskDetails = () => {
       };
 
       // Construir la URL del endpoint con parámetros
-      const endpoint = API.ENDPOINTS.STUDENT.HOMEWORK_SUBMIT_FILE
-        .replace(':courseId', courseId)
-        .replace(':courseWorkId', courseWorkId);
+      const endpoint = API.ENDPOINTS.STUDENT.HOMEWORK_SUBMIT_FILE.replace(
+        ":courseId",
+        courseId
+      ).replace(":courseWorkId", courseWorkId);
 
-      console.log('Submitting assignment:', {
+      console.log("Submitting assignment:", {
         endpoint,
         courseId,
         courseWorkId,
@@ -166,22 +168,26 @@ const TaskDetails = () => {
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Submission successful:', result);
-        
+        console.log("Submission successful:", result);
+
         // Si la respuesta indica que se necesita entrega manual
-        if (result.message?.includes("manual submission required") || result.fileInfo) {
-          console.log('Manual submission required:', result);
+        if (
+          result.message?.includes("manual submission required") ||
+          result.fileInfo
+        ) {
+          console.log("Manual submission required:", result);
           setManualSubmissionData(result);
           setShowManualSubmissionModal(true);
         } else {
           // Entrega exitosa normal
           let message = "Tarea entregada correctamente";
-          
+
           // Mostrar mensaje específico basado en la respuesta
           if (result.fileLink) {
-            message += "\n\nNota: Es posible que necesites compartir el archivo manualmente con tu profesor.";
+            message +=
+              "\n\nNota: Es posible que necesites compartir el archivo manualmente con tu profesor.";
           }
-          
+
           if (result.instructions) {
             message += `\n\n${result.instructions}`;
           }
@@ -194,12 +200,12 @@ const TaskDetails = () => {
         console.error("Error submitting task:", response.status);
         const errorData = await response.json().catch(() => ({}));
         console.error("Error details:", errorData);
-        
+
         let errorMessage = "No se pudo entregar la tarea";
         if (errorData.error) {
           errorMessage += `\n\n${errorData.error}`;
         }
-        
+
         Alert.alert("Error", errorMessage);
       }
     } catch (error) {
@@ -223,7 +229,7 @@ const TaskDetails = () => {
   // Funciones para el modal de entrega manual
   const copyToClipboard = async (text) => {
     try {
-      if (Platform.OS === 'web') {
+      if (Platform.OS === "web") {
         await navigator.clipboard.writeText(text);
       } else {
         await Clipboard.setString(text);
@@ -237,10 +243,10 @@ const TaskDetails = () => {
 
   const openGoogleClassroom = () => {
     // URL específica para la tarea en Google Classroom
-    const classroomTaskUrl = `https://classroom.google.com/c/${courseId}/a/${courseWorkId}/submissions/by-status/and-sort-name/all`;
+    const classroomTaskUrl = `https://classroom.google.com/u/1/c/${courseId}/a/${courseWorkId}/details`;
     Linking.openURL(classroomTaskUrl).catch(() => {
       // Fallback a la URL general de Classroom si falla
-      const classroomUrl = 'https://classroom.google.com';
+      const classroomUrl = "https://classroom.google.com/u/1";
       Linking.openURL(classroomUrl).catch(() => {
         Alert.alert("Error", "No se pudo abrir Google Classroom");
       });
@@ -249,16 +255,16 @@ const TaskDetails = () => {
 
   const openTaskSubmission = () => {
     // URL directa para entregar la tarea específica
-    const taskSubmissionUrl = `https://classroom.google.com/c/${courseId}/a/${courseWorkId}`;
+    const taskSubmissionUrl = `https://classroom.google.com/u/1/c/${courseId}/a/${courseWorkId}/details`;
     Linking.openURL(taskSubmissionUrl).catch(() => {
       Alert.alert("Error", "No se pudo abrir la tarea en Google Classroom");
     });
   };
 
   const copyTaskUrl = async () => {
-    const taskUrl = `https://classroom.google.com/c/${courseId}/a/${courseWorkId}`;
+    const taskUrl = `https://classroom.google.com/u/1/c/${courseId}/a/${courseWorkId}/details`;
     try {
-      if (Platform.OS === 'web') {
+      if (Platform.OS === "web") {
         await navigator.clipboard.writeText(taskUrl);
       } else {
         await Clipboard.setString(taskUrl);
@@ -279,9 +285,11 @@ const TaskDetails = () => {
   const handleManualSubmissionComplete = () => {
     setShowManualSubmissionModal(false);
     setManualSubmissionData(null);
-    Alert.alert("¡Perfecto!", "Recuerda entregar el archivo en Google Classroom usando el link proporcionado", [
-      { text: "OK", onPress: () => router.back() },
-    ]);
+    Alert.alert(
+      "¡Perfecto!",
+      "Recuerda entregar el archivo en Google Classroom usando el link proporcionado",
+      [{ text: "OK", onPress: () => router.back() }]
+    );
   };
 
   // Función para determinar el estado de la tarea
@@ -361,13 +369,18 @@ const TaskDetails = () => {
               <Ionicons name="calendar-outline" size={16} color="#666" />
               <Text style={styles.dueDate}>
                 Fecha de entrega:{" "}
-                {formatDate(
-                  task.dueDate.year +
-                    "-" +
-                    task.dueDate.month +
-                    "-" +
-                    task.dueDate.day
-                )}
+                {task.dueDate &&
+                task.dueDate.year &&
+                task.dueDate.month &&
+                task.dueDate.day
+                  ? formatDate(
+                      task.dueDate.year +
+                        "-" +
+                        task.dueDate.month +
+                        "-" +
+                        task.dueDate.day
+                    )
+                  : "Sin fecha límite"}
               </Text>
             </View>
             <View
@@ -553,10 +566,16 @@ const TaskDetails = () => {
               {/* Header del modal */}
               <View style={styles.modalHeader}>
                 <View style={styles.modalIcon}>
-                  <Ionicons name="cloud-upload-outline" size={32} color="#CB8D27" />
+                  <Ionicons
+                    name="cloud-upload-outline"
+                    size={32}
+                    color="#CB8D27"
+                  />
                 </View>
                 <Text style={styles.modalTitle}>Archivo Subido a Drive</Text>
-                <Text style={styles.modalSubtitle}>Entrega manual requerida</Text>
+                <Text style={styles.modalSubtitle}>
+                  Entrega manual requerida
+                </Text>
               </View>
 
               {/* Información del archivo */}
@@ -565,12 +584,19 @@ const TaskDetails = () => {
                   <Text style={styles.sectionTitle}>Archivo Subido</Text>
                   <View style={styles.fileInfoCard}>
                     <View style={styles.fileIconContainer}>
-                      <Ionicons name="document-outline" size={24} color="#28a745" />
+                      <Ionicons
+                        name="document-outline"
+                        size={24}
+                        color="#28a745"
+                      />
                     </View>
                     <View style={styles.fileDetails}>
-                      <Text style={styles.fileName}>{manualSubmissionData.fileInfo.name}</Text>
+                      <Text style={styles.fileName}>
+                        {manualSubmissionData.fileInfo.name}
+                      </Text>
                       <Text style={styles.fileSize}>
-                        {Math.round(manualSubmissionData.fileInfo.size / 1024)} KB
+                        {Math.round(manualSubmissionData.fileInfo.size / 1024)}{" "}
+                        KB
                       </Text>
                       <Text style={styles.fileMimeType}>
                         {manualSubmissionData.fileInfo.mimeType}
@@ -583,20 +609,24 @@ const TaskDetails = () => {
               {/* Instrucciones */}
               <View style={styles.instructionsSection}>
                 <Text style={styles.sectionTitle}>Instrucciones</Text>
-                {manualSubmissionData?.instructions?.map((instruction, index) => (
-                  <View key={index} style={styles.instructionItem}>
-                    <View style={styles.instructionNumber}>
-                      <Text style={styles.instructionNumberText}>{index + 1}</Text>
+                {manualSubmissionData?.instructions?.map(
+                  (instruction, index) => (
+                    <View key={index} style={styles.instructionItem}>
+                      <View style={styles.instructionNumber}>
+                        <Text style={styles.instructionNumberText}>
+                          {index + 1}
+                        </Text>
+                      </View>
+                      <Text style={styles.instructionText}>{instruction}</Text>
                     </View>
-                    <Text style={styles.instructionText}>{instruction}</Text>
-                  </View>
-                ))}
+                  )
+                )}
               </View>
 
               {/* Links del archivo */}
               <View style={styles.linksSection}>
                 <Text style={styles.sectionTitle}>Enlaces del Archivo</Text>
-                
+
                 {/* Link de visualización */}
                 <View style={styles.linkCard}>
                   <View style={styles.linkHeader}>
@@ -609,14 +639,20 @@ const TaskDetails = () => {
                   <View style={styles.linkActions}>
                     <TouchableOpacity
                       style={styles.copyButton}
-                      onPress={() => copyToClipboard(manualSubmissionData?.fileInfo?.viewLink)}
+                      onPress={() =>
+                        copyToClipboard(
+                          manualSubmissionData?.fileInfo?.viewLink
+                        )
+                      }
                     >
                       <Ionicons name="copy-outline" size={16} color="#fff" />
                       <Text style={styles.copyButtonText}>Copiar</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.openButton}
-                      onPress={() => openFileLink(manualSubmissionData?.fileInfo?.viewLink)}
+                      onPress={() =>
+                        openFileLink(manualSubmissionData?.fileInfo?.viewLink)
+                      }
                     >
                       <Ionicons name="open-outline" size={16} color="#007bff" />
                       <Text style={styles.openButtonText}>Abrir</Text>
@@ -627,7 +663,11 @@ const TaskDetails = () => {
                 {/* Link de descarga */}
                 <View style={styles.linkCard}>
                   <View style={styles.linkHeader}>
-                    <Ionicons name="download-outline" size={20} color="#28a745" />
+                    <Ionicons
+                      name="download-outline"
+                      size={20}
+                      color="#28a745"
+                    />
                     <Text style={styles.linkTitle}>Descargar Archivo</Text>
                   </View>
                   <Text style={styles.linkUrl} numberOfLines={2}>
@@ -636,16 +676,28 @@ const TaskDetails = () => {
                   <View style={styles.linkActions}>
                     <TouchableOpacity
                       style={styles.copyButton}
-                      onPress={() => copyToClipboard(manualSubmissionData?.fileInfo?.downloadLink)}
+                      onPress={() =>
+                        copyToClipboard(
+                          manualSubmissionData?.fileInfo?.downloadLink
+                        )
+                      }
                     >
                       <Ionicons name="copy-outline" size={16} color="#fff" />
                       <Text style={styles.copyButtonText}>Copiar</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.openButton}
-                      onPress={() => openFileLink(manualSubmissionData?.fileInfo?.downloadLink)}
+                      onPress={() =>
+                        openFileLink(
+                          manualSubmissionData?.fileInfo?.downloadLink
+                        )
+                      }
                     >
-                      <Ionicons name="download-outline" size={16} color="#28a745" />
+                      <Ionicons
+                        name="download-outline"
+                        size={16}
+                        color="#28a745"
+                      />
                       <Text style={styles.openButtonText}>Descargar</Text>
                     </TouchableOpacity>
                   </View>
@@ -655,17 +707,21 @@ const TaskDetails = () => {
               {/* Enlace directo a la tarea */}
               <View style={styles.taskLinkSection}>
                 <Text style={styles.sectionTitle}>Enlace a la Tarea</Text>
-                
+
                 <View style={styles.taskLinkCard}>
                   <View style={styles.linkHeader}>
                     <Ionicons name="school-outline" size={20} color="#4285F4" />
-                    <Text style={styles.linkTitle}>Ir a la Tarea en Google Classroom</Text>
+                    <Text style={styles.linkTitle}>
+                      Ir a la Tarea en Google Classroom
+                    </Text>
                   </View>
                   <Text style={styles.taskDescription}>
-                    Este enlace te llevará directamente a la tarea donde podrás adjuntar tu archivo
+                    Este enlace te llevará directamente a la tarea donde podrás
+                    adjuntar tu archivo
                   </Text>
                   <Text style={styles.linkUrl} numberOfLines={2}>
-                    https://classroom.google.com/c/{courseId}/a/{courseWorkId}
+                    https://classroom.google.com/u/1/c/{courseId}/a/
+                    {courseWorkId}/details
                   </Text>
                   <View style={styles.linkActions}>
                     <TouchableOpacity
@@ -690,10 +746,16 @@ const TaskDetails = () => {
               {manualSubmissionData?.note && (
                 <View style={styles.noteSection}>
                   <View style={styles.noteHeader}>
-                    <Ionicons name="information-circle-outline" size={20} color="#ffc107" />
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={20}
+                      color="#ffc107"
+                    />
                     <Text style={styles.noteTitle}>Nota Importante</Text>
                   </View>
-                  <Text style={styles.noteText}>{manualSubmissionData.note}</Text>
+                  <Text style={styles.noteText}>
+                    {manualSubmissionData.note}
+                  </Text>
                 </View>
               )}
 
@@ -704,14 +766,20 @@ const TaskDetails = () => {
                   onPress={openTaskSubmission}
                 >
                   <Ionicons name="add-circle-outline" size={20} color="#fff" />
-                  <Text style={styles.taskSubmissionButtonText}>Ir a Entregar Tarea</Text>
+                  <Text style={styles.taskSubmissionButtonText}>
+                    Ir a Entregar Tarea
+                  </Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   style={styles.completeButton}
                   onPress={handleManualSubmissionComplete}
                 >
-                  <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={20}
+                    color="#fff"
+                  />
                   <Text style={styles.completeButtonText}>Entendido</Text>
                 </TouchableOpacity>
               </View>
