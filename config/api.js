@@ -82,6 +82,34 @@ export const API={
       INFO: '/users/profile',
       UPDATE: '/users/update',
     },
+    // Forums endpoints
+    FORUMS: {
+      LIST: '/forums',
+      CREATE: '/forums',
+      DETAIL: '/forums/:id',
+      UPDATE: '/forums/:id',
+      DELETE: '/forums/:id',
+      POSTS: '/forums/:id/posts',
+      CREATE_POST: '/forums/:id/posts',
+    },
+    // Posts endpoints
+    POSTS: {
+      DETAIL: '/posts/:id',
+      UPDATE: '/posts/:id',
+      DELETE: '/posts/:id',
+      TOGGLE_RESPONSES: '/posts/:id/toggle-responses',
+      COMMENTS: '/posts/:id/comments',
+      CREATE_COMMENT: '/posts/:id/comments',
+    },
+    // Comments endpoints
+    COMMENTS: {
+      UPDATE: '/comments/:id',
+      DELETE: '/comments/:id',
+    },
+    // Attachments endpoints
+    ATTACHMENTS: {
+      DELETE: '/attachments/:id',
+    },
   },
 };
 

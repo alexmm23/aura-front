@@ -54,6 +54,13 @@ function TabsContent() {
       route: "/(tabs)/NoteBookScreen",
     },
     {
+      name: "forums",
+      icon: "chatbubbles",
+      text: "Foros",
+      route: "/(tabs)/forums",
+      ionicon: true,
+    },
+    {
       name: "classes",
       icon: require("../../assets/images/clases.png"),
       text: "Clases",
@@ -106,17 +113,29 @@ function TabsContent() {
             title: item.text,
             tabBarIcon: ({ focused }) => (
               <View style={{ alignItems: "center", justifyContent: "center" }}>
-                <Image
-                  source={item.icon}
-                  style={{
-                    width: 28,
-                    height: 28,
-                    tintColor: focused ? "#fff" : "#e0e0e0",
-                    marginBottom: 2,
-                    marginTop: 10,
-                  }}
-                  resizeMode="contain"
-                />
+                {item.ionicon ? (
+                  <Ionicons
+                    name={item.icon}
+                    size={24}
+                    color={focused ? "#fff" : "#e0e0e0"}
+                    style={{
+                      marginBottom: 2,
+                      marginTop: 10,
+                    }}
+                  />
+                ) : (
+                  <Image
+                    source={item.icon}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      tintColor: focused ? "#fff" : "#e0e0e0",
+                      marginBottom: 2,
+                      marginTop: 10,
+                    }}
+                    resizeMode="contain"
+                  />
+                )}
               </View>
             ),
           }}
