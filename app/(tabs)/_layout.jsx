@@ -147,6 +147,12 @@ function TabsContent() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="notebookView"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

@@ -52,7 +52,7 @@ const NotebookPages = () => {
       onPress={() =>
         router.push({
           pathname: "/(tabs)/notebookView",
-          params: { pageId: item.id },
+          params: { pageId: item.page_id || item.id }, // Usar page_id si existe, sino id
         })
       }
     >
@@ -63,7 +63,7 @@ const NotebookPages = () => {
       )}
       <AuraText
         style={styles.pageTitle}
-        text={item.title || `Página ${item.page_number || ""}`}
+        text={item.title || `Página ${item.page_number || item.page_id || ""}`}
       />
     </TouchableOpacity>
   );
