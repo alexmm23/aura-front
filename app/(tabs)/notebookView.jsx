@@ -36,19 +36,25 @@ const NotebookView = () => {
       try {
         // Usar el endpoint de notes con el pageId como parámetro
         const response = await apiGet(
-          `${API.ENDPOINTS.STUDENT.NOTES}?page_id=${pageId}`
+          `${API.ENDPOINTS.STUDENT.NOTE_SHOW}/${pageId}`
         );
         if (!response.ok) {
           throw new Error(response.statusText || "Error fetching page");
         }
 
-        const data = await response.json();
-        console.log("Page data:", data);
+        const result = await response.json();
+        console.log("Page response:", result);
 
-        // Buscar la página específica en los datos devueltos
-        const pageData =
-          data.data?.find((item) => item.page_id == pageId) || data.data?.[0];
-        setPage(pageData);
+        // Verificar si la respuesta es exitosa y tiene datos
+        if (result.success && result.data) {
+          // Si data es un array, tomar el primer elemento, sino usar data directamente
+          const pageData = Array.isArray(result.data)
+            ? result.data[0]
+            : result.data;
+          setPage(pageData);
+        } else {
+          throw new Error("No se encontraron datos de la página");
+        }
       } catch (error) {
         console.error("Error fetching page:", error);
         Alert.alert("Error", "No se pudo cargar la página");
@@ -79,7 +85,8 @@ const NotebookView = () => {
 
       // Crear nombre de archivo único
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const filename = `aura-page-${timestamp}.png`;
+      const pageIdentifier = page.page_id || page.id || "unknown";
+      const filename = `aura-page-${pageIdentifier}-${timestamp}.png`;
       const fileUri = `${FileSystem.documentDirectory}${filename}`;
 
       // Extraer datos base64 de la imagen
@@ -113,7 +120,8 @@ const NotebookView = () => {
       setShowMenu(false);
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const filename = `aura-page-${timestamp}.png`;
+      const pageIdentifier = page.page_id || page.id || "unknown";
+      const filename = `aura-page-${pageIdentifier}-${timestamp}.png`;
       const fileUri = `${FileSystem.documentDirectory}${filename}`;
 
       // Extraer datos base64 de la imagen
@@ -146,9 +154,11 @@ const NotebookView = () => {
       setShowMenu(false);
 
       // Crear elemento de descarga para web
+      const pageIdentifier = page.page_id || page.id || "unknown";
+      const timestamp = new Date().toISOString().slice(0, 10);
       const link = document.createElement("a");
       link.href = page.data;
-      link.download = `aura-page-${new Date().toISOString().slice(0, 10)}.png`;
+      link.download = `aura-page-${pageIdentifier}-${timestamp}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -224,13 +234,16 @@ const NotebookView = () => {
 
         <View style={styles.headerContent}>
           <AuraText
-            text={page.title || `Página ${page.page_number || ""}`}
+            text={`Página ${page.page_id || page.id || ""}`}
             style={styles.headerTitle}
           />
           {page.created_at && (
             <Text style={styles.headerDate}>
               {new Date(page.created_at).toLocaleDateString("es-ES")}
             </Text>
+          )}
+          {page.type && (
+            <Text style={styles.headerType}>Tipo: {page.type}</Text>
           )}
         </View>
 
@@ -351,6 +364,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
     marginTop: 2,
+  },
+  headerType: {
+    fontSize: 11,
+    color: "#888",
+    marginTop: 1,
+    fontStyle: "italic",
   },
   content: {
     flex: 1,

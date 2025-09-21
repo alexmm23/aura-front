@@ -36,6 +36,7 @@ export const CONFIG={
 };
 
 // API endpoints
+
 export const API={
   BASE_URL: CONFIG.API_URL,
   ENDPOINTS: {
@@ -66,6 +67,7 @@ export const API={
       NOTEBOOK_DELETE: '/notebook/delete',
       NOTES: '/note/list',
       NOTE_CREATE: '/note/images/upload',
+      NOTE_SHOW: '/note/show',
     },
     // Task endpoints
     TASKS: {
