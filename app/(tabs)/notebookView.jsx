@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
 import { API } from "@/config/api";
@@ -92,9 +92,9 @@ const NotebookView = () => {
       // Extraer datos base64 de la imagen
       const base64Data = page.data.replace(/^data:image\/[^;]+;base64,/, "");
 
-      // Guardar archivo temporalmente
+      // Guardar archivo temporalmente usando la API legacy
       await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: "base64",
       });
 
       // Guardar en la galería
@@ -129,7 +129,7 @@ const NotebookView = () => {
 
       // Guardar archivo temporalmente
       await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: "base64",
       });
 
       // Compartir usando el menú nativo
