@@ -1,8 +1,7 @@
 const getEnvironment=() => {
   // Leer variables de entorno del sistema
   const isProduction=process.env.NODE_ENV==='production'||process.env.APP_ENV==='production';
-  const customApiUrl=process.env.API_URL; // Variable de entorno personalizada
-
+  const customApiUrl=process.env.API_URL;
   return {
     name: isProduction? "AURA":"AURA Dev",
     apiUrl: customApiUrl||(isProduction

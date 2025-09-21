@@ -11,7 +11,6 @@ const getBaseUrl=() => {
     console.log('API URL from process.env:', process.env.API_URL);
     return process.env.API_URL;
   }
-
   // 2. Luego intentamos obtener la URL desde app.config.js
   if (apiUrl) {
     console.log('API URL from config:', apiUrl);
@@ -49,11 +48,11 @@ export const API={
       GOOGLE: '/auth/google',
       RESET_PASSWORD: '/auth/reset-password',
       LOGOUT: '/auth/logout',
+      LOGOUT_ALL: '/auth/logout/all',
       TEAMS: '/oauth/microsoft',
       PROFILE: '/users/profile',
       AUTH_CHECK: '/auth/check',
       LOGIN_WEB: '/auth/login/web',
-      LOGOUT_WEB: '/auth/logout/web',
     },
     // Student endpoints
     STUDENT: {

@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
 import { API, buildApiUrl, isWeb } from '../config/api';
+import { apiGet, apiPost } from '../utils/fetchWithAuth';
 
 function getPathname() {
-    return typeof window !== 'undefined' ? window.location.pathname : '';
+    return typeof window!=='undefined'? window.location.pathname:'';
 }
 
 async function clearAuthData() {
@@ -13,19 +14,15 @@ async function clearAuthData() {
 }
 
 export function useAuth() {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [user, setUser] = useState(null);
+    const [isAuthenticated, setIsAuthenticated]=useState(false);
+    const [isLoading, setIsLoading]=useState(true);
+    const [user, setUser]=useState(null);
 
-    const isTokenExpired = async (token) => {
+    const isTokenExpired=async (token) => {
         try {
-            const response = await fetch(buildApiUrl(API.ENDPOINTS.AUTH.VERIFY_TOKEN), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token }),
-            });
+            const response=await apiPost(API.ENDPOINTS.AUTH.VERIFY_TOKEN, { token });
             if (!response.ok) throw new Error('Token inválido o expirado');
-            const data = await response.json();
+            const data=await response.json();
             return data.expired;
         } catch (error) {
             console.error('Error al verificar el token:', error);
@@ -33,7 +30,7 @@ export function useAuth() {
         }
     };
 
-    const decodeAndSetUser = (token) => {
+    const decodeAndSetUser=(token) => {
         try {
             setUser(jwtDecode(token));
         } catch (e) {
@@ -42,15 +39,14 @@ export function useAuth() {
         }
     };
 
-    const refreshAccessToken = async (refreshToken) => {
+    const refreshAccessToken=async (refreshToken) => {
         try {
-            const response = await fetch(buildApiUrl(API.ENDPOINTS.AUTH.REFRESH_TOKEN), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refreshToken }),
+            const response=await apiPost(API.ENDPOINTS.AUTH.REFRESH_TOKEN, {
+                refreshToken: refreshToken
             });
             if (!response.ok) throw new Error('No se pudo renovar el token');
-            return await response.json();
+            const data=await response.json();
+            return data;
         } catch (error) {
             console.error('Error al renovar el token:', error);
             return null;
@@ -58,23 +54,17 @@ export function useAuth() {
     };
 
     useEffect(() => {
-        const checkAuthStatus = async () => {
+        const checkAuthStatus=async () => {
             try {
                 setIsLoading(true);
-                
+
                 if (isWeb()) {
-                    // Para web, verificar cookies con el servidor
+                    // Para web, verificar cookies con el servidor usando apiGet
                     try {
-                        const response = await fetch(buildApiUrl(API.ENDPOINTS.AUTH.AUTH_CHECK), {
-                            method: 'GET',
-                            credentials: 'include', // Incluir cookies httpOnly
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                        });
-                        
+                        const response=await apiGet(API.ENDPOINTS.AUTH.AUTH_CHECK);
+
                         if (response.ok) {
-                            const data = await response.json();
+                            const data=await response.json();
                             console.log('Auth check web exitoso:', data);
                             setIsAuthenticated(true);
                             if (data.user) {
@@ -90,20 +80,20 @@ export function useAuth() {
                     }
                 } else {
                     // Para móvil, verificar tokens locales
-                    const token = await AsyncStorage.getItem('userToken');
-                    const refreshToken = await AsyncStorage.getItem('refreshToken');
-                    
-                    if (!token && !refreshToken) {
+                    const token=await AsyncStorage.getItem('userToken');
+                    const refreshToken=await AsyncStorage.getItem('refreshToken');
+
+                    if (!token&&!refreshToken) {
                         setIsAuthenticated(false);
                         return;
                     }
-                    
-                    if (token && !(await isTokenExpired(token))) {
+
+                    if (token&&!(await isTokenExpired(token))) {
                         setIsAuthenticated(true);
                         decodeAndSetUser(token);
                     } else if (refreshToken) {
-                        const result = await refreshAccessToken(refreshToken);
-                        if (result && result.accessToken && result.refreshToken) {
+                        const result=await refreshAccessToken(refreshToken);
+                        if (result&&result.accessToken&&result.refreshToken) {
                             await AsyncStorage.setItem('userToken', result.accessToken);
                             await AsyncStorage.setItem('refreshToken', result.refreshToken);
                             setIsAuthenticated(true);
@@ -127,25 +117,21 @@ export function useAuth() {
                 setIsLoading(false);
             }
         };
-        
+
         checkAuthStatus();
     }, []);
 
-    const login = async (credentials) => {
+    const login=async (credentials) => {
         try {
             if (isWeb()) {
-                // Para web, usar POST /api/auth/login/web con cookies httpOnly
-                const response = await fetch(buildApiUrl(API.ENDPOINTS.AUTH.LOGIN_WEB), {
-                    method: 'POST',
-                    credentials: 'include', // Crucial para cookies httpOnly
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(credentials),
+                // Para web, usar POST /auth/login/web con email y password usando apiPost
+                const response=await apiPost(API.ENDPOINTS.AUTH.LOGIN_WEB, {
+                    email: credentials.email,
+                    password: credentials.password
                 });
-                
+
                 if (response.ok) {
-                    const data = await response.json();
+                    const data=await response.json();
                     console.log('Login web exitoso:', data);
                     setIsAuthenticated(true);
                     if (data.user) {
@@ -153,34 +139,36 @@ export function useAuth() {
                     }
                     return { success: true, data };
                 } else {
-                    const errorData = await response.json().catch(() => ({}));
+                    const errorData=await response.json().catch(() => ({}));
                     console.error('Error en login web:', errorData);
-                    return { success: false, error: errorData.message || 'Error de autenticación' };
+                    return { success: false, error: errorData.message||'Error de autenticación' };
                 }
             } else {
-                // Para móvil, usar POST /api/auth/login con tokens en body
-                const response = await fetch(buildApiUrl(API.ENDPOINTS.AUTH.LOGIN), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(credentials),
+                // Para móvil, usar POST /auth/login con email y password usando apiPost
+                const response=await apiPost(API.ENDPOINTS.AUTH.LOGIN, {
+                    email: credentials.email,
+                    password: credentials.password
                 });
-                
+
                 if (response.ok) {
-                    const data = await response.json();
-                    await AsyncStorage.setItem('userToken', data.accessToken || data.token);
+                    const data=await response.json();
+                    // Guardar los tokens recibidos
+                    if (data.accessToken) {
+                        await AsyncStorage.setItem('userToken', data.accessToken);
+                    }
                     if (data.refreshToken) {
                         await AsyncStorage.setItem('refreshToken', data.refreshToken);
                     }
                     console.log('Login móvil exitoso');
                     setIsAuthenticated(true);
-                    if (data.accessToken || data.token) {
-                        decodeAndSetUser(data.accessToken || data.token);
+                    if (data.accessToken) {
+                        decodeAndSetUser(data.accessToken);
                     }
                     return { success: true, data };
                 } else {
-                    const errorData = await response.json().catch(() => ({}));
+                    const errorData=await response.json().catch(() => ({}));
                     console.error('Error en login móvil:', errorData);
-                    return { success: false, error: errorData.message || errorData.error || 'Error de autenticación' };
+                    return { success: false, error: errorData.message||errorData.error||'Error de autenticación' };
                 }
             }
         } catch (error) {
@@ -189,29 +177,16 @@ export function useAuth() {
         }
     };
 
-    const logout = async () => {
+    const logout=async (logoutAll=false) => {
         try {
             if (isWeb()) {
-                // Para web, llamar POST /api/auth/logout/web que limpia cookies y DB
-                await fetch(buildApiUrl(API.ENDPOINTS.AUTH.LOGOUT_WEB), {
-                    method: 'POST',
-                    credentials: 'include', // Incluir cookies para limpiarlas
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
+                // Para web, usar /auth/logout que maneja cookies httpOnly usando apiPost
+                const endpoint=logoutAll? API.ENDPOINTS.AUTH.LOGOUT_ALL:API.ENDPOINTS.AUTH.LOGOUT;
+                await apiPost(endpoint);
             } else {
-                // Para móvil, llamar POST /api/auth/logout que limpia tokens en DB
-                const token = await AsyncStorage.getItem('userToken');
-                if (token) {
-                    await fetch(buildApiUrl(API.ENDPOINTS.AUTH.LOGOUT), {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`,
-                        },
-                    });
-                }
+                // Para móvil, usar /auth/logout o /auth/logout/all usando apiPost
+                const endpoint=logoutAll? API.ENDPOINTS.AUTH.LOGOUT_ALL:API.ENDPOINTS.AUTH.LOGOUT;
+                await apiPost(endpoint);
                 await clearAuthData();
             }
             setIsAuthenticated(false);
@@ -227,11 +202,16 @@ export function useAuth() {
         }
     };
 
+    const logoutAllDevices=async () => {
+        return await logout(true);
+    };
+
     return {
         isAuthenticated,
         isLoading,
         login,
         logout,
+        logoutAllDevices,
         user,
     };
 }
