@@ -25,6 +25,40 @@ const TaskDetails = () => {
   const router = useRouter();
   const { courseId, courseWorkId, submissionId } = useLocalSearchParams();
 
+  // Función helper para codificar IDs en base64
+  const encodeBase64 = (str) => {
+    if (Platform.OS === "web") {
+      return btoa(str);
+    } else {
+      // Para React Native, usar una implementación simple de base64
+      const chars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+      let result = "";
+      let i = 0;
+      const data = str;
+
+      while (i < data.length) {
+        const a = data.charCodeAt(i++);
+        const b = i < data.length ? data.charCodeAt(i++) : 0;
+        const c = i < data.length ? data.charCodeAt(i++) : 0;
+
+        const bitmap = (a << 16) | (b << 8) | c;
+
+        result += chars.charAt((bitmap >> 18) & 63);
+        result += chars.charAt((bitmap >> 12) & 63);
+        result += chars.charAt((bitmap >> 6) & 63);
+        result += chars.charAt(bitmap & 63);
+      }
+
+      return (
+        result.substring(
+          0,
+          result.length - (data.length % 3 ? 3 - (data.length % 3) : 0)
+        ) + "===".substring(0, data.length % 3 ? 3 - (data.length % 3) : 0)
+      );
+    }
+  };
+
   // Estados para los datos de la tarea
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -242,11 +276,13 @@ const TaskDetails = () => {
   };
 
   const openGoogleClassroom = () => {
-    // URL específica para la tarea en Google Classroom
-    const classroomTaskUrl = `https://classroom.google.com/u/1/c/${courseId}/a/${courseWorkId}/details`;
+    // URL específica para la tarea en Google Classroom con IDs codificados en base64
+    const encodedCourseId = encodeBase64(courseId);
+    const encodedCourseWorkId = encodeBase64(courseWorkId);
+    const classroomTaskUrl = `https://classroom.google.com/u/4/c/${encodedCourseId}/a/${encodedCourseWorkId}/details`;
     Linking.openURL(classroomTaskUrl).catch(() => {
       // Fallback a la URL general de Classroom si falla
-      const classroomUrl = "https://classroom.google.com/u/1";
+      const classroomUrl = "https://classroom.google.com/u/4";
       Linking.openURL(classroomUrl).catch(() => {
         Alert.alert("Error", "No se pudo abrir Google Classroom");
       });
@@ -254,15 +290,19 @@ const TaskDetails = () => {
   };
 
   const openTaskSubmission = () => {
-    // URL directa para entregar la tarea específica
-    const taskSubmissionUrl = `https://classroom.google.com/u/1/c/${courseId}/a/${courseWorkId}/details`;
+    // URL directa para entregar la tarea específica con IDs codificados en base64
+    const encodedCourseId = encodeBase64(courseId);
+    const encodedCourseWorkId = encodeBase64(courseWorkId);
+    const taskSubmissionUrl = `https://classroom.google.com/u/4/c/${encodedCourseId}/a/${encodedCourseWorkId}/details`;
     Linking.openURL(taskSubmissionUrl).catch(() => {
       Alert.alert("Error", "No se pudo abrir la tarea en Google Classroom");
     });
   };
 
   const copyTaskUrl = async () => {
-    const taskUrl = `https://classroom.google.com/u/1/c/${courseId}/a/${courseWorkId}/details`;
+    const encodedCourseId = encodeBase64(courseId);
+    const encodedCourseWorkId = encodeBase64(courseWorkId);
+    const taskUrl = `https://classroom.google.com/u/4/c/${encodedCourseId}/a/${encodedCourseWorkId}/details`;
     try {
       if (Platform.OS === "web") {
         await navigator.clipboard.writeText(taskUrl);
@@ -720,8 +760,9 @@ const TaskDetails = () => {
                     adjuntar tu archivo
                   </Text>
                   <Text style={styles.linkUrl} numberOfLines={2}>
-                    https://classroom.google.com/u/1/c/{courseId}/a/
-                    {courseWorkId}/details
+                    https://classroom.google.com/u/1/c/{encodeBase64(courseId)}
+                    /a/
+                    {encodeBase64(courseWorkId)}/details
                   </Text>
                   <View style={styles.linkActions}>
                     <TouchableOpacity
