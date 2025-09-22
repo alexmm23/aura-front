@@ -183,7 +183,10 @@ export default function Profile() {
             style={styles.backButton}
             onPress={() => router.replace("/(tabs)/profile")}
           >
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+           <Image
+              source={require("@/assets/images/volver.png")}
+              style={styles.backIcon}
+            />
           </TouchableOpacity>
         </LinearGradient>
 
@@ -292,6 +295,11 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     borderWidth: 4,
     borderColor: "#fff",
+  },  
+  backIcon: {
+    width: 24,
+    height: 24,
+    tintColor: "#fff",
   },
   content: {
     padding: 20,

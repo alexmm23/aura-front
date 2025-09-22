@@ -169,7 +169,7 @@ export default function Profile() {
             <TouchableOpacity style={styles.button}
             onPress={() =>
                 router.push({
-                  pathname: "/payment",
+                  pathname: "/profile/payment",
                 })
               }>
               <AuraText

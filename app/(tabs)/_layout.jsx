@@ -55,10 +55,9 @@ function TabsContent() {
     },
     {
       name: "forums",
-      icon: "chatbubbles",
+      icon: require("../../assets/images/grupo.png"),
       text: "Foros",
       route: "/(tabs)/forums",
-      ionicon: true,
     },
     {
       name: "classes",
@@ -142,6 +141,12 @@ function TabsContent() {
         />
       ))}
       {/* Ocultar rutas anidadas que no queremos en la navegación */}
+      <Tabs.Screen
+        name="profile/payment"
+        options={{
+          href: null,
+        }}
+      />
       <Tabs.Screen
         name="profile/link_moodle"
         options={{
