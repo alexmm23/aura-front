@@ -16,6 +16,7 @@ import { AuraText } from "@/components/AuraText";
 import { AuraTextInput } from "@/components/AuraTextInput";
 import { Image } from "react-native";
 import { apiPost } from "../../utils/fetchWithAuth";
+
 const LandscapeHeader = ({ colors, styles, children }) => {
   return (
     <View style={localStyles.container}>
@@ -50,7 +51,7 @@ const PortraitHeader = ({ colors, styles }) => (
   <View style={styles.backgroundContainer}>
     <Svg
       width="100%"
-      height="100%" // mantenemos esto para que escale
+      height="100%"
       preserveAspectRatio="none"
       viewBox="0 0 349 371"
       style={styles.svg}
@@ -79,6 +80,7 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [errors, setErrors] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validateEmail = (email) => /^\S+@\S+\.\S+$/.test(email);
 
@@ -97,19 +99,34 @@ export default function ForgotPassword() {
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
-    } try {
-      const response = await apiPost(API.ENDPOINTS.AUTH.FORGOT_PASSWORD, { email });
-      // Aquí puedes manejar la respuesta
-      if (!response.ok) {
-        setErrors({ form: response.data.message || "Error al enviar el correo" });
-        return;
-      }
-      setEmail("");
+    }
+
+    try {
+      setIsSubmitting(true);
       setErrors({});
-      setIsSubmitted(true);
-      router.replace("/(auth)/login");
+
+      // Usar el endpoint correcto de tu backend
+      const response = await apiPost(API.ENDPOINTS.AUTH.RESET_PASSWORD, { email });
+      
+      // Tu backend siempre devuelve status 200 por seguridad
+      if (response.ok) {
+        setEmail("");
+        setErrors({});
+        setIsSubmitted(true);
+        
+        // Opcional: redirigir después de unos segundos
+        setTimeout(() => {
+          router.replace("/(auth)/login");
+        }, 3000);
+      } else {
+        // Aunque es improbable que entre aquí por tu lógica de backend
+        setErrors({ form: "Error al procesar la solicitud" });
+      }
     } catch (error) {
+      console.error('Error enviando reset:', error);
       setErrors({ form: "Error al procesar la solicitud" });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -123,8 +140,8 @@ export default function ForgotPassword() {
         style={styles.subtitle}
         text={
           isSubmitted
-            ? "Hemos enviado un enlace de recuperación a tu correo electrónico"
-            : ""
+            ? "Hemos enviado un enlace de recuperación a tu correo electrónico. Revisa tu bandeja de entrada y spam."
+            : "Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña"
         }
       />
 
@@ -144,12 +161,22 @@ export default function ForgotPassword() {
           />
           {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-          <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-            <AuraText style={styles.buttonText} text="Enviar" />
+          <TouchableOpacity 
+            style={[styles.button, isSubmitting && styles.buttonDisabled]} 
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+          >
+            <AuraText 
+              style={styles.buttonText} 
+              text={isSubmitting ? "Enviando..." : "Enviar"} 
+            />
           </TouchableOpacity>
         </>
       ) : (
-        <View style={styles.successContainer} />
+        <View style={styles.successContainer}>
+          <AuraText style={styles.successText} text="✅ Enlace enviado" />
+          <AuraText style={styles.successSubtext} text="Serás redirigido al login automáticamente..." />
+        </View>
       )}
 
       <TouchableOpacity
@@ -198,7 +225,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     width: "90%",
-    //alignSelf: "center",
     marginTop: "50%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -252,6 +278,9 @@ const styles = StyleSheet.create({
     marginBottom: 25,
     width: "80%",
   },
+  buttonDisabled: {
+    backgroundColor: "#cccccc",
+  },
   buttonText: {
     color: "#11181C",
     fontWeight: "600",
@@ -269,27 +298,31 @@ const styles = StyleSheet.create({
   successContainer: {
     alignItems: "center",
     marginVertical: 20,
+    padding: 20,
+    backgroundColor: "#f0f9f0",
+    borderRadius: 10,
+    width: "90%",
+  },
+  successText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#28a745",
+    marginBottom: 8,
+  },
+  successSubtext: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
   },
   headerImageLandscape: {
     width: "100%",
     height: "80%",
     maxHeight: 500,
   },
-  // Estilos para modo vertical
   backgroundContainer: {
-    height: 920, //AUMENTE PARA DAR ESPACIO
+    height: 920,
     width: "100%",
     position: "absolute",
-    //justifyContent:"flex-end",
-  },
-  // Estilos para modo horizontal
-  backgroundContainerLandscape: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: "40%", // El header ocupa solo una parte del ancho en modo horizontal
-    height: "100%",
   },
   svg: {
     position: "absolute",
@@ -303,38 +336,10 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 350, // igual que el contenedor
+    height: 350,
     justifyContent: "center",
     alignItems: "center",
-    paddingTop: 40, //mas espacio arriba
-  },
-  headerContentLandscape: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 30, // mas espacio al rededor
-  },
-  headerImage: {
-    width: "90%",
-    height: 250, //altura aumentada
-  },
-  headerImageLandscape: {
-    width: "100%", // Ocupa todo el ancho disponible
-    height: "80%", // Ocupa más altura
-    maxHeight: 500, // Límite para pantallas grandes
-  },
-  formContainer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingTop: 40,
   },
 });
 
@@ -342,7 +347,7 @@ const localStyles = StyleSheet.create({
   container: {
     flexDirection: "row",
     flex: 1,
-    backgroundColor: "#e7e1cf", // Fondo general beige
+    backgroundColor: "#e7e1cf",
     borderRadius: 27,
     overflow: "hidden",
     width: "85%",
@@ -359,18 +364,12 @@ const localStyles = StyleSheet.create({
     overflow: "hidden",
   },
   image: {
-    width: "45%", // puedes ajustar
-    height: "50%", // o '100%' si quieres que cubra todo el alto del contenedor
+    width: "45%",
+    height: "50%",
     resizeMode: "contain",
     marginBottom: 20,
     zIndex: 2,
     position: "relative",
-  },
-  slogan: {
-    color: "#fff",
-    fontSize: 18,
-    textAlign: "center",
-    fontWeight: "500",
   },
   rightSide: {
     flex: 1,
@@ -378,46 +377,6 @@ const localStyles = StyleSheet.create({
     justifyContent: "center",
     padding: 40,
     marginTop: -250,
-  },
-  title: {
-    fontSize: 28,
-    color: "#c35f91",
-    marginBottom: 30,
-    fontWeight: "bold",
-  },
-  input: {
-    backgroundColor: "#e7e1cf",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 15,
-  },
-  link: {
-    fontSize: 12,
-    textAlign: "right",
-    marginBottom: 20,
-    color: "#666",
-  },
-  loginButton: {
-    backgroundColor: "#f4a950",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
-    alignItems: "center",
-  },
-  loginText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  googleLogo: {
-    width: 40,
-    height: 40,
-    alignSelf: "center",
-    marginBottom: 10,
-  },
-  registerText: {
-    textAlign: "center",
-    fontSize: 13,
-    color: "#444",
   },
   svgBackground: {
     position: "absolute",

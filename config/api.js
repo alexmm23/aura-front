@@ -110,6 +110,22 @@ export const API={
     ATTACHMENTS: {
       DELETE: '/attachments/:id',
     },
+    AUTH: {
+      LOGIN: '/auth/login',
+      REGISTER: '/users/create',
+      VERIFY_TOKEN: '/auth/token/verify',
+      REFRESH_TOKEN: '/auth/token/refresh',
+      GOOGLE: '/auth/google',
+      RESET_PASSWORD: '/auth/reset-password', // ✅ Ya lo tienes
+      VERIFY_RESET_TOKEN: '/auth/verify-reset-token', // ➕ Agregar este
+      CONFIRM_RESET_PASSWORD: '/auth/confirm-reset-password', // ➕ Agregar este
+      LOGOUT: '/auth/logout',
+      LOGOUT_ALL: '/auth/logout/all',
+      TEAMS: '/oauth/microsoft',
+      PROFILE: '/users/profile',
+      AUTH_CHECK: '/auth/check',
+      LOGIN_WEB: '/auth/login/web',
+    },
   },
 };
 

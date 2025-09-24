@@ -1,19 +1,22 @@
-const getEnvironment=() => {
+const getEnvironment = () => {
   // Leer variables de entorno del sistema
-  const isProduction=process.env.NODE_ENV==='production'||process.env.APP_ENV==='production';
-  const customApiUrl=process.env.API_URL;
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production';
+  const customApiUrl = process.env.API_URL;
   return {
-    name: isProduction? "AURA":"AURA Dev",
-    apiUrl: customApiUrl||(isProduction
+    name: isProduction ? "AURA" : "AURA Dev",
+    apiUrl: customApiUrl || (isProduction
       ? "https://back.aurapp.com.mx/api"
-      :"http://localhost:3000/api"),
-    environment: isProduction? 'production':'development'
+      : "http://localhost:3000/api"),
+    environment: isProduction ? 'production' : 'development',
+    webUrl: isProduction 
+      ? "https://aurapp.com.mx" 
+      : "http://localhost:3000"
   };
 };
 
-const env=getEnvironment();
+const env = getEnvironment();
 
-module.exports={
+module.exports = {
   expo: {
     entryPoint: "node_modules/expo-router/entry.js",
     name: env.name,
@@ -21,18 +24,46 @@ module.exports={
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
-    scheme: "myapp",
+    scheme: "aura", // ✅ Cambiado de "myapp" a "aura" para consistencia
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     ios: {
-      supportsTablet: true
+      supportsTablet: true,
+      // ✅ Configuración para iOS deep links
+      associatedDomains: [
+        `applinks:${env.webUrl.replace('http://', '').replace('https://', '')}`
+      ],
+      bundleIdentifier: "com.alexmm23.aurafront"
     },
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff"
       },
-      package: "com.alexmm23.aurafront"
+      package: "com.alexmm23.aurafront",
+      // ✅ Configuración para Android deep links
+      intentFilters: [
+        {
+          action: "VIEW",
+          autoVerify: true,
+          data: [
+            {
+              scheme: "https",
+              host: env.webUrl.replace('http://', '').replace('https://', '').split(':')[0],
+              ...(env.webUrl.includes(':3000') && { port: "3000" })
+            },
+            {
+              scheme: "http", 
+              host: env.webUrl.replace('http://', '').replace('https://', '').split(':')[0],
+              ...(env.webUrl.includes(':3000') && { port: "3000" })
+            },
+            {
+              scheme: "aura"
+            }
+          ],
+          category: ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     web: {
       name: "AURA - Organiza, Estudia y Aprende",
@@ -42,7 +73,13 @@ module.exports={
       favicon: "./assets/images/favicon.png"
     },
     plugins: [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          // ✅ Configuración para expo-router con deep links
+          origin: env.webUrl
+        }
+      ],
       "expo-dev-client",
       [
         "expo-splash-screen",
@@ -66,12 +103,13 @@ module.exports={
       },
       // Configuraciones de entorno
       apiUrl: env.apiUrl,
+      webUrl: env.webUrl, // ✅ Agregamos webUrl para usar en el frontend
       environment: env.environment,
       // Pasar variables de entorno adicionales si existen
       customConfig: {
-        debugMode: process.env.DEBUG_MODE==='true',
-        logLevel: process.env.LOG_LEVEL||'info',
-        apiTimeout: parseInt(process.env.API_TIMEOUT||'5000')
+        debugMode: process.env.DEBUG_MODE === 'true',
+        logLevel: process.env.LOG_LEVEL || 'info',
+        apiTimeout: parseInt(process.env.API_TIMEOUT || '5000')
       }
     }
   }
