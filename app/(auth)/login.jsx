@@ -65,11 +65,25 @@ export default function Login() {
   const isLargeScreen = width >= 928;
 
   const handleSubmit = async () => {
-    // Basic validation
+    // Limpiar errores previos
+    setErrors({});
+
+    // Validación básica
     const newErrors = {};
-    if (!formData.email)
+
+    if (!formData.email.trim()) {
       newErrors.email = "El correo electrónico es obligatorio";
-    if (!formData.password) newErrors.password = "La contraseña es obligatoria";
+    } else {
+      // Validar formato de email básico
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email.trim())) {
+        newErrors.email = "Por favor ingresa un email válido";
+      }
+    }
+
+    if (!formData.password.trim()) {
+      newErrors.password = "La contraseña es obligatoria";
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -77,13 +91,23 @@ export default function Login() {
     }
 
     try {
-      // Usar el sistema unificado de login
-      const result = await login({
-        email: formData.email,
-        password: formData.password,
+      console.log("Attempting login with:", {
+        email: formData.email.trim(),
+        hasPassword: !!formData.password,
       });
 
-      if (result.success) {
+      const credentials = {
+        email: formData.email.trim(),
+        password: formData.password,
+      };
+
+      // Usar el sistema unificado de login
+      const result = await login(credentials);
+
+      console.log("Login result received:", result);
+
+      if (result && result.success) {
+        console.log("Login successful, redirecting...");
         // Si el login fue exitoso, obtener info del usuario para redirección
         if (isWeb()) {
           // En web, hacer request para obtener perfil del usuario
@@ -115,11 +139,15 @@ export default function Login() {
         }
       } else {
         // Mostrar error del login
-        setErrors({ form: result.error || "Error de autenticación" });
+        const errorMessage = result?.error || "Error desconocido en el login";
+        console.error("Login failed:", errorMessage);
+        setErrors({ form: errorMessage });
       }
     } catch (error) {
-      console.error("Login error:", error);
-      setErrors({ form: "Error de conexión" });
+      console.error("Login error in component:", error);
+      setErrors({
+        form: error.message || "Error de conexión. Verifica tu internet.",
+      });
     }
   };
 

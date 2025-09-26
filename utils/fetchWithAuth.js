@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { buildApiUrl, API, isWeb, createFetchOptions } from '../config/api';
+import { Platform } from 'react-native';
 
 /**
  * Wrapper universal para fetch que maneja automáticamente:
@@ -11,48 +12,50 @@ import { buildApiUrl, API, isWeb, createFetchOptions } from '../config/api';
  * @param {Object} options - Opciones de fetch
  * @returns {Promise} - Respuesta del fetch
  */
-export const fetchWithAuth = async (url, options = {}) => {
+export const fetchWithAuth=async (url, options={}) => {
     try {
-        let authOptions = { ...options };
+        let authOptions={ ...options };
 
         if (isWeb()) {
             // Para web: usar cookies httpOnly automáticamente
-            authOptions = createFetchOptions(authOptions);
+            authOptions=createFetchOptions(authOptions);
         } else {
             // Para móvil: añadir token JWT en headers
-            const token = await AsyncStorage.getItem('userToken');
+            const token=await AsyncStorage.getItem('userToken');
             if (token) {
-                authOptions.headers = {
+                authOptions.headers={
                     // Solo añadir Content-Type si no es FormData
-                    ...(!(authOptions.body instanceof FormData) && { 'Content-Type': 'application/json' }),
+                    ...(!(authOptions.body instanceof FormData)&&{ 'Content-Type': 'application/json' }),
                     ...authOptions.headers,
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'expo-platform': Platform.OS
                 };
             }
         }
 
         // Realizar la petición
-        const response = await fetch(url, authOptions);
+        const response=await fetch(url, authOptions);
 
-        // Si la respuesta es 401 (Unauthorized)
-        if (response.status === 401) {
+        // Si la respuesta es 401 (Unauthorized) y NO es un endpoint de autenticación
+        const isAuthEndpoint=url.includes('/auth/login')||url.includes('/auth/register')||url.includes('/auth/refresh');
+        if (response.status===401&&!isAuthEndpoint) {
             console.log('Sesión expirada o inválida...');
 
             if (isWeb()) {
                 // En web, redirigir al login (las cookies se limpiarán automáticamente)
-                if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-                    window.location.href = '/login';
+                if (typeof window!=='undefined'&&!window.location.pathname.includes('/login')) {
+                    window.location.href='/login';
                 }
             } else {
                 // En móvil, intentar renovar el token
-                const refreshToken = await AsyncStorage.getItem('refreshToken');
+                const refreshToken=await AsyncStorage.getItem('refreshToken');
                 if (!refreshToken) {
                     await handleMobileLogout();
                     return response;
                 }
 
                 // Intentar renovar el token
-                const refreshResponse = await fetch(buildApiUrl(API.ENDPOINTS.AUTH.REFRESH_TOKEN), {
+                const refreshResponse=await fetch(buildApiUrl(API.ENDPOINTS.AUTH.REFRESH_TOKEN), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ refreshToken }),
@@ -63,14 +66,14 @@ export const fetchWithAuth = async (url, options = {}) => {
                     return response;
                 }
 
-                const { accessToken: newToken, refreshToken: newRefreshToken } = await refreshResponse.json();
+                const { accessToken: newToken, refreshToken: newRefreshToken }=await refreshResponse.json();
 
                 // Guardar los nuevos tokens
                 await AsyncStorage.setItem('userToken', newToken);
                 await AsyncStorage.setItem('refreshToken', newRefreshToken);
 
                 // Reintentar la petición original con el nuevo token
-                authOptions.headers = {
+                authOptions.headers={
                     ...authOptions.headers,
                     'Authorization': `Bearer ${newToken}`
                 };
@@ -83,25 +86,25 @@ export const fetchWithAuth = async (url, options = {}) => {
 
     } catch (error) {
         console.error('Error en fetchWithAuth:', error);
-        
+
         // En caso de error, limpiar sesión apropiadamente
         if (!isWeb()) {
             await handleMobileLogout();
         }
-        
+
         throw error;
     }
 };
 
 // Función auxiliar para manejar el logout en móvil
-const handleMobileLogout = async () => {
+const handleMobileLogout=async () => {
     try {
         await AsyncStorage.removeItem('userToken');
         await AsyncStorage.removeItem('refreshToken');
 
         // Redireccionar solo si no estamos ya en login
-        if (router && router.replace) {
-            const currentRoute = router.pathname || '';
+        if (router&&router.replace) {
+            const currentRoute=router.pathname||'';
             if (!currentRoute.includes('/login')) {
                 router.replace('/login');
             }
@@ -115,15 +118,15 @@ const handleMobileLogout = async () => {
  * Función helper para hacer requests con autenticación automática
  * Usa automáticamente cookies para web y tokens para móvil
  */
-export const apiRequest = async (endpoint, options = {}) => {
-    const url = buildApiUrl(endpoint);
+export const apiRequest=async (endpoint, options={}) => {
+    const url=buildApiUrl(endpoint);
     return fetchWithAuth(url, options);
 };
 
 /**
  * Función helper para requests GET con autenticación
  */
-export const apiGet = async (endpoint, options = {}) => {
+export const apiGet=async (endpoint, options={}) => {
     return apiRequest(endpoint, {
         method: 'GET',
         ...options
@@ -131,16 +134,60 @@ export const apiGet = async (endpoint, options = {}) => {
 };
 
 /**
+ * Función helper para requests POST sin autenticación (para login, registro, etc.)
+ */
+export const apiPostNoAuth=async (endpoint, data=null, options={}) => {
+    const url=buildApiUrl(endpoint);
+    console.log('apiPostNoAuth - URL:', url);
+    console.log('apiPostNoAuth - Data:', data);
+    console.log('apiPostNoAuth - Platform:', Platform.OS);
+
+    const requestOptions={
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(Platform.OS!=='web'&&{ 'expo-platform': Platform.OS }),
+            ...options.headers
+        },
+        ...options
+    };
+
+    if (isWeb()) {
+        // Para web, usar cookies si es necesario
+        requestOptions.credentials='include';
+    }
+
+    if (data) {
+        requestOptions.body=JSON.stringify(data);
+    }
+
+    console.log('apiPostNoAuth - Request options:', {
+        ...requestOptions,
+        body: data? '[DATA]':'null'
+    });
+
+    try {
+        const response=await fetch(url, requestOptions);
+        console.log('apiPostNoAuth - Response status:', response.status);
+        console.log('apiPostNoAuth - Response ok:', response.ok);
+        return response;
+    } catch (error) {
+        console.error('apiPostNoAuth - Fetch error:', error);
+        throw error;
+    }
+};
+
+/**
  * Función helper para requests POST con autenticación
  */
-export const apiPost = async (endpoint, data = null, options = {}) => {
-    const requestOptions = {
+export const apiPost=async (endpoint, data=null, options={}) => {
+    const requestOptions={
         method: 'POST',
         ...options
     };
 
     if (data) {
-        requestOptions.body = JSON.stringify(data);
+        requestOptions.body=JSON.stringify(data);
     }
 
     return apiRequest(endpoint, requestOptions);
@@ -149,15 +196,15 @@ export const apiPost = async (endpoint, data = null, options = {}) => {
 /**
  * Función helper para requests POST multipart/form-data con autenticación
  */
-export const apiPostMultipart = async (endpoint, formData, options = {}) => {
-    const requestOptions = {
+export const apiPostMultipart=async (endpoint, formData, options={}) => {
+    const requestOptions={
         method: 'POST',
         body: formData,
         ...options
     };
 
     // No establecer Content-Type para FormData, el browser lo hará automáticamente
-    if (requestOptions.headers && requestOptions.headers['Content-Type']) {
+    if (requestOptions.headers&&requestOptions.headers['Content-Type']) {
         delete requestOptions.headers['Content-Type'];
     }
 
@@ -167,14 +214,14 @@ export const apiPostMultipart = async (endpoint, formData, options = {}) => {
 /**
  * Función helper para requests PUT con autenticación
  */
-export const apiPut = async (endpoint, data = null, options = {}) => {
-    const requestOptions = {
+export const apiPut=async (endpoint, data=null, options={}) => {
+    const requestOptions={
         method: 'PUT',
         ...options
     };
 
     if (data) {
-        requestOptions.body = JSON.stringify(data);
+        requestOptions.body=JSON.stringify(data);
     }
 
     return apiRequest(endpoint, requestOptions);
@@ -183,21 +230,21 @@ export const apiPut = async (endpoint, data = null, options = {}) => {
 /**
  * Función helper para requests DELETE con autenticación
  */
-export const apiDelete = async (endpoint, options = {}) => {
+export const apiDelete=async (endpoint, options={}) => {
     return apiRequest(endpoint, {
         method: 'DELETE',
         ...options
     });
 };
 
-export const apiPatch = async (endpoint, data = null, options = {}) => {
-    const requestOptions = {
+export const apiPatch=async (endpoint, data=null, options={}) => {
+    const requestOptions={
         method: 'PATCH',
         ...options
     };
 
     if (data) {
-        requestOptions.body = JSON.stringify(data);
+        requestOptions.body=JSON.stringify(data);
     }
 
     return apiRequest(endpoint, requestOptions);
