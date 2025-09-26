@@ -94,12 +94,12 @@ export const API={
     },
     // Posts endpoints
     POSTS: {
-      DETAIL: '/posts/:id',
-      UPDATE: '/posts/:id',
-      DELETE: '/posts/:id',
-      TOGGLE_RESPONSES: '/posts/:id/toggle-responses',
-      COMMENTS: '/posts/:id/comments',
-      CREATE_COMMENT: '/posts/:id/comments',
+      DETAIL: '/forums/posts/:id',
+      UPDATE: '/forums/posts/:id',                    // ✅ Cambiado
+      DELETE: '/forums/posts/:id',                    // ✅ Cambiado
+      TOGGLE_RESPONSES: '/forums/posts/:id/toggle-responses',
+      COMMENTS: '/forums/posts/:id/comments',
+      CREATE_COMMENT: '/forums/posts/:id/comments',
     },
     // Comments endpoints
     COMMENTS: {
