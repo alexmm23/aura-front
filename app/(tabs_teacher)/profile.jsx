@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { useAuth } from "@/hooks/useAuth"; // Hook para manejar la autenticación
+import { useAuth } from "@/contexts/AuthContext"; // Hook para manejar la autenticación
 import AsyncStorage from "@react-native-async-storage/async-storage"; // Para manejar el almacenamiento local
 import * as Linking from "expo-linking";
 import { apiGet } from "../../utils/fetchWithAuth";
@@ -30,13 +30,13 @@ export default function Profile() {
 
   const handleLogout = async () => {
     try {
+      console.log('Teacher profile logout button pressed');
       await logout();
-      // Redirigir al login después del logout
-      router.replace("/(auth)/login");
+      console.log('Logout completed, ProtectedRoute will handle redirection');
+      // No hacemos redirección manual - el AuthContext y ProtectedRoute se encargan
     } catch (error) {
       console.error("Error durante logout:", error);
-      // Aún así redirigir en caso de error
-      router.replace("/(auth)/login");
+      // En caso de error, aún así el AuthContext debería limpiar el estado
     }
   };
   const googleLogin = async () => {

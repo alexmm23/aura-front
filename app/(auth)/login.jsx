@@ -16,7 +16,7 @@ import {
 import { useRouter } from "expo-router";
 import Head from "expo-router/head";
 import { StatusBar } from "expo-status-bar";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { Colors } from "@/constants/Colors";
 import Svg, { Path } from "react-native-svg";
 import { AuraText } from "@/components/AuraText";
@@ -107,39 +107,12 @@ export default function Login() {
       console.log("Login result received:", result);
 
       if (result && result.success) {
-        console.log("Login successful, redirecting...");
-        // Si el login fue exitoso, obtener info del usuario para redirección
-        if (isWeb()) {
-          // En web, hacer request para obtener perfil del usuario
-          try {
-            const profileResponse = await apiGet(API.ENDPOINTS.AUTH.PROFILE);
-
-            if (profileResponse.ok) {
-              const userData = await profileResponse.json();
-              // Redirigir basado en el rol
-              console.log("User data:", userData);
-              if (userData.role_id === 3) {
-                router.replace("/HomeTeacher");
-              } else {
-                router.replace("/home");
-              }
-            } else {
-              // Si no se puede obtener el perfil, ir a home por defecto
-              router.replace("/home");
-            }
-          } catch (error) {
-            console.error("Error obteniendo perfil:", error);
-            router.replace("/home");
-          }
-        } else {
-          // En móvil, usar el token para decodificar el rol
-          // Nota: Esto requiere que el backend incluya el rol en el token
-          // Por ahora, ir a home por defecto
-          router.replace("/home");
-        }
+        console.log("Login successful! AuthContext will handle redirection automatically");
+        // El AuthContext y ProtectedRoute se encargarán de la redirección automática
+        // No necesitamos hacer redirección manual aquí
       } else {
         // Mostrar error del login
-        const errorMessage = result?.error || "Error desconocido en el login";
+        const errorMessage = result?.message || "Error desconocido en el login";
         console.error("Login failed:", errorMessage);
         setErrors({ form: errorMessage });
       }

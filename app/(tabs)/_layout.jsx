@@ -1,8 +1,7 @@
-import { Tabs, useRouter } from "expo-router";
+import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/Colors";
-import { useAuth } from "@/hooks/useAuth";
-import { useLayoutEffect } from "react";
+import RoleProtectedTabs from "@/components/RoleProtectedTabs";
 import { Image, View, Text } from "react-native";
 import {
   SafeAreaProvider,
@@ -11,29 +10,13 @@ import {
 
 export default function TabsLayout() {
   const colors = Colors.light;
-  const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
-
-  // Usamos useLayoutEffect para la navegación y agregamos un pequeño retraso
-  useLayoutEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      const timer = setTimeout(() => {
-        router.replace("/(auth)/login");
-      }, 100);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated, isLoading, router]);
-
-  // Si aún estamos cargando o no autenticado, no renderizamos las pestañas
-  if (isLoading || !isAuthenticated) {
-    return null; // No renderizar nada mientras verificamos autenticación
-  }
 
   return (
-    <SafeAreaProvider>
-      <TabsContent />
-    </SafeAreaProvider>
+    <RoleProtectedTabs requiredRole={2}>
+      <SafeAreaProvider>
+        <TabsContent />
+      </SafeAreaProvider>
+    </RoleProtectedTabs>
   );
 }
 

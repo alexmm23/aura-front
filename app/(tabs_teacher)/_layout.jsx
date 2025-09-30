@@ -1,34 +1,18 @@
-import { Tabs, useRouter } from "expo-router";
-import { useLayoutEffect } from "react";
+import { Tabs } from "expo-router";
 import { Image, View } from "react-native";
 import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { useAuth } from "@/hooks/useAuth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import RoleProtectedTabs from "@/components/RoleProtectedTabs";
 
 export default function TabsLayout() {
-  const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
-
-  useLayoutEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      const timer = setTimeout(() => {
-        router.replace("/(auth)/login");
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated, isLoading, router]);
-
-  if (isLoading || !isAuthenticated) {
-    return null;
-  }
-
   return (
-    <SafeAreaProvider>
-      <TabsContent />
-    </SafeAreaProvider>
+    <RoleProtectedTabs requiredRole={3}>
+      <SafeAreaProvider>
+        <TabsContent />
+      </SafeAreaProvider>
+    </RoleProtectedTabs>
   );
 }
 
