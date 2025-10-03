@@ -21,6 +21,7 @@ module.exports = {
     entryPoint: "node_modules/expo-router/entry.js",
     name: env.name,
     slug: "aura-front",
+    owner: "alexmm23",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
@@ -81,6 +82,7 @@ module.exports = {
         }
       ],
       "expo-dev-client",
+      "expo-web-browser",
       [
         "expo-splash-screen",
         {
