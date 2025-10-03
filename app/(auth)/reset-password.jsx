@@ -16,7 +16,11 @@ import Svg, { Path } from "react-native-svg";
 import { AuraText } from "@/components/AuraText";
 import { AuraTextInput } from "@/components/AuraTextInput";
 import { Image } from "react-native";
-import { apiPostForgotPassword, apiGetResetToken, apiPostResetPassword } from "@/utils/resetPasswordApi";
+import {
+  apiPostForgotPassword,
+  apiGetResetToken,
+  apiPostResetPassword,
+} from "@/utils/resetPasswordApi";
 
 const LandscapeHeader = ({ colors, styles, children }) => {
   return (
@@ -77,10 +81,9 @@ export default function ResetPassword() {
   const router = useRouter();
   const { token } = useLocalSearchParams();
 
-    console.log('🔍 Frontend - Token extraído:', JSON.stringify(token));
-    console.log('🔍 Frontend - Tipo del token:', typeof token);
-    console.log('🔍 Frontend - Longitud del token:', token?.length);
-
+  console.log("🔍 Frontend - Token extraído:", JSON.stringify(token));
+  console.log("🔍 Frontend - Tipo del token:", typeof token);
+  console.log("🔍 Frontend - Longitud del token:", token?.length);
 
   const { width, height } = useWindowDimensions();
   const colors = Colors.light;
@@ -96,56 +99,57 @@ export default function ResetPassword() {
   const isLargeScreen = width >= 928;
   const isLandscape = width > height;
 
-    const [isSuccess, setIsSuccess] = useState(false); // Agregar este estado
+  const [isSuccess, setIsSuccess] = useState(false); // Agregar este estado
 
   // Verificar token al cargar
- // En tu componente ResetPassword, actualiza el useEffect:
-    useEffect(() => {
-    
+  // En tu componente ResetPassword, actualiza el useEffect:
+  useEffect(() => {
     if (token) {
-        console.log('Token existe, llamando a verifyToken...');
-        verifyToken();
+      console.log("Token existe, llamando a verifyToken...");
+      verifyToken();
     } else {
-        console.log('No hay token, configurando error...');
-        setIsLoading(false);
-        setErrors({ token: "Token no encontrado" });
+      console.log("No hay token, configurando error...");
+      setIsLoading(false);
+      setErrors({ token: "Token no encontrado" });
     }
-    }, [token]);
+  }, [token]);
 
-    const verifyToken = async () => {
-        
-        try {
-            setIsLoading(true);
-            
-            const response = await apiGetResetToken(`${API.ENDPOINTS.AUTH.VERIFY_RESET_TOKEN}/${token}`);  
-            
-            if (response.ok) {
-            setIsValidToken(true);
-            setUserData(response.data.user);
-            setErrors({});
-            } else {
-            setIsValidToken(false);
-            setErrors({ token: response.data?.error || "Token inválido o expirado" });
-            }
-        } catch (error) {
-    
-            setIsValidToken(false);
-            setErrors({ token: "Error al verificar el token" });
-        } finally {
-            setIsLoading(false);
-        }
-        };
+  const verifyToken = async () => {
+    try {
+      setIsLoading(true);
+
+      const response = await apiGetResetToken(
+        `${API.ENDPOINTS.AUTH.VERIFY_RESET_TOKEN}/${token}`
+      );
+
+      if (response.ok) {
+        setIsValidToken(true);
+        setUserData(response.data.user);
+        setErrors({});
+      } else {
+        setIsValidToken(false);
+        setErrors({
+          token: response.data?.error || "Token inválido o expirado",
+        });
+      }
+    } catch (error) {
+      setIsValidToken(false);
+      setErrors({ token: "Error al verificar el token" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const validatePassword = (pass) => {
     if (pass.length < 8) {
       return "La contraseña debe tener al menos 8 caracteres";
     }
-    
+
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
     if (!passwordRegex.test(pass)) {
       return "La contraseña debe contener al menos una minúscula, una mayúscula y un número";
     }
-    
+
     return null;
   };
 
@@ -173,36 +177,39 @@ export default function ResetPassword() {
     }
 
     try {
-        setIsSubmitting(true);
-        setErrors({});
+      setIsSubmitting(true);
+      setErrors({});
 
-        const response = await apiPostResetPassword(API.ENDPOINTS.AUTH.CONFIRM_RESET_PASSWORD, {
-        token,
-        password,
-        confirmPassword,
-        });
-
-
-        if (response.ok) {
-            // Cambiar a estado de éxito
-            setIsSuccess(true);
-            //setIsValidToken(false); // Para ocultar el formulario
-            setErrors({}); // Limpiar errores
-            
-            // Mostrar mensaje de éxito y redirigir después de 3 segundos
-            setTimeout(() => {
-                router.replace("/(auth)/login");
-            }, 3000);
-            
-        } else {
-            setErrors({ form: response.data?.error || "Error al restablecer la contraseña" });
+      const response = await apiPostResetPassword(
+        API.ENDPOINTS.AUTH.CONFIRM_RESET_PASSWORD,
+        {
+          token,
+          password,
+          confirmPassword,
         }
+      );
+
+      if (response.ok) {
+        // Cambiar a estado de éxito
+        setIsSuccess(true);
+        //setIsValidToken(false); // Para ocultar el formulario
+        setErrors({}); // Limpiar errores
+
+        // Mostrar mensaje de éxito y redirigir después de 3 segundos
+        setTimeout(() => {
+          router.replace("/(auth)/login");
+        }, 3000);
+      } else {
+        setErrors({
+          form: response.data?.error || "Error al restablecer la contraseña",
+        });
+      }
     } catch (error) {
-        setErrors({ form: "Error al procesar la solicitud" });
+      setErrors({ form: "Error al procesar la solicitud" });
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
-};
+  };
 
   const Header = width > height ? LandscapeHeader : PortraitHeader;
 
@@ -211,17 +218,26 @@ export default function ResetPassword() {
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <AuraText style={styles.title} text="Verificando..." />
-          <AuraText style={styles.subtitle} text="Por favor espera mientras verificamos tu token" />
+          <AuraText
+            style={styles.subtitle}
+            text="Por favor espera mientras verificamos tu token"
+          />
         </View>
-    ) : isSuccess ? (
+      ) : isSuccess ? (
         <View style={styles.loadingContainer}>
-            <AuraText style={styles.title} text="¡Contraseña actualizada!" />
-            <AuraText style={styles.subtitle} text="Tu contraseña ha sido restablecida correctamente. Serás redirigido al login en unos segundos..." />
+          <AuraText style={styles.title} text="¡Contraseña actualizada!" />
+          <AuraText
+            style={styles.subtitle}
+            text="Tu contraseña ha sido restablecida correctamente. Serás redirigido al login en unos segundos..."
+          />
         </View>
-    ) : !isValidToken ? (
+      ) : !isValidToken ? (
         <View style={styles.errorContainer}>
           <AuraText style={styles.title} text="Token Inválido" />
-          <AuraText style={styles.subtitle} text={errors.token || "El enlace no es válido o ha expirado"} />
+          <AuraText
+            style={styles.subtitle}
+            text={errors.token || "El enlace no es válido o ha expirado"}
+          />
           <TouchableOpacity
             style={styles.button}
             onPress={() => router.replace("/(auth)/forgot-password")}
@@ -229,19 +245,21 @@ export default function ResetPassword() {
             <AuraText style={styles.buttonText} text="Solicitar nuevo enlace" />
           </TouchableOpacity>
         </View>
-    ) : (
+      ) : (
         <>
           <AuraText style={styles.title} text="Restablecer Contraseña" />
-          
+
           {userData && (
-            <AuraText 
-              style={styles.subtitle} 
-              text={`Hola ${userData.name}, ingresa tu nueva contraseña`} 
+            <AuraText
+              style={styles.subtitle}
+              text={`Hola ${userData.name}, ingresa tu nueva contraseña`}
             />
           )}
 
           {errors.form && (
-            <Text style={[styles.errorText, styles.formError]}>{errors.form}</Text>
+            <Text style={[styles.errorText, styles.formError]}>
+              {errors.form}
+            </Text>
           )}
 
           <AuraTextInput
@@ -252,7 +270,9 @@ export default function ResetPassword() {
             secureTextEntry={true}
             autoCapitalize="none"
           />
-          {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+          {errors.password && (
+            <Text style={styles.errorText}>{errors.password}</Text>
+          )}
 
           <AuraTextInput
             style={styles.input}
@@ -262,24 +282,38 @@ export default function ResetPassword() {
             secureTextEntry={true}
             autoCapitalize="none"
           />
-          {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+          {errors.confirmPassword && (
+            <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+          )}
 
           <View style={styles.passwordRequirements}>
-            <AuraText style={styles.requirementText} text="La contraseña debe contener:" />
-            <AuraText style={styles.requirementText} text="• Al menos 8 caracteres" />
-            <AuraText style={styles.requirementText} text="• Una letra minúscula" />
-            <AuraText style={styles.requirementText} text="• Una letra mayúscula" />
+            <AuraText
+              style={styles.requirementText}
+              text="La contraseña debe contener:"
+            />
+            <AuraText
+              style={styles.requirementText}
+              text="• Al menos 8 caracteres"
+            />
+            <AuraText
+              style={styles.requirementText}
+              text="• Una letra minúscula"
+            />
+            <AuraText
+              style={styles.requirementText}
+              text="• Una letra mayúscula"
+            />
             <AuraText style={styles.requirementText} text="• Un número" />
           </View>
 
-          <TouchableOpacity 
-            style={[styles.button, isSubmitting && styles.buttonDisabled]} 
+          <TouchableOpacity
+            style={[styles.button, isSubmitting && styles.buttonDisabled]}
             onPress={handleSubmit}
             disabled={isSubmitting}
           >
-            <AuraText 
-              style={styles.buttonText} 
-              text={isSubmitting ? "Procesando..." : "Restablecer Contraseña"} 
+            <AuraText
+              style={styles.buttonText}
+              text={isSubmitting ? "Procesando..." : "Restablecer Contraseña"}
             />
           </TouchableOpacity>
         </>
