@@ -1,5 +1,5 @@
 import { useFonts } from "expo-font";
-import { Stack, Slot } from "expo-router";
+import { Stack } from "expo-router";
 import { AuthProvider } from "../contexts/AuthContext";
 import ProtectedRoute from "../components/ProtectedRoute";
 
@@ -41,6 +41,10 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs_teacher)" options={{ headerShown: false }} />
           <Stack.Screen name="(profile)" options={{ headerShown: false }} />
+          <Stack.Screen name="reset-password" options={{ headerShown: false }} />
+          <Stack.Screen name="terms" options={{ headerShown: false }} />
+          <Stack.Screen name="privacy" options={{ headerShown: false }} />
+          <Stack.Screen name="unauthorized" options={{ headerShown: false }} />
         </Stack>
       </ProtectedRoute>
     </AuthProvider>
