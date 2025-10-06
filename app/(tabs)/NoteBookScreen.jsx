@@ -141,7 +141,7 @@ const NotebookScreen = () => {
       const token = await AsyncStorage.getItem("userToken");
       console.log("Creando cuaderno con título:", notebookTitle.trim());
 
-      const response = await apiPost(API.ENDPOINTS.STUDENT.NOTEBOOKS, {
+      const response = await apiPost(API.ENDPOINTS.STUDENT.NOTEBOOK_CREATE, {
         title: notebookTitle.trim(),
       });
 
