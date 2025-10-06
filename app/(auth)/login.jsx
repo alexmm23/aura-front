@@ -45,7 +45,7 @@ export default function Login() {
   const router = useRouter();
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
-  const { login, logout } = useAuth();
+  const { login, logout, isAuthenticated, user } = useAuth();
   const colors = Colors.light;
   const styles = createStyles(colors, isLandscape);
   const [formData, setFormData] = useState({
@@ -54,6 +54,13 @@ export default function Login() {
   });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+
+  // Debug function para limpiar estado
+  const handleDebugReset = async () => {
+    console.log("🐛 DEBUG: Resetting auth state...");
+    await logout();
+    console.log("🐛 DEBUG: Auth state reset complete");
+  };
 
   const handleChange = (field, value) => {
     setFormData({
@@ -107,7 +114,9 @@ export default function Login() {
       console.log("Login result received:", result);
 
       if (result && result.success) {
-        console.log("Login successful! AuthContext will handle redirection automatically");
+        console.log(
+          "Login successful! AuthContext will handle redirection automatically"
+        );
         // El AuthContext y ProtectedRoute se encargarán de la redirección automática
         // No necesitamos hacer redirección manual aquí
       } else {
@@ -126,6 +135,36 @@ export default function Login() {
 
   const formularioCompleto = (
     <View style={styles.card}>
+      {/* DEBUG: Indicador temporal de estado de autenticación */}
+      <View
+        style={{
+          backgroundColor: isAuthenticated ? "#ff4444" : "#44ff44",
+          padding: 10,
+          marginBottom: 10,
+          borderRadius: 5,
+        }}
+      >
+        <Text style={{ color: "white", fontSize: 12, textAlign: "center" }}>
+          🐛 DEBUG: Auth={isAuthenticated ? "TRUE" : "FALSE"} | User=
+          {user?.email || "none"}
+        </Text>
+        {isAuthenticated && (
+          <TouchableOpacity
+            onPress={handleDebugReset}
+            style={{
+              marginTop: 5,
+              backgroundColor: "#ffffff33",
+              padding: 5,
+              borderRadius: 3,
+            }}
+          >
+            <Text style={{ color: "white", fontSize: 10, textAlign: "center" }}>
+              Resetear Estado
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       <AuraText style={styles.title} text="Inicia Sesion" />
       <AuraText style={styles.subtitle} text="Organiza, Estudia, Aprende" />
 

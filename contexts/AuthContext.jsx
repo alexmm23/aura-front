@@ -3,6 +3,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
 import { API, buildApiUrl, isWeb } from '../config/api';
 import { apiGet, apiPost, apiPostNoAuth } from '../utils/fetchWithAuth';
+import { View, ActivityIndicator, Text } from 'react-native';
+import { Colors } from '../constants/Colors';
+import AppNavigator from '../components/AppNavigator';
 
 const AuthContext = createContext(null);
 
@@ -20,69 +23,113 @@ export const AuthProvider = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Verificación inicial de autenticación
+    // DEBUG: Log cuando el estado cambia
     useEffect(() => {
-        checkAuthStatus();
-    }, []);
+        console.log('🔐 AuthContext - State changed:', {
+            isAuthenticated,
+            isLoading,
+            hasUser: !!user,
+            userEmail: user?.email || 'none'
+        });
+        
+        // DEBUGGER REMOVIDO: No pausar automáticamente para evitar interferencias
+        // if (isAuthenticated) {
+        //     debugger; // 🔍 Pausa cuando el usuario esté autenticado
+        // }
+    }, [isAuthenticated, isLoading, user]);
+
+    // Verificación inicial de autenticación - SOLO UNA VEZ
+    useEffect(() => {
+        console.log('🔐 AuthContext - Starting initial auth check (ONCE)');
+        let isMounted = true;
+        
+        const runAuthCheck = async () => {
+            if (isMounted) {
+                await checkAuthStatus();
+            }
+        };
+        
+        // Ejecutar solo una vez al montar el componente
+        runAuthCheck();
+        
+        // Cleanup para evitar actualizaciones si el componente se desmonta
+        return () => {
+            isMounted = false;
+        };
+    }, []); // Array de dependencias VACÍO para ejecutar solo una vez
 
     const checkAuthStatus = async () => {
         try {
+            console.log('🔐 AuthContext - checkAuthStatus START');
+            
+            // Evitar múltiples llamadas simultáneas
+            if (isLoading) {
+                console.log('🔐 AuthContext - Already loading, skipping');
+                return;
+            }
+            
             setIsLoading(true);
 
             if (isWeb()) {
-                // Para web, verificar cookies con el servidor
-                const response = await apiGet(API.ENDPOINTS.AUTH.AUTH_CHECK);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('Auth check web exitoso:', data);
-                    setUser(data.user);
-                    setIsAuthenticated(true);
-                } else {
-                    console.log('No hay sesión web válida');
+                // Para web, verificar cookies con el servidor - SOLO SI ES NECESARIO
+                try {
+                    const response = await apiGet(API.ENDPOINTS.AUTH.AUTH_CHECK);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('🔐 Auth check web exitoso:', data);
+                        setUser(data.user);
+                        setIsAuthenticated(true);
+                    } else {
+                        console.log('🔐 No hay sesión web válida');
+                        setUser(null);
+                        setIsAuthenticated(false);
+                    }
+                } catch (apiError) {
+                    console.log('🔐 Error en API call, asumiendo no autenticado:', apiError.message);
                     setUser(null);
                     setIsAuthenticated(false);
                 }
             } else {
-                // Para móvil, verificar tokens locales
+                // Para móvil, verificar tokens locales SIN LLAMADAS AL API
+                console.log('🔐 Checking mobile tokens locally...');
                 const token = await AsyncStorage.getItem('userToken');
                 
                 if (token) {
                     try {
-                        // Verificar si el token es válido
-                        const response = await apiPost(API.ENDPOINTS.AUTH.VERIFY_TOKEN, { token });
+                        // Solo decodificar el token localmente, NO verificar con el servidor
+                        const decodedUser = jwtDecode(token);
                         
-                        if (response.ok) {
-                            const decodedUser = jwtDecode(token);
+                        // Verificar si el token ha expirado
+                        const currentTime = Date.now() / 1000;
+                        if (decodedUser.exp && decodedUser.exp > currentTime) {
+                            console.log('🔐 Token válido localmente');
                             setUser(decodedUser);
                             setIsAuthenticated(true);
                         } else {
-                            // Token inválido, intentar refresh
-                            const refreshToken = await AsyncStorage.getItem('refreshToken');
-                            if (refreshToken) {
-                                await refreshAccessToken(refreshToken);
-                            } else {
-                                await clearAuthData();
-                                setUser(null);
-                                setIsAuthenticated(false);
-                            }
+                            console.log('🔐 Token expirado');
+                            await clearAuthData();
+                            setUser(null);
+                            setIsAuthenticated(false);
                         }
-                    } catch (error) {
-                        console.error('Error verificando token:', error);
+                    } catch (tokenError) {
+                        console.log('🔐 Error decodificando token:', tokenError.message);
                         await clearAuthData();
                         setUser(null);
                         setIsAuthenticated(false);
                     }
                 } else {
+                    console.log('🔐 No hay token móvil');
                     setUser(null);
                     setIsAuthenticated(false);
                 }
             }
         } catch (error) {
-            console.error('Error en checkAuthStatus:', error);
+            console.error('🔐 AuthContext - Error en checkAuthStatus:', error);
             setUser(null);
             setIsAuthenticated(false);
         } finally {
+            console.log('🔐 AuthContext - checkAuthStatus COMPLETE');
             setIsLoading(false);
         }
     };
@@ -254,7 +301,27 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={value}>
-            {children}
+            {/* AuthProvider renderiza directamente el navegador apropiado */}
+            {/* Eliminamos la verificación redundante en AppNavigator */}
+            {isLoading ? (
+                <View style={{ 
+                    flex: 1, 
+                    justifyContent: 'center', 
+                    alignItems: 'center',
+                    backgroundColor: Colors.light.background 
+                }}>
+                    <ActivityIndicator size="large" color={Colors.light.primary} />
+                    <Text style={{ 
+                        marginTop: 10, 
+                        color: Colors.light.text,
+                        fontSize: 16 
+                    }}>
+                        Verificando autenticación...
+                    </Text>
+                </View>
+            ) : (
+                <AppNavigator isAuthenticated={isAuthenticated} user={user} />
+            )}
         </AuthContext.Provider>
     );
 };

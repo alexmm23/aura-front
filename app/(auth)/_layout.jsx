@@ -38,13 +38,7 @@ export default function AuthLayout() {
           }}
         />
         <Stack.Screen
-          name="ResetPassword"
-          options={{
-            title: "Restablecer Contraseña",
-          }}
-        />
-        <Stack.Screen
-          name="reset-password/[token]"
+          name="reset-password"
           options={{
             title: "Restablecer Contraseña",
           }}

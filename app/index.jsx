@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../contexts/AuthContext";
 import PrimaryButton from "@/components/PrimaryButton";
 
 export default function Index() {
@@ -27,29 +27,11 @@ export default function Index() {
     );
   }, [isLoading, isAuthenticated, user]);
 
-  // Usamos useLayoutEffect en lugar de useEffect para navegaciones
-  // Esto garantiza que la navegación ocurra antes del pintado
-  useLayoutEffect(() => {
-    // Solo navegamos cuando ya no estamos cargando
-    if (!isLoading) {
-      // Pequeño retraso para garantizar que el layout esté montado
-      const timer = setTimeout(() => {
-        try {
-          if (isAuthenticated) {
-            console.log("Navegando a /home");
-            router.replace("/home");
-          } else {
-            console.log("Navegando a /login");
-            router.replace("/login");
-          }
-        } catch (error) {
-          console.error("Error en navegación:", error);
-        }
-      }, 100);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated, isLoading, router]);
+  // SIMPLIFICADO: No hacer redirecciones automáticas aquí
+  // El AppNavigator ya maneja el estado de autenticación correctamente
+  
+  // Solo mostrar una pantalla simple de bienvenida o redirigir manualmente si es necesario
+  // console.log('📍 INDEX PAGE - Auth state:', { isAuthenticated, isLoading, user: user?.email });
 
   // Renderizamos una pantalla de carga mientras se verifica el estado de autenticación
   return (
@@ -81,9 +63,8 @@ export default function Index() {
           </>
         ) : (
           <>
-            <ActivityIndicator size="large" color="#CB8D27" />
-            <Text style={{ marginTop: 16, textAlign: "center" }}>
-              Redirigiendo...
+            <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' }}>
+              ¡Bienvenido a AURA!
             </Text>
             <Text
               style={{
@@ -91,24 +72,36 @@ export default function Index() {
                 fontSize: 12,
                 color: "gray",
                 textAlign: "center",
+                marginBottom: 20
               }}
             >
               {debugInfo}
             </Text>
-            {/* Botón de emergencia por si la navegación falla */}
+            {/* Botones de navegación manual */}
             <View style={{ marginTop: 20 }}>
-              <PrimaryButton
-                title="Ir a Login (Manual)"
-                // onPress={() => {}}
-                onPress={() => router.push("/login")}
-                style={{ marginBottom: 10 }}
-              />
-              <PrimaryButton
-                title="Ir a Home (Manual)"
-                // onPress={() => {}}
-                onPress={() => router.push("/home")}
-                style={{}}
-              />
+              {!isAuthenticated ? (
+                <>
+                  <PrimaryButton
+                    title="Iniciar Sesión"
+                    onPress={() => router.push("/(auth)/login")}
+                    style={{ marginBottom: 10 }}
+                  />
+                  <PrimaryButton
+                    title="Registrarse"
+                    onPress={() => router.push("/(auth)/register")}
+                    style={{}}
+                  />
+                </>
+              ) : (
+                <PrimaryButton
+                  title="Ir a Home"
+                  onPress={() => {
+                    const homeRoute = user?.role_id === 3 ? '/(tabs_teacher)/HomeTeacher' : '/(tabs)/home';
+                    router.push(homeRoute);
+                  }}
+                  style={{}}
+                />
+              )}
             </View>
           </>
         )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -81,9 +81,19 @@ export default function ResetPassword() {
   const router = useRouter();
   const { token } = useLocalSearchParams();
 
-  console.log("🔍 Frontend - Token extraído:", JSON.stringify(token));
-  console.log("🔍 Frontend - Tipo del token:", typeof token);
-  console.log("🔍 Frontend - Longitud del token:", token?.length);
+  // Refs para prevenir ejecuciones múltiples
+  const hasVerifiedToken = useRef(false);
+  const renderCount = useRef(0);
+  
+  // Incrementar contador de renders
+  renderCount.current += 1;
+
+  console.log("🔍🔍🔍 RESET-PASSWORD - Component render #", renderCount.current, "🔍🔍🔍");
+  console.log("🔍🔍🔍 RESET-PASSWORD - Token extraído:", JSON.stringify(token), "🔍🔍🔍");
+  console.log("🔍🔍🔍 RESET-PASSWORD - This is the NORMAL version 🔍🔍🔍");
+  console.log("🔍🔍🔍 RESET-PASSWORD - Tipo del token:", typeof token, "🔍🔍🔍");
+  console.log("🔍🔍🔍 RESET-PASSWORD - Longitud del token:", token?.length, "🔍🔍🔍");
+  console.log("🔍🔍🔍 RESET-PASSWORD - hasVerifiedToken:", hasVerifiedToken.current, "🔍🔍🔍");
 
   const { width, height } = useWindowDimensions();
   const colors = Colors.light;
@@ -100,45 +110,59 @@ export default function ResetPassword() {
   const isLandscape = width > height;
 
   const [isSuccess, setIsSuccess] = useState(false); // Agregar este estado
-
-  // Verificar token al cargar
-  // En tu componente ResetPassword, actualiza el useEffect:
+  
   useEffect(() => {
-    if (token) {
-      console.log("Token existe, llamando a verifyToken...");
-      verifyToken();
-    } else {
-      console.log("No hay token, configurando error...");
-      setIsLoading(false);
-      setErrors({ token: "Token no encontrado" });
+    // PREVENIR múltiples ejecuciones del useEffect
+    if (hasVerifiedToken.current) {
+      console.log("🔍 RESET-PASSWORD - useEffect already executed, skipping");
+      return;
     }
-  }, [token]);
 
-  const verifyToken = async () => {
-    try {
-      setIsLoading(true);
-
-      const response = await apiGetResetToken(
-        `${API.ENDPOINTS.AUTH.VERIFY_RESET_TOKEN}/${token}`
-      );
-
-      if (response.ok) {
-        setIsValidToken(true);
-        setUserData(response.data.user);
-        setErrors({});
-      } else {
-        setIsValidToken(false);
-        setErrors({
-          token: response.data?.error || "Token inválido o expirado",
-        });
+    // Función para verificar el token - SOLO UNA VEZ
+    const verifyTokenOnce = async () => {
+      console.log("🔍 RESET-PASSWORD - Component mounted, verifying token once");
+      hasVerifiedToken.current = true; // Marcar como ejecutado INMEDIATAMENTE
+      
+      if (!token) {
+        console.log("🔍 RESET-PASSWORD - No token provided");
+        setIsLoading(false);
+        setErrors({ token: "Token no encontrado" });
+        return;
       }
-    } catch (error) {
-      setIsValidToken(false);
-      setErrors({ token: "Error al verificar el token" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
+      try {
+        console.log("🔍🔍🔍 RESET-PASSWORD - Making API call to verify token:", token, "🔍🔍🔍");
+        setIsLoading(true);
+        
+        const response = await apiGetResetToken(
+          `${API.ENDPOINTS.AUTH.VERIFY_RESET_TOKEN}/${token}`
+        );
+  
+        if (response.ok) {
+          console.log("🔍 RESET-PASSWORD - Token verification successful");
+          setIsValidToken(true);
+          setUserData(response.data.user);
+          setErrors({});
+        } else {
+          console.log("🔍 RESET-PASSWORD - Token verification failed");
+          setIsValidToken(false);
+          setErrors({
+            token: response.data?.error || "Token inválido o expirado",
+          });
+        }
+      } catch (error) {
+        console.log("🔍 RESET-PASSWORD - Token verification error:", error);
+        setIsValidToken(false);
+        setErrors({ token: "Error al verificar el token" });
+      } finally {
+        console.log("🔍 RESET-PASSWORD - Token verification complete, setting loading to false");
+        setIsLoading(false);
+      }
+    };
+
+    // Ejecutar solo UNA VEZ al montar el componente
+    verifyTokenOnce();
+  }, [token]); // Incluir token como dependencia para re-verificar si cambia
 
   const validatePassword = (pass) => {
     if (pass.length < 8) {
