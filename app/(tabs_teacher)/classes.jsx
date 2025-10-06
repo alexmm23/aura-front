@@ -1,171 +1,170 @@
 import {
   View,
-  Text,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
-  Image,
+  RefreshControl,
+  Pressable,
 } from "react-native";
 import React, { useEffect, useState } from "react";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { AuraText } from "@/components/AuraText";
 import { API, buildApiUrl } from "@/config/api";
-import Head from "expo-router/head";
-import Svg, { Path } from "react-native-svg";
 import { Colors } from "@/constants/Colors";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ClassCard } from "@/components/teacher/ClassCard";
+import { CreatePost } from "@/components/teacher/CreatePost";
+import { CreateAssignment } from "@/components/teacher/CreateAssignment";
+import { Ionicons } from "@expo/vector-icons";
 
-export default function HomeTeacher() {
-  const [homework, setHomework] = useState([]);
-  const { height, width } = useWindowDimensions();
+export default function TeacherClasses() {
+  const [classes, setClasses] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedClass, setSelectedClass] = useState(null);
+  const { width } = useWindowDimensions();
   const colors = Colors.light;
-  const isLandscape = width > height;
-  const fetchHomework = async () => {
+
+  const fetchClasses = async () => {
     try {
       const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(
-        buildApiUrl(API.ENDPOINTS.STUDENT.HOMEWORK),
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(buildApiUrl(API.ENDPOINTS.TEACHER.CLASSES), {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
       const data = await response.json();
-      console.log("Homework data:", data);
-      setHomework(data);
-      console.log(data);
+      console.log("Classes data:", data);
+      setClasses(data);
     } catch (error) {
-      console.error("Error fetching homework:", error);
+      console.error("Error fetching classes:", error);
     }
   };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchClasses();
+    setRefreshing(false);
+  };
+
   useEffect(() => {
-    fetchHomework();
+    fetchClasses();
   }, []);
 
-  return (
+  const handlePostCreated = (newPost) => {
+    // Actualizar la lista de posts en la clase seleccionada
+    if (selectedClass) {
+      setClasses(
+        classes.map((c) =>
+          c.id === selectedClass.id
+            ? { ...c, posts: [newPost, ...(c.posts || [])] }
+            : c
+        )
+      );
+    }
+  };
+
+  const handleAssignmentCreated = (newAssignment) => {
+    // Actualizar la lista de tareas en la clase seleccionada
+    if (selectedClass) {
+      setClasses(
+        classes.map((c) =>
+          c.id === selectedClass.id
+            ? { ...c, assignments: [newAssignment, ...(c.assignments || [])] }
+            : c
+        )
+      );
+    }
+  };
+
+  const renderClassDetail = () => (
+    <View style={styles.selectedClassContainer}>
+      <View style={styles.classHeader}>
+        <Pressable
+          onPress={() => setSelectedClass(null)}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </Pressable>
+        <AuraText style={styles.selectedClassTitle}>
+          {selectedClass.name}
+        </AuraText>
+      </View>
+
+      <CreatePost
+        classId={selectedClass.id}
+        onPostCreated={handlePostCreated}
+      />
+
+      <CreateAssignment
+        classId={selectedClass.id}
+        onAssignmentCreated={handleAssignmentCreated}
+      />
+
+      {selectedClass.posts && selectedClass.posts.length > 0 && (
+        <View style={styles.section}>
+          <AuraText style={styles.sectionTitle}>
+            Publicaciones Recientes
+          </AuraText>
+          {selectedClass.posts.map((post) => (
+            <View key={post.id} style={styles.post}>
+              <AuraText>{post.content}</AuraText>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {selectedClass.assignments && selectedClass.assignments.length > 0 && (
+        <View style={styles.section}>
+          <AuraText style={styles.sectionTitle}>Tareas</AuraText>
+          {selectedClass.assignments.map((assignment) => (
+            <View key={assignment.id} style={styles.assignment}>
+              <AuraText style={styles.assignmentTitle}>
+                {assignment.title}
+              </AuraText>
+              <AuraText>{assignment.description}</AuraText>
+              <AuraText style={styles.dueDate}>
+                Entrega: {new Date(assignment.due_date).toLocaleDateString()}
+              </AuraText>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+
+  const renderClassList = () => (
     <>
-      <Head>
-        <title>Inicio - AURA </title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      </Head>
-      <SafeAreaProvider>
-        <SafeAreaView style={styles.container} edges={["right", "left", "top"]}>
-          {/* Header con SVG */}
-          {isLandscape ? (
-            <LandscapeHeader colors={colors} styles={styles} />
-          ) : (
-            <PortraitHeader colors={colors} styles={styles} />
-          )}
-
-          {/* Título responsive */}
-          <View style={styles.contentWrapper}>
-            <View style={styles.headerTitle}>
-              <AuraText
-                text={"Mis Clases"}
-                style={
-                  isLandscape ? styles.titleLandscape : styles.title
-                }
-              />
-            </View>
-          </View>
-
-          {/* Contenido scrollable */}
-          <ScrollView
-            contentContainerStyle={styles.contentContainer}
-            style={styles.scrollView}
-          >
-            {/* Card de clase */}
-            <View style={styles.classCard}>
-                <View style={styles.classContent}>
-                    <Text style={styles.className}>Informática Forense</Text>
-                    {/* Línea divisoria gris */}
-                        <View style={styles.divider} />
-                    <View style={styles.classInfo}>
-                    <Text style={styles.classPeriod}>Febrero-Junio 2025</Text>
-                    <Text style={styles.teacherName}>L-306</Text>
-                    </View>
-                </View>
-                <Image 
-                    source={require("../../assets/images/classroom.png")}
-                    style={styles.platformIcon}
-                />
-            </View>
-
-            <View style={styles.classCard}>
-                <View style={styles.classContent}>
-                    <Text style={styles.className}>Hacking Ético</Text>
-                    {/* Línea divisoria gris */}
-                        <View style={styles.divider} />
-                    <View style={styles.classInfo}>
-                    <Text style={styles.classPeriod}>Febrero-Junio 2025</Text>
-                    <Text style={styles.teacherName}>B-207</Text>
-                    </View>
-                </View>
-                <Image 
-                    source={require("../../assets/images/teams.png")}
-                    style={styles.platformIcon}
-                />
-            </View>
-
-
-            <View style={styles.classCard}>
-                <View style={styles.classContent}>
-                    <Text style={styles.className}>Ingles</Text>
-                        {/* Línea divisoria gris */}
-                        <View style={styles.divider} />
-                    <View style={styles.classInfo}>
-                    <Text style={styles.classPeriod}>Febrero-Junio 2025</Text>
-                    <Text style={styles.teacherName}>F LAB-A</Text>
-                    </View>
-                </View>
-                <Image 
-                    source={require("../../assets/images/classroom.png")}
-                    style={styles.platformIcon}
-                />
-            </View>
-
-            <View style={styles.classCard}>
-                <View style={styles.classContent}>
-                    <Text style={styles.className}>Calculo diferencial</Text>
-                    {/* Línea divisoria gris */}
-                        <View style={styles.divider} />
-                    <View style={styles.classInfo}>
-                    <Text style={styles.classPeriod}>Febrero-Junio 2025</Text>
-                    <Text style={styles.teacherName}>L-101</Text>
-                    </View>
-                </View>
-                <Image 
-                    source={require("../../assets/images/classroom.png")}
-                    style={styles.platformIcon}
-                />
-            </View>
-
-            <View style={styles.classCard}>
-                <View style={styles.classContent}>
-                    <Text style={styles.className}>Informática Forense</Text>
-                    {/* Línea divisoria gris */}
-                        <View style={styles.divider} />
-                    <View style={styles.classInfo}>
-                    <Text style={styles.classPeriod}>Febrero-Junio 2025</Text>
-                    <Text style={styles.teacherName}>F SL-1</Text>
-                    </View>
-                </View>
-                <Image 
-                    source={require("../../assets/images/teams.png")}
-                    style={styles.platformIcon}
-                />
-            </View>
-          </ScrollView>
-        </SafeAreaView>
-      </SafeAreaProvider>
+      <View style={styles.header}>
+        <AuraText style={styles.title}>Mis Clases</AuraText>
+      </View>
+      <View style={styles.classesGrid}>
+        {classes.map((classData) => (
+          <ClassCard
+            key={classData.id}
+            classData={classData}
+            onPress={() => setSelectedClass(classData)}
+          />
+        ))}
+      </View>
     </>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {selectedClass ? renderClassDetail() : renderClassList()}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -329,9 +328,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     //marginRight:250,
     top: 0,
-    right: 0,        // Cambiado de left a right
-    width: "80%",    // Ancho relativo
-    height: "90%",   // Alto relativo
+    right: 0, // Cambiado de left a right
+    width: "80%", // Ancho relativo
+    height: "90%", // Alto relativo
     zIndex: 0,
     overflow: "hidden",
   },
@@ -392,7 +391,7 @@ const styles = StyleSheet.create({
   classContent: {
     flex: 1, // ocupa el espacio restante
     paddingRight: 10, // espacio entre texto e imagen (opcional)
-    },
+  },
   className: {
     fontSize: 18,
     fontWeight: "bold",
@@ -416,14 +415,13 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   platformIcon: {
-  width: 60,
-  height: 60,
-  resizeMode: "contain",
-},
-divider: {
-  height: 1,
-  backgroundColor: "#ccc", // gris claro
-  marginVertical: 3, // espacio arriba y abajo de la línea
-},
-
+    width: 60,
+    height: 60,
+    resizeMode: "contain",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#ccc", // gris claro
+    marginVertical: 3, // espacio arriba y abajo de la línea
+  },
 });

@@ -49,6 +49,14 @@ export const API={
       GOOGLE: '/auth/google',
       RESET_PASSWORD: '/auth/reset-password',
       LOGOUT: '/auth/logout',
+    },
+    // Teacher endpoints
+    TEACHER: {
+      CLASSES: '/teacher/classes',
+      CLASS_DETAIL: '/teacher/classes/:id',
+      POSTS: '/teacher/classes/:id/posts',
+      ASSIGNMENTS: '/teacher/classes/:id/assignments',
+      STUDENTS: '/teacher/classes/:id/students',
       LOGOUT_ALL: '/auth/logout/all',
       TEAMS: '/oauth/microsoft',
       PROFILE: '/users/profile',

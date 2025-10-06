@@ -36,7 +36,7 @@ const NotebookView = () => {
       try {
         // Usar el endpoint de notes con el pageId como parámetro
         const response = await apiGet(
-          `${API.ENDPOINTS.STUDENT.NOTE_SHOW}/${pageId}`
+          `${API.ENDPOINTS.STUDENT.NOTE_SHOW}/${pageId + 1}`
         );
         if (!response.ok) {
           throw new Error(response.statusText || "Error fetching page");
