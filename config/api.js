@@ -55,6 +55,19 @@ export const API={
       AUTH_CHECK: '/auth/check',
       LOGIN_WEB: '/auth/login/web',
     },
+    // ➕ Agregar esta sección de REMINDERS
+    REMINDERS: {
+      BASE: '/reminders',
+      LIST: '/reminders',
+      CREATE: '/reminders',
+      UPDATE: '/reminders/:id',
+      DELETE: '/reminders/:id',
+      MARK_SENT: '/reminders/:id/mark-sent',
+      STATISTICS: '/reminders/statistics',
+      SEND_EMAIL: '/reminders/:id/send-email', 
+      SEND_UPCOMING: '/reminders/send-upcoming', 
+      CHECK_PENDING: '/reminders/check-pending', 
+    },
     // Student endpoints
     STUDENT: {
       HOMEWORK: '/student/homework',
