@@ -124,16 +124,30 @@ const PublicNavigator = () => {
 };
 
 // Navegador para rutas protegidas (autenticadas)
-const ProtectedNavigator = ({ user }) => {
+const ProtectedNavigator = ({ user, shouldPreserveRoute }) => {
   const router = useRouter();
 
   console.log("🔒 Rendering PROTECTED Navigator for user:", user?.email);
 
-  // Redirigir a home apropiado SOLO si estamos en una ruta no válida
+  // Redirigir a home apropiado SOLO si estamos en una ruta no válida Y no debemos preservar la ruta
   useEffect(() => {
     const currentPath =
       typeof window !== "undefined" ? window.location.pathname : "";
-    console.log("🔒 PROTECTED NAVIGATOR - Current path:", currentPath);
+    console.log(
+      "🔒 PROTECTED NAVIGATOR - Current path:",
+      currentPath,
+      "shouldPreserveRoute:",
+      shouldPreserveRoute
+    );
+
+    // Si debemos preservar la ruta (F5 en ruta protegida), no redirigir
+    if (shouldPreserveRoute) {
+      console.log(
+        "🔒 PROTECTED NAVIGATOR - Preserving current route:",
+        currentPath
+      );
+      return;
+    }
 
     // Solo redirigir si estamos en rutas de auth o la raíz
     const shouldRedirect =
@@ -159,7 +173,7 @@ const ProtectedNavigator = ({ user }) => {
         currentPath
       );
     }
-  }, [user, router]);
+  }, [user, router, shouldPreserveRoute]);
 
   return (
     <Stack
@@ -182,17 +196,23 @@ const ProtectedNavigator = ({ user }) => {
 };
 
 // Componente principal SIMPLIFICADO - solo recibe props del AuthProvider
-const AppNavigator = ({ isAuthenticated, user }) => {
+const AppNavigator = ({ isAuthenticated, user, shouldPreserveRoute }) => {
   console.log("🧭 AppNavigator - Received props:", {
     isAuthenticated,
     userEmail: user?.email || "none",
     userRole: user?.role_id || "none",
+    shouldPreserveRoute,
   });
 
   // SIMPLE: Solo renderizar basado en props (sin verificaciones redundantes)
   if (isAuthenticated && user) {
     console.log("🔒 AppNavigator - Rendering PROTECTED Navigator");
-    return <ProtectedNavigator user={user} />;
+    return (
+      <ProtectedNavigator
+        user={user}
+        shouldPreserveRoute={shouldPreserveRoute}
+      />
+    );
   } else {
     console.log("🌐 AppNavigator - Rendering PUBLIC Navigator");
     return <PublicNavigator />;
