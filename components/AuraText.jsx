@@ -1,8 +1,17 @@
 import { Text, StyleSheet, Platform } from "react-native";
 
-export const AuraText = ({ fontFamily = "fredoka-regular", style, text }) => {
+export const AuraText = ({
+  children,
+  fontFamily = "fredoka-regular",
+  style,
+  text,
+  ...props
+}) => {
+  const content = children !== undefined ? children : text;
+
   return (
     <Text
+      {...props}
       style={StyleSheet.flatten([
         Platform.select({
           web: {},
@@ -11,7 +20,7 @@ export const AuraText = ({ fontFamily = "fredoka-regular", style, text }) => {
         style,
       ])}
     >
-      {text}
+      {content}
     </Text>
   );
 };

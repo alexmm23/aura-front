@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { KeyboardAvoidingView, Platform } from "react-native";
 import { API, buildApiUrl, isWeb, getLoginEndpoint } from "@/config/api";
-import { apiGet } from "@/utils/fetchWithAuth";
 import { Ionicons } from "@expo/vector-icons";
 
 import {

@@ -15,6 +15,7 @@ import Svg, { Path } from "react-native-svg";
 import { Colors } from "@/constants/Colors";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { apiGet } from "@/utils/fetchWithAuth";
 
 export default function HomeTeacher() {
   const [homework, setHomework] = useState([]);
@@ -23,17 +24,7 @@ export default function HomeTeacher() {
   const isLandscape = width > height;
   const fetchHomework = async () => {
     try {
-      const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(
-        buildApiUrl(API.ENDPOINTS.STUDENT.HOMEWORK),
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await apiGet(API.ENDPOINTS.TEACHER.COURSES);
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
@@ -70,23 +61,26 @@ export default function HomeTeacher() {
             style={styles.scrollView}
           >
             {/* Mis recordatorios */}
-                <View style={styles.card}>
-                <AuraText style={styles.title} text="Mis Recordatorios"></AuraText>
-                <View style={styles.noteCard}>
-                    <AuraText style={styles.noteTitle} text="Recordatorio #1" />
-                    <AuraText
-                    style={styles.noteText}
-                    text="Entregar avance del proyecto el viernes a las 3:00 PM."
-                    />
-                </View>
-                <View style={styles.noteCard}>
-                    <AuraText style={styles.noteTitle} text="Recordatorio #2" />
-                    <AuraText
-                    style={styles.noteText}
-                    text="Revisar lectura pendiente de ética profesional antes del lunes."
-                    />
-                </View>
-                </View>
+            <View style={styles.card}>
+              <AuraText
+                style={styles.title}
+                text="Mis Recordatorios"
+              ></AuraText>
+              <View style={styles.noteCard}>
+                <AuraText style={styles.noteTitle} text="Recordatorio #1" />
+                <AuraText
+                  style={styles.noteText}
+                  text="Entregar avance del proyecto el viernes a las 3:00 PM."
+                />
+              </View>
+              <View style={styles.noteCard}>
+                <AuraText style={styles.noteTitle} text="Recordatorio #2" />
+                <AuraText
+                  style={styles.noteText}
+                  text="Revisar lectura pendiente de ética profesional antes del lunes."
+                />
+              </View>
+            </View>
 
             {/* Mis Tareas */}
             <View style={styles.card}>

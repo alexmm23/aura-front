@@ -5,6 +5,7 @@ import {
   useWindowDimensions,
   RefreshControl,
   Pressable,
+  Text,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { AuraText } from "@/components/AuraText";
@@ -36,7 +37,53 @@ export default function TeacherClasses() {
       const result = await response.json();
       console.log("Classes data:", result);
       if (result.success && result.data.courses) {
-        setClasses(result.data.courses);
+        // Para cada clase, obtener las tareas próximas
+        const classesWithAssignments = await Promise.all(
+          result.data.courses.map(async (classData) => {
+            try {
+              const assignmentsResponse = await apiGet(
+                API.ENDPOINTS.GOOGLE_CLASSROOM.COURSEWORK(classData.id)
+              );
+
+              if (assignmentsResponse.ok) {
+                const assignmentsResult = await assignmentsResponse.json();
+                const assignments = assignmentsResult.success
+                  ? assignmentsResult.data
+                  : [];
+
+                // Filtrar solo tareas próximas (próximos 7 días)
+                const upcoming = assignments
+                  .filter((assignment) => {
+                    if (!assignment.dueDate) return false;
+                    const dueDate = new Date(assignment.dueDate);
+                    const today = new Date();
+                    const nextWeek = new Date(
+                      today.getTime() + 7 * 24 * 60 * 60 * 1000
+                    );
+                    return dueDate >= today && dueDate <= nextWeek;
+                  })
+                  .slice(0, 3); // Solo las primeras 3
+
+                return {
+                  ...classData,
+                  upcomingAssignments: upcoming,
+                };
+              }
+            } catch (error) {
+              console.error(
+                `Error fetching assignments for class ${classData.id}:`,
+                error
+              );
+            }
+
+            return {
+              ...classData,
+              upcomingAssignments: [],
+            };
+          })
+        );
+
+        setClasses(classesWithAssignments);
       }
     } catch (error) {
       console.error("Error fetching classes:", error);
@@ -51,6 +98,29 @@ export default function TeacherClasses() {
 
   useEffect(() => {
     fetchClasses();
+
+    // Datos de prueba en caso de que el API no responda
+    setTimeout(() => {
+      if (classes.length === 0) {
+        console.log("No data from API, setting test data");
+        setClasses([
+          {
+            id: "test-1",
+            name: "Matemáticas I",
+            section: "A",
+            enrollmentCode: "ABC123",
+            courseState: "ACTIVE",
+            upcomingAssignments: [
+              {
+                id: "assign-1",
+                title: "Tarea de Álgebra",
+                dueDate: new Date(Date.now() + 86400000).toISOString(),
+              },
+            ],
+          },
+        ]);
+      }
+    }, 3000);
   }, []);
 
   const fetchCourseDetails = async (courseId) => {
@@ -191,30 +261,37 @@ export default function TeacherClasses() {
     </View>
   );
 
-  const renderClassList = () => (
-    <>
-      <View style={styles.header}>
-        <AuraText style={styles.title}>Mis Clases</AuraText>
-      </View>
-      <View style={styles.classesGrid}>
-        {classes.map((classData) => (
-          <ClassCard
-            key={classData.id}
-            classData={{
-              ...classData,
-              title: classData.name,
-              description: `Sección: ${classData.section || "N/A"} - Sala: ${
-                classData.room || "N/A"
-              }`,
-              code: classData.enrollmentCode,
-              status: classData.courseState,
-            }}
-            onPress={() => handleClassSelect(classData)}
-          />
-        ))}
-      </View>
-    </>
-  );
+  const renderClassList = () => {
+    console.log("📚 Rendering class list, classes:", classes.length);
+    console.log("📚 Classes data:", classes);
+
+    return (
+      <>
+        <View style={styles.header}>
+          <AuraText style={styles.title}>Mis Clases</AuraText>
+        </View>
+        <View style={styles.classesGrid}>
+          {classes.length === 0 ? (
+            <View style={styles.emptyState}>
+              <AuraText style={styles.emptyText}>Cargando clases...</AuraText>
+            </View>
+          ) : (
+            classes.map((classData) => {
+              console.log("📚 Rendering class card for:", classData.name);
+              return (
+                <ClassCard
+                  key={classData.id}
+                  classData={classData}
+                  upcomingAssignments={classData.upcomingAssignments || []}
+                  onPress={() => handleClassSelect(classData)}
+                />
+              );
+            })
+          )}
+        </View>
+      </>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -315,11 +392,30 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: 40,
   },
+  header: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
   title: {
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: "bold",
     color: "#CB8D27",
-    textAlign: "left",
+    textAlign: "center",
+  },
+  classesGrid: {
+    paddingHorizontal: 12,
+    paddingBottom: 20,
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
   },
   noteCard: {
     backgroundColor: "#E4E3DD",
