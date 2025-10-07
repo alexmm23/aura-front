@@ -22,6 +22,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [shouldPreserveRoute, setShouldPreserveRoute] = useState(false);
 
   // DEBUG: Log cuando el estado cambia
   useEffect(() => {
@@ -50,6 +51,23 @@ export const AuthProvider = ({ children }) => {
     console.log("🔐 AuthContext - Starting initial auth check (ONCE)");
     let isMounted = true;
 
+    // Verificar si estamos en una ruta protegida para preservarla
+    const currentPath =
+      typeof window !== "undefined" ? window.location.pathname : "";
+    const isProtectedRoute =
+      currentPath.startsWith("/(tabs") ||
+      currentPath.includes("/classes") ||
+      currentPath.includes("/profile") ||
+      currentPath.includes("/home");
+
+    setShouldPreserveRoute(isProtectedRoute);
+    console.log(
+      "🔐 AuthContext - Should preserve route:",
+      isProtectedRoute,
+      "for path:",
+      currentPath
+    );
+
     const runAuthCheck = async () => {
       if (isMounted) {
         await checkAuthStatus();
@@ -68,12 +86,6 @@ export const AuthProvider = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       console.log("🔐 AuthContext - checkAuthStatus START");
-
-      // Evitar múltiples llamadas simultáneas
-      if (isLoading) {
-        console.log("🔐 AuthContext - Already loading, skipping");
-        return;
-      }
 
       setIsLoading(true);
 
@@ -336,7 +348,11 @@ export const AuthProvider = ({ children }) => {
           </Text>
         </View>
       ) : (
-        <AppNavigator isAuthenticated={isAuthenticated} user={user} />
+        <AppNavigator
+          isAuthenticated={isAuthenticated}
+          user={user}
+          shouldPreserveRoute={shouldPreserveRoute}
+        />
       )}
     </AuthContext.Provider>
   );

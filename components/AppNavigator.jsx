@@ -129,12 +129,36 @@ const ProtectedNavigator = ({ user }) => {
 
   console.log("🔒 Rendering PROTECTED Navigator for user:", user?.email);
 
-  // Redirigir a home apropiado al montar
+  // Redirigir a home apropiado SOLO si estamos en una ruta no válida
   useEffect(() => {
-    const homeRoute =
-      user?.role_id === 3 ? "/(tabs_teacher)/HomeTeacher" : "/(tabs)/home";
-    console.log("🔒 PROTECTED NAVIGATOR - Redirecting to:", homeRoute);
-    router.replace(homeRoute);
+    const currentPath =
+      typeof window !== "undefined" ? window.location.pathname : "";
+    console.log("🔒 PROTECTED NAVIGATOR - Current path:", currentPath);
+
+    // Solo redirigir si estamos en rutas de auth o la raíz
+    const shouldRedirect =
+      currentPath === "/" ||
+      currentPath.startsWith("/(auth)") ||
+      currentPath === "/login" ||
+      currentPath === "/register" ||
+      currentPath === "/forgotPassword";
+
+    if (shouldRedirect) {
+      const homeRoute =
+        user?.role_id === 3 ? "/(tabs_teacher)/HomeTeacher" : "/(tabs)/home";
+      console.log(
+        "🔒 PROTECTED NAVIGATOR - Redirecting from",
+        currentPath,
+        "to:",
+        homeRoute
+      );
+      router.replace(homeRoute);
+    } else {
+      console.log(
+        "🔒 PROTECTED NAVIGATOR - Staying on current route:",
+        currentPath
+      );
+    }
   }, [user, router]);
 
   return (
