@@ -47,9 +47,26 @@ export const API={
       VERIFY_TOKEN: '/auth/token/verify',
       REFRESH_TOKEN: '/auth/token/refresh',
       GOOGLE: '/auth/google',
-      RESET_PASSWORD: '/auth/reset-password',
+      RESET_PASSWORD: '/auth/reset-password', // ✅ Ya lo tienes
+      VERIFY_RESET_TOKEN: '/auth/verify-reset-token', // ➕ Agregar este
+      CONFIRM_RESET_PASSWORD: '/auth/confirm-reset-password', // ➕ Agregar este
       LOGOUT: '/auth/logout',
+      LOGOUT_ALL: '/auth/logout/all',
+      TEAMS: '/oauth/microsoft',
+      PROFILE: '/users/profile',
+      AUTH_CHECK: '/auth/check',
+      LOGIN_WEB: '/auth/login/web',
     },
+    // Google Classroom endpoints
+    GOOGLE_CLASSROOM: {
+      COURSES: '/auth/google/courses',
+      COURSE_DETAILS: (courseId) => `/auth/google/courses/${courseId}`,
+      COURSEWORK: (courseId) => `/auth/google/courses/${courseId}/coursework`,
+      DELETE_COURSEWORK: (courseId, courseWorkId) => `/auth/google/courses/${courseId}/coursework/${courseWorkId}`,
+      ANNOUNCEMENTS: (courseId) => `/auth/google/courses/${courseId}/announcements`,
+    },
+    LOGOUT: '/auth/logout',
+
     // Teacher endpoints
     TEACHER: {
       CLASSES: '/teacher/classes',
@@ -72,9 +89,9 @@ export const API={
       DELETE: '/reminders/:id',
       MARK_SENT: '/reminders/:id/mark-sent',
       STATISTICS: '/reminders/statistics',
-      SEND_EMAIL: '/reminders/:id/send-email', 
-      SEND_UPCOMING: '/reminders/send-upcoming', 
-      CHECK_PENDING: '/reminders/check-pending', 
+      SEND_EMAIL: '/reminders/:id/send-email',
+      SEND_UPCOMING: '/reminders/send-upcoming',
+      CHECK_PENDING: '/reminders/check-pending',
     },
     // Student endpoints
     STUDENT: {
@@ -131,24 +148,9 @@ export const API={
     ATTACHMENTS: {
       DELETE: '/attachments/:id',
     },
-    AUTH: {
-      LOGIN: '/auth/login',
-      REGISTER: '/users/create',
-      VERIFY_TOKEN: '/auth/token/verify',
-      REFRESH_TOKEN: '/auth/token/refresh',
-      GOOGLE: '/auth/google',
-      RESET_PASSWORD: '/auth/reset-password', // ✅ Ya lo tienes
-      VERIFY_RESET_TOKEN: '/auth/verify-reset-token', // ➕ Agregar este
-      CONFIRM_RESET_PASSWORD: '/auth/confirm-reset-password', // ➕ Agregar este
-      LOGOUT: '/auth/logout',
-      LOGOUT_ALL: '/auth/logout/all',
-      TEAMS: '/oauth/microsoft',
-      PROFILE: '/users/profile',
-      AUTH_CHECK: '/auth/check',
-      LOGIN_WEB: '/auth/login/web',
-    },
-  },
-};
+
+  }
+}
 
 // Helper function to build full API URLs
 export const buildApiUrl=(endpoint) => {

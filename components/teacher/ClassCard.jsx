@@ -11,23 +11,59 @@ export const ClassCard = ({ classData }) => {
     router.push(`/class/${classData.id}`);
   };
 
+  const textStyles = StyleSheet.create({
+    baseText: {
+      color: colors.text,
+    },
+    secondaryText: {
+      color: colors.textSecondary,
+    },
+  });
+
   return (
     <Pressable onPress={handlePress}>
       <View style={[styles.card, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
-          <AuraText style={[styles.className, { color: colors.text }]}>
+          <AuraText
+            style={StyleSheet.compose(styles.className, textStyles.baseText)}
+          >
             {classData.name}
           </AuraText>
-          <AuraText style={[styles.classCode, { color: colors.textSecondary }]}>
-            Código: {classData.code}
+          <AuraText
+            style={StyleSheet.compose(
+              styles.classCode,
+              textStyles.secondaryText
+            )}
+          >
+            Código: {classData.enrollmentCode}
           </AuraText>
         </View>
         <View style={styles.info}>
-          <AuraText style={[styles.infoText, { color: colors.textSecondary }]}>
-            {classData.students_count} estudiantes
+          <AuraText
+            style={StyleSheet.compose(
+              styles.infoText,
+              textStyles.secondaryText
+            )}
+          >
+            Sección: {classData.section || "N/A"}
           </AuraText>
-          <AuraText style={[styles.infoText, { color: colors.textSecondary }]}>
-            {classData.assignments_count} tareas
+          <AuraText
+            style={StyleSheet.compose(
+              styles.infoText,
+              textStyles.secondaryText
+            )}
+          >
+            Sala: {classData.room || "N/A"}
+          </AuraText>
+          <AuraText
+            style={StyleSheet.compose(styles.status, {
+              color:
+                classData.courseState === "ACTIVE"
+                  ? colors.success
+                  : colors.textSecondary,
+            })}
+          >
+            {classData.courseState === "ACTIVE" ? "Activo" : "Inactivo"}
           </AuraText>
         </View>
       </View>
@@ -48,6 +84,11 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 8,
+  },
+  status: {
+    marginTop: 4,
+    fontWeight: "bold",
+    fontSize: 12,
   },
   className: {
     fontSize: 18,

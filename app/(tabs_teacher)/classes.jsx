@@ -16,6 +16,8 @@ import { ClassCard } from "@/components/teacher/ClassCard";
 import { CreatePost } from "@/components/teacher/CreatePost";
 import { CreateAssignment } from "@/components/teacher/CreateAssignment";
 import { Ionicons } from "@expo/vector-icons";
+import { apiGet, apiPost } from "../../utils/fetchWithAuth";
+import Svg, { Path } from "react-native-svg";
 
 export default function TeacherClasses() {
   const [classes, setClasses] = useState([]);
@@ -26,20 +28,16 @@ export default function TeacherClasses() {
 
   const fetchClasses = async () => {
     try {
-      const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(buildApiUrl(API.ENDPOINTS.TEACHER.CLASSES), {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await apiGet(API.ENDPOINTS.GOOGLE_CLASSROOM.COURSES);
+
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
-      const data = await response.json();
-      console.log("Classes data:", data);
-      setClasses(data);
+      const result = await response.json();
+      console.log("Classes data:", result);
+      if (result.success && result.data.courses) {
+        setClasses(result.data.courses);
+      }
     } catch (error) {
       console.error("Error fetching classes:", error);
     }
@@ -54,6 +52,62 @@ export default function TeacherClasses() {
   useEffect(() => {
     fetchClasses();
   }, []);
+
+  const fetchCourseDetails = async (courseId) => {
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      const [detailsResponse, announcementsResponse, courseworkResponse] =
+        await Promise.all([
+          fetch(
+            buildApiUrl(
+              API.ENDPOINTS.GOOGLE_CLASSROOM.COURSE_DETAILS(courseId)
+            ),
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          ),
+          fetch(
+            buildApiUrl(API.ENDPOINTS.GOOGLE_CLASSROOM.ANNOUNCEMENTS(courseId)),
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          ),
+          fetch(
+            buildApiUrl(API.ENDPOINTS.GOOGLE_CLASSROOM.COURSEWORK(courseId)),
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          ),
+        ]);
+
+      if (
+        !detailsResponse.ok ||
+        !announcementsResponse.ok ||
+        !courseworkResponse.ok
+      ) {
+        throw new Error("Error fetching course details");
+      }
+
+      const [details, announcements, coursework] = await Promise.all([
+        detailsResponse.json(),
+        announcementsResponse.json(),
+        courseworkResponse.json(),
+      ]);
+
+      setSelectedClass({
+        ...details,
+        posts: announcements,
+        assignments: coursework,
+      });
+    } catch (error) {
+      console.error("Error fetching course details:", error);
+    }
+  };
+
+  const handleClassSelect = (classData) => {
+    setSelectedClass(classData);
+    fetchCourseDetails(classData.id);
+  };
 
   const handlePostCreated = (newPost) => {
     // Actualizar la lista de posts en la clase seleccionada
@@ -146,8 +200,16 @@ export default function TeacherClasses() {
         {classes.map((classData) => (
           <ClassCard
             key={classData.id}
-            classData={classData}
-            onPress={() => setSelectedClass(classData)}
+            classData={{
+              ...classData,
+              title: classData.name,
+              description: `Sección: ${classData.section || "N/A"} - Sala: ${
+                classData.room || "N/A"
+              }`,
+              code: classData.enrollmentCode,
+              status: classData.courseState,
+            }}
+            onPress={() => handleClassSelect(classData)}
           />
         ))}
       </View>
@@ -168,45 +230,54 @@ export default function TeacherClasses() {
   );
 }
 
-const LandscapeHeader = ({ colors, styles }) => (
-  <View style={styles.backgroundContainerLandscape}>
-    <Svg
-      width="100%"
-      height="100%"
-      preserveAspectRatio="xMidYMid slice"
-      viewBox="-200 -210 560 670"
-      style={styles.svg}
-    >
-      <Path
-        d="M255.625 387.801C209.254 181.192 -160.246 23.1376 82.0284 -31.2381C324.303 -85.6138 756.693 147.292 499.715 406.644C292.867 538.783 474.159 720.291 259.299 690.506C56.814 617.548 301.996 594.41 255.625 387.801Z"
-        fill="#CDAEC4"
-        fillOpacity={0.67}
-        transform="scale(0.4) translate(180, -50)" // Ajustado para posicionar en la esquina superior derecha
-      />
-    </Svg>
-  </View>
-);
-
-const PortraitHeader = ({ colors, styles }) => (
-  <View style={styles.backgroundContainer}>
-    <Svg
-      width="100%"
-      height="100%"
-      preserveAspectRatio="xMidYMid slice"
-      viewBox="0 0 500 500"
-      style={styles.svg}
-    >
-      <Path
-        d="M255.625 387.801C209.254 181.192 -160.246 23.1376 82.0284 -31.2381C324.303 -85.6138 756.693 147.292 499.715 406.644C292.867 538.783 474.159 720.291 259.299 690.506C56.814 617.548 301.996 594.41 255.625 387.801Z"
-        fill="#CDAEC4"
-        fillOpacity={0.67}
-        transform="scale(0.7) translate(100, -50)" // Ajusta escala y posición
-      />
-    </Svg>
-  </View>
-);
-
 const styles = StyleSheet.create({
+  selectedClassContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  classHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  selectedClassTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+  },
+  section: {
+    marginTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 16,
+  },
+  post: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  assignment: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  assignmentTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  dueDate: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 8,
+  },
   container: {
     flex: 1,
     backgroundColor: "#E6E2D2",

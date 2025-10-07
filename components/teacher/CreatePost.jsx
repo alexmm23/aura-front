@@ -17,14 +17,14 @@ export const CreatePost = ({ classId, onPostCreated }) => {
     try {
       const token = await AsyncStorage.getItem("userToken");
       const response = await fetch(
-        buildApiUrl(`${API.ENDPOINTS.TEACHER.POSTS}/${classId}`),
+        buildApiUrl(API.ENDPOINTS.GOOGLE_CLASSROOM.ANNOUNCEMENTS(classId)),
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ content }),
+          body: JSON.stringify({ text: content }),
         }
       );
 

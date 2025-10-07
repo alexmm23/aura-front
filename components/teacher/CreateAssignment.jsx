@@ -21,7 +21,7 @@ export const CreateAssignment = ({ classId, onAssignmentCreated }) => {
     try {
       const token = await AsyncStorage.getItem("userToken");
       const response = await fetch(
-        buildApiUrl(`${API.ENDPOINTS.TEACHER.ASSIGNMENTS}/${classId}`),
+        buildApiUrl(API.ENDPOINTS.GOOGLE_CLASSROOM.COURSEWORK(classId)),
         {
           method: "POST",
           headers: {
@@ -31,7 +31,9 @@ export const CreateAssignment = ({ classId, onAssignmentCreated }) => {
           body: JSON.stringify({
             title,
             description,
-            due_date: dueDate.toISOString(),
+            dueDate: dueDate.toISOString(),
+            maxPoints: 100, // Default value for assignments
+            workType: "ASSIGNMENT",
           }),
         }
       );
