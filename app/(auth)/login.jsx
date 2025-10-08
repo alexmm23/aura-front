@@ -135,7 +135,7 @@ export default function Login() {
   const formularioCompleto = (
     <View style={styles.card}>
       {/* DEBUG: Indicador temporal de estado de autenticación */}
-      <View
+      {/* <View
         style={{
           backgroundColor: isAuthenticated ? "#ff4444" : "#44ff44",
           padding: 10,
@@ -162,7 +162,7 @@ export default function Login() {
             </Text>
           </TouchableOpacity>
         )}
-      </View>
+      </View> */}
 
       <AuraText style={styles.title} text="Inicia Sesion" />
       <AuraText style={styles.subtitle} text="Organiza, Estudia, Aprende" />
