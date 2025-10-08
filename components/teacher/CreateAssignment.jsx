@@ -5,6 +5,7 @@ import { Colors } from "@/constants/Colors";
 import { API, buildApiUrl } from "@/config/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { MaterialIcons } from "@expo/vector-icons";
 
 export const CreateAssignment = ({ classId, onAssignmentCreated }) => {
   const [title, setTitle] = useState("");
@@ -55,101 +56,188 @@ export const CreateAssignment = ({ classId, onAssignmentCreated }) => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TextInput
-        style={[
-          styles.input,
-          { color: colors.text, borderColor: colors.border },
-        ]}
-        placeholder="Título de la tarea"
-        placeholderTextColor={colors.textSecondary}
-        value={title}
-        onChangeText={setTitle}
-      />
-      <TextInput
-        style={[
-          styles.input,
-          styles.description,
-          { color: colors.text, borderColor: colors.border },
-        ]}
-        placeholder="Descripción de la tarea"
-        placeholderTextColor={colors.textSecondary}
-        value={description}
-        onChangeText={setDescription}
-        multiline
-      />
-      <Pressable
-        style={styles.dateButton}
-        onPress={() => setShowDatePicker(true)}
-      >
-        <AuraText style={{ color: colors.text }}>
-          Fecha de entrega: {dueDate.toLocaleDateString()}
-        </AuraText>
-      </Pressable>
-      {showDatePicker && (
-        <DateTimePicker
-          value={dueDate}
-          mode="date"
-          display="default"
-          onChange={(event, selectedDate) => {
-            setShowDatePicker(false);
-            if (selectedDate) {
-              setDueDate(selectedDate);
-            }
-          }}
-        />
-      )}
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          { backgroundColor: colors.primary },
-          pressed && styles.buttonPressed,
-        ]}
-        onPress={handleSubmit}
-        disabled={isLoading}
-      >
-        <AuraText style={[styles.buttonText, { color: colors.white }]}>
-          {isLoading ? "Creando..." : "Crear Tarea"}
-        </AuraText>
-      </Pressable>
+    <View style={styles.overlay}>
+      <View style={styles.modal}>
+        {/* Header de la clase con imagen decorativa */}
+        <View style={styles.classHeader}>
+          <View style={styles.booksContainer}>
+            <MaterialIcons name="auto-stories" size={24} color="#4CAF50" />
+            <MaterialIcons name="book" size={28} color="#2196F3" />
+            <MaterialIcons name="menu-book" size={24} color="#FF9800" />
+            <MaterialIcons name="school" size={26} color="#9C27B0" />
+            <MaterialIcons name="local-florist" size={22} color="#4CAF50" />
+          </View>
+          <AuraText style={styles.className}>Análisis de Datos</AuraText>
+        </View>
+
+        {/* Formulario */}
+        <View style={styles.form}>
+          {/* Título de la tarea */}
+          <View style={styles.inputContainer}>
+            <View style={styles.inputHeader}>
+              <MaterialIcons name="assignment" size={20} color="#FF9800" />
+              <AuraText style={styles.inputLabel}>Título de tarea</AuraText>
+            </View>
+            <TextInput
+              style={styles.titleInput}
+              placeholder="Título de tarea"
+              placeholderTextColor="#999"
+              value={title}
+              onChangeText={setTitle}
+            />
+            <AuraText style={styles.dateLabel}>
+              Fecha y hora de entrega
+            </AuraText>
+          </View>
+
+          {/* Descripción */}
+          <View style={styles.inputContainer}>
+            <AuraText style={styles.inputLabel}>Descripción</AuraText>
+            <TextInput
+              style={styles.descriptionInput}
+              placeholder="Descripción de la tarea"
+              placeholderTextColor="#999"
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              textAlignVertical="top"
+            />
+          </View>
+
+          {/* Botones */}
+          <View style={styles.buttonContainer}>
+            <Pressable style={styles.attachButton}>
+              <MaterialIcons name="attach-file" size={24} color="#FF9800" />
+            </Pressable>
+            <Pressable
+              style={styles.createButton}
+              onPress={handleSubmit}
+              disabled={isLoading}
+            >
+              <AuraText style={styles.createButtonText}>
+                {isLoading ? "Creando..." : "Crear"}
+              </AuraText>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Date picker */}
+        {showDatePicker && (
+          <DateTimePicker
+            value={dueDate}
+            mode="date"
+            display="default"
+            onChange={(event, selectedDate) => {
+              setShowDatePicker(false);
+              if (selectedDate) {
+                setDueDate(selectedDate);
+              }
+            }}
+          />
+        )}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
   },
-  input: {
-    borderWidth: 1,
-    borderRadius: 4,
+  modal: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    width: "100%",
+    maxWidth: 350,
+    overflow: "hidden",
+  },
+  classHeader: {
+    backgroundColor: "#9BB5E8",
+    padding: 20,
+    alignItems: "center",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  booksContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
+    gap: 8,
+  },
+  className: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#CB8D27",
+    textAlign: "center",
+  },
+  form: {
+    padding: 20,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 8,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: "#666",
+    fontWeight: "500",
+  },
+  titleInput: {
+    backgroundColor: "#E8E8E8",
+    borderRadius: 10,
     padding: 12,
-    marginBottom: 12,
+    fontSize: 16,
+    color: "#333",
+    marginBottom: 8,
   },
-  description: {
+  dateLabel: {
+    fontSize: 12,
+    color: "#999",
+  },
+  descriptionInput: {
+    backgroundColor: "#E8E8E8",
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 16,
+    color: "#333",
     minHeight: 100,
     textAlignVertical: "top",
   },
-  dateButton: {
-    padding: 12,
-    marginBottom: 12,
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
   },
-  button: {
-    padding: 12,
-    borderRadius: 4,
+  attachButton: {
+    width: 50,
+    height: 50,
+    backgroundColor: "#FFF3E0",
+    borderRadius: 25,
+    justifyContent: "center",
     alignItems: "center",
   },
-  buttonPressed: {
-    opacity: 0.8,
+  createButton: {
+    backgroundColor: "#B85DB8",
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 25,
+    flex: 1,
+    marginLeft: 15,
+    alignItems: "center",
   },
-  buttonText: {
+  createButtonText: {
+    color: "#fff",
+    fontSize: 16,
     fontWeight: "bold",
   },
 });
