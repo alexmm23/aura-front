@@ -3,6 +3,7 @@ import { useState } from "react";
 import { AuraText } from "@/components/AuraText";
 import { Colors } from "@/constants/Colors";
 import { API, buildApiUrl } from "@/config/api";
+import { apiGet, apiPost } from "../../utils/fetchWithAuth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export const CreatePost = ({ classId, onPostCreated }) => {
@@ -15,17 +16,9 @@ export const CreatePost = ({ classId, onPostCreated }) => {
 
     setIsLoading(true);
     try {
-      const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(
-        buildApiUrl(API.ENDPOINTS.GOOGLE_CLASSROOM.ANNOUNCEMENTS(classId)),
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ text: content }),
-        }
+      const response = await apiPost(
+        API.ENDPOINTS.GOOGLE_CLASSROOM.ANNOUNCEMENTS(classId),
+        { text: content }
       );
 
       if (!response.ok) {

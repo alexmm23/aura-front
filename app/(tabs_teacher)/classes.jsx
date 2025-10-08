@@ -23,21 +23,30 @@ import Svg, { Path } from "react-native-svg";
 export default function TeacherClasses() {
   const [classes, setClasses] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedClass, setSelectedClass] = useState(null);
   const { width } = useWindowDimensions();
   const colors = Colors.light;
 
   const fetchClasses = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      console.log("🔄 Fetching classes from Google Classroom...");
       const response = await apiGet(API.ENDPOINTS.GOOGLE_CLASSROOM.COURSES);
 
       if (!response.ok) {
-        throw new Error("Network response was not ok");
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
       const result = await response.json();
-      console.log("Classes data:", result);
-      if (result.success && result.data.courses) {
-        // Para cada clase, obtener las tareas próximas
+      console.log("📚 Classes response:", result);
+
+      if (result.success && result.data?.courses) {
+        console.log(`✅ Found ${result.data.courses.length} courses`);
+
+        // Para cada clase, obtener las tareas próximas de forma paralela
         const classesWithAssignments = await Promise.all(
           result.data.courses.map(async (classData) => {
             try {
@@ -47,31 +56,56 @@ export default function TeacherClasses() {
 
               if (assignmentsResponse.ok) {
                 const assignmentsResult = await assignmentsResponse.json();
-                const assignments = assignmentsResult.success
-                  ? assignmentsResult.data
-                  : [];
+                const courseWork =
+                  assignmentsResult.success &&
+                  assignmentsResult.data?.courseWork
+                    ? assignmentsResult.data.courseWork
+                    : [];
 
-                // Filtrar solo tareas próximas (próximos 7 días)
-                const upcoming = assignments
+                // Filtrar tareas próximas (próximos 7 días) y con fecha de vencimiento
+                const today = new Date();
+                const nextWeek = new Date(
+                  today.getTime() + 7 * 24 * 60 * 60 * 1000
+                );
+
+                const upcoming = courseWork
                   .filter((assignment) => {
                     if (!assignment.dueDate) return false;
-                    const dueDate = new Date(assignment.dueDate);
-                    const today = new Date();
-                    const nextWeek = new Date(
-                      today.getTime() + 7 * 24 * 60 * 60 * 1000
+
+                    // Construir fecha de vencimiento desde el objeto de Google Classroom
+                    const dueDate = new Date(
+                      assignment.dueDate.year,
+                      assignment.dueDate.month - 1, // Los meses en JS son 0-indexados
+                      assignment.dueDate.day
                     );
+
                     return dueDate >= today && dueDate <= nextWeek;
                   })
-                  .slice(0, 3); // Solo las primeras 3
+                  .slice(0, 3) // Solo las primeras 3
+                  .map((assignment) => ({
+                    id: assignment.id,
+                    title: assignment.title,
+                    dueDate: assignment.dueDate
+                      ? new Date(
+                          assignment.dueDate.year,
+                          assignment.dueDate.month - 1,
+                          assignment.dueDate.day
+                        ).toISOString()
+                      : null,
+                  }));
 
                 return {
                   ...classData,
                   upcomingAssignments: upcoming,
                 };
+              } else {
+                console.warn(
+                  `⚠️ Could not fetch assignments for course ${classData.id}`
+                );
               }
             } catch (error) {
               console.error(
-                `Error fetching assignments for class ${classData.id}:`,
+                `❌ Error fetching assignments for class ${classData.id}:`,
                 error
               );
             }
@@ -84,9 +118,18 @@ export default function TeacherClasses() {
         );
 
         setClasses(classesWithAssignments);
+      } else {
+        console.warn("⚠️ No courses found or invalid response structure");
+        setClasses([]);
       }
     } catch (error) {
-      console.error("Error fetching classes:", error);
+      console.error("❌ Error fetching classes:", error);
+      setError(
+        "No se pudieron cargar las clases. Verifica tu conexión a Google Classroom."
+      );
+      setClasses([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -98,29 +141,6 @@ export default function TeacherClasses() {
 
   useEffect(() => {
     fetchClasses();
-
-    // Datos de prueba en caso de que el API no responda
-    setTimeout(() => {
-      if (classes.length === 0) {
-        console.log("No data from API, setting test data");
-        setClasses([
-          {
-            id: "test-1",
-            name: "Matemáticas I",
-            section: "A",
-            enrollmentCode: "ABC123",
-            courseState: "ACTIVE",
-            upcomingAssignments: [
-              {
-                id: "assign-1",
-                title: "Tarea de Álgebra",
-                dueDate: new Date(Date.now() + 86400000).toISOString(),
-              },
-            ],
-          },
-        ]);
-      }
-    }, 3000);
   }, []);
 
   const fetchCourseDetails = async (courseId) => {
@@ -128,26 +148,9 @@ export default function TeacherClasses() {
       const token = await AsyncStorage.getItem("userToken");
       const [detailsResponse, announcementsResponse, courseworkResponse] =
         await Promise.all([
-          fetch(
-            buildApiUrl(
-              API.ENDPOINTS.GOOGLE_CLASSROOM.COURSE_DETAILS(courseId)
-            ),
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          ),
-          fetch(
-            buildApiUrl(API.ENDPOINTS.GOOGLE_CLASSROOM.ANNOUNCEMENTS(courseId)),
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          ),
-          fetch(
-            buildApiUrl(API.ENDPOINTS.GOOGLE_CLASSROOM.COURSEWORK(courseId)),
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          ),
+          apiGet(API.ENDPOINTS.GOOGLE_CLASSROOM.COURSE_DETAILS(courseId)),
+          apiGet(API.ENDPOINTS.GOOGLE_CLASSROOM.ANNOUNCEMENTS(courseId)),
+          apiGet(API.ENDPOINTS.GOOGLE_CLASSROOM.COURSEWORK(courseId)),
         ]);
 
       if (
@@ -262,33 +265,73 @@ export default function TeacherClasses() {
   );
 
   const renderClassList = () => {
-    console.log("📚 Rendering class list, classes:", classes.length);
-    console.log("📚 Classes data:", classes);
-
     return (
       <>
         <View style={styles.header}>
           <AuraText style={styles.title}>Mis Clases</AuraText>
         </View>
-        <View style={styles.classesGrid}>
-          {classes.length === 0 ? (
-            <View style={styles.emptyState}>
-              <AuraText style={styles.emptyText}>Cargando clases...</AuraText>
+
+        {/* Estado de carga */}
+        {loading && !refreshing && (
+          <View style={styles.loadingState}>
+            <View style={styles.loadingSpinner}>
+              <AuraText style={styles.loadingText}>🔄</AuraText>
             </View>
-          ) : (
-            classes.map((classData) => {
-              console.log("📚 Rendering class card for:", classData.name);
-              return (
-                <ClassCard
-                  key={classData.id}
-                  classData={classData}
-                  upcomingAssignments={classData.upcomingAssignments || []}
-                  onPress={() => handleClassSelect(classData)}
-                />
-              );
-            })
-          )}
-        </View>
+            <AuraText style={styles.loadingText}>
+              Cargando clases de Google Classroom...
+            </AuraText>
+          </View>
+        )}
+
+        {/* Estado de error */}
+        {error && !loading && (
+          <View style={styles.errorState}>
+            <AuraText style={styles.errorTitle}>⚠️ Error al cargar</AuraText>
+            <AuraText style={styles.errorText}>{error}</AuraText>
+            <Pressable style={styles.retryButton} onPress={fetchClasses}>
+              <AuraText style={styles.retryButtonText}>
+                Intentar de nuevo
+              </AuraText>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Lista de clases */}
+        {!loading && !error && (
+          <View style={styles.classesGrid}>
+            {classes.length === 0 ? (
+              <View style={styles.emptyState}>
+                <AuraText style={styles.emptyTitle}>📚 No hay clases</AuraText>
+                <AuraText style={styles.emptyText}>
+                  No se encontraron clases en tu cuenta de Google Classroom.
+                </AuraText>
+                <AuraText style={styles.emptySubtext}>
+                  Asegúrate de tener clases creadas en Google Classroom.
+                </AuraText>
+              </View>
+            ) : (
+              <>
+                <View style={styles.classesHeader}>
+                  <AuraText style={styles.classesCount}>
+                    {classes.length} {classes.length === 1 ? "clase" : "clases"}{" "}
+                    encontradas
+                  </AuraText>
+                </View>
+                {classes.map((classData) => {
+                  console.log("📚 Rendering class card for:", classData.name);
+                  return (
+                    <ClassCard
+                      key={classData.id}
+                      classData={classData}
+                      upcomingAssignments={classData.upcomingAssignments || []}
+                      onPress={() => handleClassSelect(classData)}
+                    />
+                  );
+                })}
+              </>
+            )}
+          </View>
+        )}
       </>
     );
   };
@@ -357,7 +400,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#E6E2D2",
+    backgroundColor: "#F5F5F0",
   },
   scrollView: {
     flex: 1,
@@ -394,17 +437,20 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 30,
     alignItems: "center",
+    backgroundColor: "transparent",
   },
   title: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: "bold",
     color: "#CB8D27",
     textAlign: "center",
+    marginTop: 20,
+    marginBottom: 10,
   },
   classesGrid: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 20,
     paddingBottom: 20,
   },
   emptyState: {
@@ -590,5 +636,77 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#ccc", // gris claro
     marginVertical: 3, // espacio arriba y abajo de la línea
+  },
+  // Nuevos estilos para estados de carga y error
+  loadingState: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingSpinner: {
+    marginBottom: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+  },
+  errorState: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF5F5",
+    margin: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#FED7D7",
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#E53E3E",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  errorText: {
+    fontSize: 14,
+    color: "#C53030",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: "#E53E3E",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#666",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: "#999",
+    textAlign: "center",
+    marginTop: 8,
+    fontStyle: "italic",
+  },
+  classesHeader: {
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+  },
+  classesCount: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    fontWeight: "500",
   },
 });

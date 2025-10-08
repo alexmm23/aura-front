@@ -1,4 +1,4 @@
-import { View, StyleSheet, Pressable, Image } from "react-native";
+import { View, StyleSheet, Pressable } from "react-native";
 import { AuraText } from "@/components/AuraText";
 import { Colors } from "@/constants/Colors";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -6,72 +6,55 @@ import { MaterialIcons } from "@expo/vector-icons";
 export const ClassCard = ({ classData, onPress, upcomingAssignments = [] }) => {
   const colors = Colors.light;
 
+  // Array of different background colors for the icons
+  const iconColors = ["#4CAF50", "#2196F3", "#FF9800", "#9C27B0", "#F44336"];
+
+  // Get a color based on the class id or name
+  const getIconColor = (id) => {
+    const hash = id ? id.length : 0;
+    return iconColors[hash % iconColors.length];
+  };
+
+  // Get the teacher name from different possible fields
+  const getTeacherName = () => {
+    if (classData.teacherName) return classData.teacherName;
+    if (classData.teachers && classData.teachers.length > 0) {
+      return classData.teachers[0].profile?.name?.fullName || "Profesor";
+    }
+    return "Dr. José López"; // Default fallback
+  };
+
+  // Get the period information
+  const getPeriod = () => {
+    if (classData.period) return classData.period;
+    // Default period format
+    return "Febrero-Junio 2025";
+  };
+
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.card,
-        { backgroundColor: colors.background },
-        pressed && styles.cardPressed,
-      ]}
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
     >
-      {/* Ícono de Google Classroom centrado */}
-      <View style={styles.iconContainer}>
-        <MaterialIcons name="class" size={48} color="#4285F4" />
-      </View>
-
-      {/* Nombre de la clase centrado */}
-      <View style={styles.titleContainer}>
-        <AuraText style={[styles.className, { color: colors.text }]}>
-          {classData.name}
-        </AuraText>
-        <AuraText
-          style={[styles.classSection, { color: colors.textSecondary }]}
-        >
-          {classData.section ? `Sección ${classData.section}` : "Sin sección"}
-        </AuraText>
-      </View>
-
-      {/* Código de clase */}
-      <View style={styles.codeContainer}>
-        <AuraText style={[styles.classCode, { color: colors.textSecondary }]}>
-          {classData.enrollmentCode}
-        </AuraText>
-      </View>
-
-      {/* Tareas próximas */}
-      <View style={styles.assignmentsContainer}>
-        <AuraText style={[styles.assignmentsTitle, { color: colors.text }]}>
-          Tareas próximas
-        </AuraText>
-        {upcomingAssignments && upcomingAssignments.length > 0 ? (
-          upcomingAssignments.slice(0, 3).map((assignment, index) => (
-            <Pressable
-              key={assignment.id || index}
-              style={styles.assignmentLink}
-              onPress={() => {
-                /* Navigate to assignment */
-              }}
-            >
-              <AuraText style={[styles.assignmentText, { color: "#4285F4" }]}>
-                • {assignment.title}
-              </AuraText>
-              {assignment.dueDate && (
-                <AuraText
-                  style={[styles.dueDateText, { color: colors.textSecondary }]}
-                >
-                  {new Date(assignment.dueDate).toLocaleDateString()}
-                </AuraText>
-              )}
-            </Pressable>
-          ))
-        ) : (
-          <AuraText
-            style={[styles.noAssignments, { color: colors.textSecondary }]}
-          >
-            No hay tareas próximas
+      <View style={styles.cardContent}>
+        {/* Class Information */}
+        <View style={styles.classInfo}>
+          <AuraText style={styles.className}>
+            {classData.name || "Clase sin nombre"}
           </AuraText>
-        )}
+          <AuraText style={styles.classPeriod}>{getPeriod()}</AuraText>
+          <AuraText style={styles.teacherName}>{getTeacherName()}</AuraText>
+        </View>
+
+        {/* Icon */}
+        <View
+          style={[
+            styles.iconContainer,
+            { backgroundColor: getIconColor(classData.id) },
+          ]}
+        >
+          <MaterialIcons name="school" size={32} color="#fff" />
+        </View>
       </View>
     </Pressable>
   );
@@ -79,84 +62,51 @@ export const ClassCard = ({ classData, onPress, upcomingAssignments = [] }) => {
 
 const styles = StyleSheet.create({
   card: {
+    backgroundColor: "#fff",
+    borderRadius: 15,
     padding: 20,
-    borderRadius: 16,
-    marginBottom: 16,
-    marginHorizontal: 8,
-    elevation: 4,
+    marginBottom: 15,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    alignItems: "center",
-    minHeight: 280,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   cardPressed: {
     transform: [{ scale: 0.98 }],
-    opacity: 0.9,
+    opacity: 0.95,
   },
-  iconContainer: {
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: "#E8F0FE",
-    borderRadius: 50,
-  },
-  titleContainer: {
+  cardContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+  },
+  classInfo: {
+    flex: 1,
+    paddingRight: 15,
   },
   className: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  classSection: {
-    fontSize: 14,
-    textAlign: "center",
-  },
-  codeContainer: {
-    backgroundColor: "#F5F5F5",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  classCode: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  assignmentsContainer: {
-    width: "100%",
-    alignItems: "center",
-  },
-  assignmentsTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+    color: "#A44076",
     marginBottom: 8,
+    lineHeight: 22,
   },
-  assignmentLink: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    marginVertical: 2,
-    borderRadius: 6,
-    backgroundColor: "#F8F9FA",
-    width: "100%",
-    alignItems: "center",
-  },
-  assignmentText: {
+  classPeriod: {
     fontSize: 14,
-    fontWeight: "500",
-    textAlign: "center",
+    color: "#666",
+    marginBottom: 5,
   },
-  dueDateText: {
-    fontSize: 12,
-    marginTop: 2,
-    textAlign: "center",
-  },
-  noAssignments: {
+  teacherName: {
     fontSize: 14,
+    color: "#666",
     fontStyle: "italic",
-    textAlign: "center",
+  },
+  iconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
