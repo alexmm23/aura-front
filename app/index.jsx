@@ -48,7 +48,7 @@ export default function Index() {
           <>
             <ActivityIndicator size="large" color="#CB8D27" />
             <Text style={{ marginTop: 16, textAlign: "center" }}>
-              Verificando autenticación...
+              Cargando...
             </Text>
             <Text
               style={{
