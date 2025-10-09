@@ -268,7 +268,7 @@ export const AuthProvider = ({ children }) => {
       console.log("Starting logout process...");
 
       if (isWeb()) {
-        await apiPost(API.ENDPOINTS.AUTH.LOGOUT);
+        await apiPost(`${API.ENDPOINTS.AUTH.LOGOUT}/web`);
         console.log("Web logout API call completed");
       } else {
         await apiPost(API.ENDPOINTS.AUTH.LOGOUT);
