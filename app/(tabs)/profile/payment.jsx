@@ -7,13 +7,15 @@ import {
   TextInput, 
   Text, 
   TouchableOpacity, 
-  useWindowDimensions 
+  useWindowDimensions,
+  Alert // ← Agregar Alert
 } from "react-native";
 import { AuraText } from "@/components/AuraText";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Path } from "react-native-svg";
 import Head from "expo-router/head";
+import { API } from "@/config/api";
 
 // Importación estática para web
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -95,72 +97,246 @@ const CheckoutForm = ({ router }) => {
   const [processing, setProcessing] = useState(false);
   const [email, setEmail] = useState('');
   const [country, setCountry] = useState('');
-  const [phone, setPhone] = useState(''); // Cambio: teléfono en vez de código postal
+  const [phone, setPhone] = useState('');
+  
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Agregar estados para modal de confirmación:
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingCardElement, setPendingCardElement] = useState(null);
+
+  const showSuccessAlert = (message) => {
+    setErrorMessage(''); // Limpiar errores
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(''), 5000); 
+  };
+
+  const showErrorAlert = (message) => {
+    setSuccessMessage(''); // Limpiar éxitos
+    setErrorMessage(message);
+    setTimeout(() => setErrorMessage(''), 8000); 
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!stripe || !elements) return;
 
+    // Validaciones básicas
+    if (!email.trim()) {
+      showErrorAlert('Por favor ingresa tu correo electrónico');
+      return;
+    }
+
+    if (!country.trim()) {
+      showErrorAlert('Por favor ingresa tu país/región');
+      return;
+    }
+
+    if (!phone.trim()) {
+      showErrorAlert('Por favor ingresa tu número de teléfono');
+      return;
+    }
+
     const cardElement = elements.getElement(CardElement);
     if (!cardElement) {
-      alert("Por favor ingresa los datos de la tarjeta");
+      showErrorAlert('Por favor ingresa los datos de la tarjeta');
       return;
     }
 
+    // ✨ MOSTRAR MODAL DE CONFIRMACIÓN
+    setPendingCardElement(cardElement);
+    setShowConfirmModal(true);
+  };
+
+  // Funciones para el modal:
+  const handleConfirmPayment = () => {
+    setShowConfirmModal(false);
+    processPayment(pendingCardElement);
+    setPendingCardElement(null);
+  };
+
+  const handleCancelPayment = () => {
+    setShowConfirmModal(false);
+    setPendingCardElement(null);
+  };
+
+  // ✨ Actualizar: función processPayment
+  const processPayment = async (cardElement) => {
     setProcessing(true);
+    setErrorMessage('');
+    setSuccessMessage('');
 
-    // Crea PaymentMethod con información adicional
-    const { error, paymentMethod } = await stripe.createPaymentMethod({
-      type: "card",
-      card: cardElement,
-      billing_details: {
-        email: email,
-        phone: phone, // Cambio: usar teléfono
-        address: {
-          country: country,
+    try {
+      // Crea PaymentMethod con información adicional
+      const { error, paymentMethod } = await stripe.createPaymentMethod({
+        type: "card",
+        card: cardElement,
+        billing_details: {
+          email: email, // ← Este es el email del formulario
+          phone: phone,
+          address: {
+            country: country,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      alert(`Error: ${error.message}`);
+      if (error) {
+        showErrorAlert(`Error en la tarjeta: ${error.message}`);
+        setProcessing(false);
+        return;
+      }
+
+      const token = localStorage.getItem("token");
+      console.log("Token being sent:", token);
+
+      // ✨ ACTUALIZAR: Enviar el email del formulario como billingEmail
+      const paymentData = {
+        paymentMethodId: paymentMethod.id, 
+        amount: 9900, 
+        currency: "mxn",
+        billingEmail: email, // ← Cambiar de 'email' a 'billingEmail' 
+        phone: phone,
+        country: country,
+        sendConfirmationEmail: true
+      };
+
+      console.log("Request body:", paymentData);
+      console.log("📧 Email del formulario que recibirá la confirmación:", email);
+
+      const response = await apiPost(API.ENDPOINTS.PAYMENT.CONFIRM, paymentData);
+      
+      console.log("Response from backend:", response);
+
+      const data = await response.json();
+      
+      if (data.success) {
+        showSuccessAlert(
+          data.message || 
+          `¡Pago realizado con éxito! Bienvenido a AURA Premium 🎉\n📧 Se ha enviado un correo de confirmación a: ${email}`
+        );
+        
+        // ✨ OPCIONAL: Envío manual de email solo si el backend no lo hizo automáticamente
+        if (!data.emailSent) {
+          console.log('⚠️ Email not sent automatically, sending manually...');
+          await sendManualConfirmationEmail(data, email); // ← Usar email del formulario
+        } else {
+          console.log(`✅ Confirmation email sent automatically to: ${email}`);
+        }
+        
+        // Redirigir después de 5 segundos para que el usuario lea el mensaje
+        setTimeout(() => {
+          router.replace("/home");
+        }, 5000);
+      } else {
+        showErrorAlert(`Error en el pago: ${data.error || 'Ocurrió un error inesperado'}`);
+      }
+
+    } catch (error) {
+      console.error('Error during payment:', error);
+      showErrorAlert('Error de conexión. Por favor intenta nuevamente.');
+    } finally {
       setProcessing(false);
-      return;
     }
+  };
 
-    const token = localStorage.getItem("token");
-    console.log("Token being sent:", token);
-    console.log("Request body:", { 
-      paymentMethodId: paymentMethod.id, 
-      amount: 9900, 
-      currency: "mxn",
-      email: email,
-      phone: phone // Cambio: usar teléfono
-    });
+  // ACTUALIZAR: Función para envío manual de email (backup)
+  const sendManualConfirmationEmail = async (paymentData, userEmail) => {
+    try {
+      console.log('📧 Sending manual payment confirmation email to:', userEmail);
 
-    const response = await apiPost("/payment/payments/confirm", { 
-      paymentMethodId: paymentMethod.id, 
-      amount: 9900, 
-      currency: "mxn",
-      email: email,
-      phone: phone // Cambio: enviar teléfono
-    });
-    
-    console.log("Response from backend:", response);
+      const emailResponse = await apiPost(API.ENDPOINTS.SEND_PAYMENT_CONFIRMATION, {
+        email: email, // ← Usar email del formulario
+        paymentData: {
+          amount: 99,
+          currency: 'MXN',
+          paymentId: paymentData.paymentId || paymentData.id || 'N/A',
+          date: new Date().toISOString(),
+          phone: phone,
+          country: country
+        }
+      });
 
-    const data = await response.json();
-    if (data.success) {
-      alert("Pago realizado con éxito");
-      router.replace("/home");
-    } else {
-      alert("Error en el pago: " + data.error);
+      if (emailResponse.ok) {
+        console.log('✅ Manual payment confirmation email sent successfully');
+      } else {
+        console.error('❌ Failed to send manual payment confirmation email');
+      }
+    } catch (error) {
+      console.error('❌ Error sending manual payment confirmation email:', error);
+      // No mostramos error al usuario porque el pago ya fue exitoso
     }
+  };
 
-    setProcessing(false);
+  // ✨ AGREGAR: Función para envío manual por separado (si necesitas)
+  const sendManualEmail = async () => {
+    try {
+      console.log('📧 Sending separate manual email...');
+      
+      await apiPost("/auth/send-payment-confirmation", {
+        email: email,
+        paymentData: {
+          amount: '99.00',
+          currency: 'MXN',
+          paymentId: 'manual_request',
+          date: new Date().toISOString(),
+          phone: phone,
+          country: country
+        }
+      });
+      
+      showSuccessAlert('📧 Email de confirmación enviado exitosamente');
+    } catch (error) {
+      console.error('Error sending separate manual email:', error);
+      showErrorAlert('Error enviando email de confirmación');
+    }
   };
 
   return (
     <View style={styles.form}>
+      {/* Modal de confirmación */}
+      {showConfirmModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>💳 Confirmar Pago</Text>
+            <Text style={styles.modalText}>
+              ¿Estás seguro de que deseas proceder con el pago de MXN$99?
+            </Text>
+            <View style={styles.modalDetails}>
+              <Text style={styles.modalDetailText}>📧 Correo: {email}</Text>
+              <Text style={styles.modalDetailText}>📱 Teléfono: {phone}</Text>
+              <Text style={styles.modalDetailText}>🌍 País: {country}</Text>
+            </View>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.cancelButton} 
+                onPress={handleCancelPayment}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.confirmButton} 
+                onPress={handleConfirmPayment}
+              >
+                <Text style={styles.confirmButtonText}>Confirmar Pago</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {successMessage ? (
+        <View style={styles.successAlert}>
+          <Text style={styles.successText}>{successMessage}</Text>
+        </View>
+      ) : null}
+
+      {errorMessage ? (
+        <View style={styles.errorAlert}>
+          <Text style={styles.errorText}>{errorMessage}</Text>
+        </View>
+      ) : null}
+
       {/* Información del contacto */}
       <Text style={styles.sectionTitle}>Información del contacto</Text>
       <TextInput
@@ -225,7 +401,16 @@ const CheckoutForm = ({ router }) => {
         onPress={handleSubmit}
         disabled={processing}
       >
-        <AuraText style={styles.payButtonText} text={processing ? "Procesando..." : "Pagar"} />
+        <AuraText style={styles.payButtonText} text={processing ? "Procesando..." : "Pagar MXN$99"} />
+      </TouchableOpacity>
+
+      {/* Agregar después del botón de pago principal */}
+      <TouchableOpacity
+        style={[styles.secondaryButton]}
+        onPress={sendManualEmail}
+        disabled={processing}
+      >
+        <Text style={styles.secondaryButtonText}>📧 Reenviar Email de Confirmación</Text>
       </TouchableOpacity>
     </View>
   );
@@ -250,18 +435,126 @@ const PortraitHeader = () => (
 );
 
 const styles = StyleSheet.create({
+  // ...estilos existentes...
+  
+  successAlert: {
+    backgroundColor: '#D4F4DD',
+    borderColor: '#4CAF50',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  successText: {
+    color: '#2E7D32',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  errorAlert: {
+    backgroundColor: '#FFEBEE',
+    borderColor: '#F44336',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#C62828',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  modalText: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  modalDetails: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  modalDetailText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  cancelButton: {
+    backgroundColor: '#f44336',
+    borderRadius: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    width: '48%',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  confirmButton: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    width: '48%',
+    alignItems: 'center',
+  },
+  confirmButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+
   container: {
     flex: 1,
-    backgroundColor: "#EDE6DB", // Mismo color de fondo que el perfil
+    backgroundColor: "#EDE6DB",
   },
   cardheader: {
     marginLeft: 20,
     borderRadius: 30,
     marginTop: 30,
     marginRight: 20,
-    height: "25%", // Reducido para que sea más pequeño
+    height: "25%",
     backgroundColor: "linear-gradient(90deg, #B065C4 0%, #F4A45B 100%)",
-    justifyContent: "flex-start", // Cambio para alinear el botón arriba
+    justifyContent: "flex-start",
     alignItems: "flex-start",
     paddingTop: 15,
     paddingLeft: 20,
@@ -285,11 +578,11 @@ const styles = StyleSheet.create({
   },
   cardImageContainer: {
     alignItems: "center",
-    marginTop: -40, // Ajustado para la nueva altura del header
+    marginTop: -40,
   },
   cardImage: {
-    width: 250, // Más ancha para evitar corte
-    height: 150, // Proporcionalmente más alta
+    width: 250,
+    height: 150,
     borderRadius: 15,
     shadowColor: "#000",
     shadowOpacity: 0.25,
@@ -299,7 +592,7 @@ const styles = StyleSheet.create({
   priceText: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#888", // Color gris como pediste
+    color: "#888",
     marginBottom: 10,
     textAlign: "center",
   },
@@ -312,8 +605,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 25,
     paddingHorizontal: 20,
-    width: "90%", // Más pequeña (era 100%)
-    maxWidth: 800, // Límite máximo de ancho
+    width: "90%",
+    maxWidth: 800,
     alignItems: "center",
     shadowColor: "#000",
     shadowOpacity: 0.1,
@@ -357,7 +650,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   payButton: {
-    backgroundColor: '#F4A45B', // Mismo color que los botones del perfil
+    backgroundColor: '#F4A45B',
     borderRadius: 10,
     paddingVertical: 15,
     paddingHorizontal: 30,
@@ -373,6 +666,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#fff',
     fontWeight: 'bold',
+  },
+  secondaryButton: {
+    backgroundColor: '#E0E0E0',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    width: "100%",
+    marginTop: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: '#CCCCCC',
+  },
+  secondaryButtonText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
   },
   // Estilos del fondo (igual que en perfil)
   backgroundContainer: {
