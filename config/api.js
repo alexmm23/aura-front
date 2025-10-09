@@ -57,6 +57,10 @@ export const API={
       AUTH_CHECK: '/auth/check',
       LOGIN_WEB: '/auth/login/web',
     },
+    PAYMENT: {
+      CONFIRM: '/payments/confirm', // ← AGREGAR ESTE
+      SEND_CONFIRMATION: '/payments/send-confirmation', // ← AGREGAR ESTE
+    },
     // Google Classroom endpoints
     GOOGLE_CLASSROOM: {
       COURSES: '/auth/google/courses',
@@ -80,7 +84,6 @@ export const API={
       AUTH_CHECK: '/auth/check',
       LOGIN_WEB: '/auth/login/web',
     },
-    // ➕ Agregar esta sección de REMINDERS
     REMINDERS: {
       BASE: '/reminders',
       LIST: '/reminders',
@@ -235,5 +238,30 @@ export const universalFetch=async (url, options={}) => {
   const { fetchWithAuth }=await import('../utils/fetchWithAuth');
   return fetchWithAuth(url, options);
 };
+
+/* Para confirmar pago (automático con email)
+export const confirmPayment = async (paymentMethodId) => {
+  try {
+    const response = await api.post(API_ENDPOINTS.PAYMENT_CONFIRM, {
+      paymentMethodId
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+// Para enviar email manual
+export const sendPaymentConfirmation = async (email, paymentData) => {
+  try {
+    const response = await api.post(API_ENDPOINTS.PAYMENT_SEND_CONFIRMATION, {
+      email,
+      paymentData
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};*/
 
 export default API;
