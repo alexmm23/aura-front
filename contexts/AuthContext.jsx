@@ -323,6 +323,31 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus,
   };
 
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
+  const loadingMessages = [
+    "Organizando notas...",
+    "Preparando tu espacio...",
+    "Cargando contenido...",
+    "Sincronizando datos...",
+    "Casi listo...",
+  ];
+
+  useEffect(() => {
+    if (isLoading) {
+      const interval = setInterval(() => {
+        setLoadingMessageIndex(
+          (prevIndex) => (prevIndex + 1) % loadingMessages.length
+        );
+      }, 1000);
+
+      return () => clearInterval(interval);
+    } else {
+      // Reset to index 0 when not loading
+      setLoadingMessageIndex(0);
+    }
+  }, [isLoading, loadingMessages.length]);
+
   return (
     <AuthContext.Provider value={value}>
       {/* AuthProvider renderiza directamente el navegador apropiado */}
@@ -344,7 +369,7 @@ export const AuthProvider = ({ children }) => {
               fontSize: 16,
             }}
           >
-            Verificando autenticación...
+            {loadingMessages[loadingMessageIndex]}
           </Text>
         </View>
       ) : (
