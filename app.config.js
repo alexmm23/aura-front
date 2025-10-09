@@ -42,6 +42,11 @@ module.exports = {
         backgroundColor: "#ffffff"
       },
       package: "com.alexmm23.aurafront",
+      permissions: [
+        "CAMERA",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE"
+      ],
       // ✅ Configuración para Android deep links
       intentFilters: [
         {
