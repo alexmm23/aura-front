@@ -37,16 +37,22 @@ function TabsContent() {
       route: "/(tabs)/NoteBookScreen",
     },
     {
+      name: "classes",
+      icon: require("../../assets/images/clases.png"),
+      text: "Clases",
+      route: "/(tabs)/classes",
+    },
+    {
       name: "forums",
       icon: require("../../assets/images/grupo.png"),
       text: "Foros",
       route: "/(tabs)/forums",
     },
     {
-      name: "classes",
-      icon: require("../../assets/images/clases.png"),
-      text: "Clases",
-      route: "/(tabs)/classes",
+      name: "chats",
+      icon: require("../../assets/images/chats.png"),
+      text: "Chats",
+      route: "/(tabs)/chats",
     },
     {
       name: "profile",
