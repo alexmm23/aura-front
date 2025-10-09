@@ -80,7 +80,6 @@ export const API={
       AUTH_CHECK: '/auth/check',
       LOGIN_WEB: '/auth/login/web',
     },
-    // ➕ Agregar esta sección de REMINDERS
     REMINDERS: {
       BASE: '/reminders',
       LIST: '/reminders',
@@ -147,6 +146,24 @@ export const API={
     // Attachments endpoints
     ATTACHMENTS: {
       DELETE: '/attachments/:id',
+    },
+    // Chats endpoints - Updated to match WebSocket documentation
+    CHATS: {
+      BASE: '/chats',
+      LIST: '/chats',
+      CREATE: '/chats',
+      DETAIL: (chatId) => `/chats/${chatId}`,
+      MESSAGES: (chatId) => `/chats/${chatId}/messages`,
+      SEND_MESSAGE: (chatId) => `/chats/${chatId}/messages`,
+      MARK_READ: (chatId) => `/chats/${chatId}/mark-read`,
+      STATS: '/chats/stats/summary',
+    },
+    // Users endpoints
+    USERS: {
+      STUDENTS: '/users/students',
+      TEACHERS: '/users/students?role=teacher',
+      STUDENTS_ONLY: '/users/students?role=student',
+      SEARCH: '/users/students',
     },
 
   }
