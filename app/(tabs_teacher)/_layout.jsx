@@ -120,6 +120,12 @@ function TabsContent() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="chats"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
