@@ -1,5 +1,4 @@
 import io from 'socket.io-client';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIG } from '../config/api';
 
 class ChatSocketService {
@@ -153,15 +152,9 @@ class ChatSocketService {
             return false;
         }
 
-        if (!this.currentUserId) {
-            console.warn('No current user ID, cannot send message');
-            return false;
-        }
-
         const messageData={
             content: content.trim(),
             chat_id: chatId,
-            sender_id: this.currentUserId,
         };
 
         console.log('📤 Sending message:', messageData);
