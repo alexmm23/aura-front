@@ -79,28 +79,6 @@ export default function Profile() {
     }
   };
 
-  const teamsLogin = async () => {
-    try {
-      const response = await fetchWithAuth(
-        buildApiUrl(API.ENDPOINTS.AUTH.TEAMS),
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      const data = await response.json();
-      if (data.url) {
-        Linking.openURL(data.url);
-      } else {
-        alert("No se pudo iniciar sesión con Teams");
-      }
-    } catch (error) {
-      console.error("Error during Teams login:", error);
-    }
-  };
 
   useEffect(() => {
     // Verifica si el usuario ya está vinculado al perfil
@@ -148,12 +126,7 @@ export default function Profile() {
                   style={styles.classroomIcon}
                 />
               </TouchableOpacity>
-              <TouchableOpacity onPress={teamsLogin}>
-                <Image
-                  source={require("@/assets/images/teams.png")}
-                  style={styles.teamsIcon}
-                />
-              </TouchableOpacity>
+              
             </View>
             {/* /* Botones */}
             <TouchableOpacity
@@ -295,12 +268,6 @@ const styles = StyleSheet.create({
   classroomIcon: {
     width: 70,
     height: 70,
-    aspectRatio: 1,
-    resizeMode: "contain",
-  },
-  teamsIcon: {
-    width: 40,
-    height: 40,
     aspectRatio: 1,
     resizeMode: "contain",
   },
