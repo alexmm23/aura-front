@@ -40,7 +40,7 @@ function TabsContent() {
       route: "(tabs_teacher)/classes", // Remove the leading slash
     },
     {
-      name: "Chats",
+      name: "chats",
       icon: require("../../assets/images/chat.png"),
       text: "Chats",
       route: "(tabs_teacher)/chats", // Remove the leading slash
@@ -116,12 +116,6 @@ function TabsContent() {
       />
       <Tabs.Screen
         name="classDetail"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="chats"
         options={{
           href: null,
         }}
