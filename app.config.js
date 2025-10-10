@@ -22,7 +22,7 @@ module.exports = {
     name: env.name,
     slug: "aura-front",
     owner: "alexmm23",
-    version: "1.0.0",
+    version: "1.3.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "aura", // ✅ Cambiado de "myapp" a "aura" para consistencia
