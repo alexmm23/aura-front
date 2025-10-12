@@ -180,10 +180,19 @@ export default function Chats() {
               handleTyping();
             }}
             onBlur={stopTyping}
-            onSubmitEditing={handleSendMessage}
+            onSubmitEditing={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
             blurOnSubmit={false}
             multiline
             returnKeyType="send"
+            onKeyPress={(e) => {
+              if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
           />
           <Pressable
             style={[

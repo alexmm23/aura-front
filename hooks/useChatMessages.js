@@ -2,8 +2,18 @@ import { useState, useEffect, useRef } from 'react';
 import { apiGet, apiPost } from '../utils/fetchWithAuth';
 import { API } from '../config/api';
 import chatSocket from '../services/chatSocket';
+import { useAuth } from './useAuth';
 
 export const useChatMessages=(chatId) => {
+    const { user } = useAuth();
+    const currentUserId = user?.id || user?.userId;
+    
+    console.log('💬 useChatMessages initialized:', {
+        chatId,
+        currentUserId,
+        user: user ? { id: user.id, userId: user.userId, email: user.email } : null
+    });
+    
     const [messages, setMessages]=useState([]);
     const [loading, setLoading]=useState(true);
     const [sending, setSending]=useState(false);
@@ -237,9 +247,17 @@ export const useChatMessages=(chatId) => {
 
     // Format messages for display
     const formatMessage=(message) => {
+        const isOwn = message.sender_id === currentUserId;
+        console.log('📝 Formatting message:', {
+            messageId: message.id,
+            sender_id: message.sender_id,
+            currentUserId,
+            isOwn
+        });
+        
         return {
             ...message,
-            isOwn: message.sender_id===chatSocket.currentUserId,
+            isOwn,
             senderName: message.sender?.name||'Unknown',
             time: formatMessageTime(message.created_at),
             avatar: getAvatarForUser(message.sender_id)

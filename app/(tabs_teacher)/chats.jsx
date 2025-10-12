@@ -125,9 +125,8 @@ export default function Chats() {
               <AuraText style={styles.emptyText}>No hay mensajes aún</AuraText>
             </View>
           )}
-          <View ref={messagesEndRef} />
 
-          {loadingMessages.map((message) => (
+          {messages.map((message) => (
             <View
               key={message.id}
               style={[
@@ -184,10 +183,19 @@ export default function Chats() {
               handleTyping();
             }}
             onBlur={stopTyping}
-            onSubmitEditing={handleSendMessage}
+            onSubmitEditing={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
             blurOnSubmit={false}
             multiline
             returnKeyType="send"
+            onKeyPress={(e) => {
+              if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
           />
           <Pressable
             style={[
