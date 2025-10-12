@@ -107,6 +107,7 @@ export const API={
       NOTEBOOK_UPDATE: '/notebook/edit',
       NOTEBOOK_DELETE: '/notebook/delete',
       NOTES: '/note/list',
+      NOTEBOOK_PAGES: '/notebook/pages',
       NOTE_CREATE: '/note/images/upload',
       NOTE_SHOW: '/note/show',
     },
@@ -168,6 +169,11 @@ export const API={
       TEACHERS: '/users/students?role=teacher',
       STUDENTS_ONLY: '/users/students?role=student',
       SEARCH: '/users/students',
+    },
+    // AI endpoints
+    AI: {
+      OCR: '/auraai/ocr',
+      STUDY_QUESTIONS: '/auraai/study',
     },
 
   }

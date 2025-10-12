@@ -217,7 +217,7 @@ export const AuthProvider = ({ children }) => {
       if (!response.ok) {
         const errorData = await response.json();
         console.error("Login failed with error:", errorData);
-        throw new Error(errorData.message || "Error en el login");
+        throw new Error(errorData.message || "Credenciales inválidas");
       }
 
       const data = await response.json();

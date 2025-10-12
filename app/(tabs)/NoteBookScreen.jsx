@@ -19,6 +19,9 @@ import Toast from "react-native-toast-message";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NotebookCanvas from "../../components/notebook/NotebookCanvas";
 import FloatingAIMenu from "../../components/FloatingAIMenu";
+import NotebookSelectorModal from "../../components/NotebookSelectorModal";
+import AIOptionsModal from "../../components/AIOptionsModal";
+import AIResultsModal from "../../components/AIResultsModal";
 import { AuraText } from "../../components/AuraText";
 import { API, buildApiUrl } from "@/config/api";
 import { useRouter } from "expo-router";
@@ -29,6 +32,12 @@ const NotebookScreen = () => {
   const [showCanvas, setShowCanvas] = useState(false);
   const [noteBooks, setNoteBooks] = useState([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showNotebookSelector, setShowNotebookSelector] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [showResultsModal, setShowResultsModal] = useState(false);
+  const [aiResults, setAiResults] = useState(null);
+  const [aiResultType, setAiResultType] = useState(null);
+  const [selectedNotebookForAI, setSelectedNotebookForAI] = useState(null);
   const [notebookTitle, setNotebookTitle] = useState("");
   const { width, height } = useWindowDimensions();
   const isLargeScreen = width >= 928;
@@ -201,6 +210,63 @@ const NotebookScreen = () => {
     setShowCreateDialog(false);
   };
 
+  const handleAIOptionPress = (option) => {
+    console.log("Opción de IA seleccionada:", option);
+
+    // Verificar que hay cuadernos disponibles
+    if (noteBooks.length === 0) {
+      Alert.alert(
+        "Sin cuadernos",
+        "Debes crear un cuaderno primero antes de usar las funciones de IA"
+      );
+      return;
+    }
+
+    // Mostrar el selector de cuadernos
+    setShowNotebookSelector(true);
+  };
+
+  const handleNotebookSelect = (notebookId) => {
+    console.log("Cuaderno seleccionado:", notebookId);
+    setSelectedNotebookForAI(notebookId);
+    setShowNotebookSelector(false);
+    // Abrir el modal de opciones de IA con el cuaderno seleccionado
+    setTimeout(() => {
+      setShowAIModal(true);
+    }, 300);
+  };
+
+  const handleNotebookSelectorClose = () => {
+    setShowNotebookSelector(false);
+  };
+
+  const handleAIModalClose = (result) => {
+    console.log("Modal de IA cerrado con resultado:", result);
+    setShowAIModal(false);
+    setSelectedNotebookForAI(null);
+
+    // Si hay resultado, mostrarlo en el modal de resultados
+    if (result) {
+      console.log("Resultados de IA:", result);
+      setAiResults(result);
+
+      // Determinar el tipo de resultado
+      if (result.extracted_text) {
+        setAiResultType("ocr");
+      } else if (result.questions) {
+        setAiResultType("study");
+      }
+
+      setShowResultsModal(true);
+    }
+  };
+
+  const handleResultsModalClose = () => {
+    setShowResultsModal(false);
+    setAiResults(null);
+    setAiResultType(null);
+  };
+
   const [lastPngDataUrl, setLastPngDataUrl] = useState(null);
 
   const renderNote = ({ item }) => (
@@ -212,6 +278,11 @@ const NotebookScreen = () => {
           params: { notebookId: item.id },
         })
       }
+      onLongPress={() => {
+        // Al mantener presionado, seleccionar para IA
+        setSelectedNotebookForAI(item.id);
+        setShowAIModal(true);
+      }}
     >
       {/* <Image source={{ uri: item.data }} style={styles.notePreview} /> */}
       <AuraText
@@ -292,8 +363,31 @@ const NotebookScreen = () => {
             </Text>
           </TouchableOpacity>
 
-          <FloatingAIMenu />
+          <FloatingAIMenu onAIOptionPress={handleAIOptionPress} />
         </View>
+
+        {/* Modal de Selección de Cuaderno */}
+        <NotebookSelectorModal
+          visible={showNotebookSelector}
+          onClose={handleNotebookSelectorClose}
+          notebooks={noteBooks}
+          onSelectNotebook={handleNotebookSelect}
+        />
+
+        {/* Modal de IA */}
+        <AIOptionsModal
+          visible={showAIModal}
+          onClose={handleAIModalClose}
+          notebookId={selectedNotebookForAI}
+        />
+
+        {/* Modal de Resultados de IA */}
+        <AIResultsModal
+          visible={showResultsModal}
+          onClose={handleResultsModalClose}
+          results={aiResults}
+          type={aiResultType}
+        />
 
         {/* Modal para crear cuaderno - Layout Landscape */}
         <Modal
@@ -380,7 +474,30 @@ const NotebookScreen = () => {
           ⇪
         </Text>
       </TouchableOpacity>
-      <FloatingAIMenu />
+      <FloatingAIMenu onAIOptionPress={handleAIOptionPress} />
+
+      {/* Modal de Selección de Cuaderno */}
+      <NotebookSelectorModal
+        visible={showNotebookSelector}
+        onClose={handleNotebookSelectorClose}
+        notebooks={noteBooks}
+        onSelectNotebook={handleNotebookSelect}
+      />
+
+      {/* Modal de IA */}
+      <AIOptionsModal
+        visible={showAIModal}
+        onClose={handleAIModalClose}
+        notebookId={selectedNotebookForAI}
+      />
+
+      {/* Modal de Resultados de IA */}
+      <AIResultsModal
+        visible={showResultsModal}
+        onClose={handleResultsModalClose}
+        results={aiResults}
+        type={aiResultType}
+      />
 
       {/* Modal para crear cuaderno */}
       <Modal

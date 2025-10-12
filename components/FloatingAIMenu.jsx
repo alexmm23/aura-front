@@ -76,7 +76,7 @@ function HoverableMenuItem({ text, onPress }) {
   );
 }
 
-export default function FloatingAIMenu() {
+export default function FloatingAIMenu({ onAIOptionPress }) {
   const [menuVisible, setMenuVisible] = React.useState(false);
 
   const handleMenuClick = () => {
@@ -85,8 +85,12 @@ export default function FloatingAIMenu() {
 
   const handleMenuItemPress = (text) => {
     console.log(`Acción seleccionada: ${text}`);
-    // Aquí puedes agregar lógica específica para cada opción
     setMenuVisible(false);
+
+    // Si se pasa la función callback, la ejecutamos
+    if (onAIOptionPress) {
+      onAIOptionPress(text);
+    }
   };
 
   const handleBackdropPress = () => {
