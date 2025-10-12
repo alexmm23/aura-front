@@ -181,9 +181,11 @@ export const apiPostNoAuth=async (endpoint, data=null, options={}) => {
  * Función helper para requests POST con autenticación
  */
 export const apiPost=async (endpoint, data=null, options={}) => {
+    const paramOptions = {...options}
+    const newMethod = paramOptions.method && paramOptions.method !== "POST" ? paramOptions.method : "POST";
+    paramOptions.method = newMethod;
     const requestOptions={
-        method: 'POST',
-        ...options
+        ...paramOptions
     };
 
     if (data) {

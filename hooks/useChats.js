@@ -192,7 +192,7 @@ export const useChats=(userType='student') => {
     const markAsRead=async (chatId) => {
         try {
             const endpoint=API.ENDPOINTS.CHATS.MARK_READ(chatId);
-            const response=await apiPost(endpoint);
+            const response=await apiPost(endpoint,null, {method: "PATCH"});
 
             if (response.ok) {
                 // Also mark as read via WebSocket
