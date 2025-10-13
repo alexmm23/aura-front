@@ -306,7 +306,7 @@ export const AuthProvider = ({ children }) => {
     if (!isAuthenticated || !user) {
       return "/(auth)/login";
     }
-    return isTeacher() ? "/(tabs_teacher)/HomeTeacher" : "/(tabs)/home";
+    return isTeacher() ? "/(tabs_teacher)/hometeacher" : "/(tabs)/home";
   };
 
   const value = {

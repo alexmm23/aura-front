@@ -51,7 +51,7 @@ const NotebookPages = () => {
       style={styles.pageItem}
       onPress={() =>
         router.push({
-          pathname: "/(tabs)/notebookView",
+          pathname: "/(tabs)/notebookview",
           params: { pageId: item.page_id || item.id }, // Usar page_id si existe, sino id
         })
       }

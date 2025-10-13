@@ -5,10 +5,10 @@ import { useAuth } from "@/hooks/useAuth";
 
 export default function AuthLayout() {
   const { isAuthenticated, isLoading } = useAuth();
-  
+
   // Eliminamos la navegación automática del layout de autenticación
   // La navegación ya se maneja en el archivo index.jsx
-  
+
   return (
     <>
       <StatusBar style="dark" />
@@ -32,7 +32,7 @@ export default function AuthLayout() {
           }}
         />
         <Stack.Screen
-          name="forgotPassword"
+          name="forgotpassword"
           options={{
             title: "Recuperar Contraseña",
           }}

@@ -31,10 +31,10 @@ function TabsContent() {
       route: "/(tabs)/home",
     },
     {
-      name: "NoteBookScreen",
+      name: "notebookscreen",
       icon: require("../../assets/images/cuaderno.png"),
       text: "Notas",
-      route: "/(tabs)/NoteBookScreen",
+      route: "/(tabs)/notebookscreen",
     },
     {
       name: "classes",
@@ -149,19 +149,19 @@ function TabsContent() {
         }}
       />
       <Tabs.Screen
-        name="notebookPages"
+        name="notebookpages"
         options={{
           href: null,
         }}
       />
       <Tabs.Screen
-        name="taskDetails"
+        name="taskdetails"
         options={{
           href: null,
         }}
       />
       <Tabs.Screen
-        name="notebookView"
+        name="notebookview"
         options={{
           href: null,
         }}

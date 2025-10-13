@@ -274,7 +274,7 @@ const NotebookScreen = () => {
       style={styles.noteItem}
       onPress={() =>
         router.push({
-          pathname: "/(tabs)/notebookPages",
+          pathname: "/(tabs)/notebookpages",
           params: { notebookId: item.id },
         })
       }

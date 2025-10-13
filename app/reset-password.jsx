@@ -84,16 +84,36 @@ export default function ResetPassword() {
   // Refs para prevenir ejecuciones múltiples
   const hasVerifiedToken = useRef(false);
   const renderCount = useRef(0);
-  
+
   // Incrementar contador de renders
   renderCount.current += 1;
 
-  console.log("🔍🔍🔍 RESET-PASSWORD - Component render #", renderCount.current, "🔍🔍🔍");
-  console.log("🔍🔍🔍 RESET-PASSWORD - Token extraído:", JSON.stringify(token), "🔍🔍🔍");
+  console.log(
+    "🔍🔍🔍 RESET-PASSWORD - Component render #",
+    renderCount.current,
+    "🔍🔍🔍"
+  );
+  console.log(
+    "🔍🔍🔍 RESET-PASSWORD - Token extraído:",
+    JSON.stringify(token),
+    "🔍🔍🔍"
+  );
   console.log("🔍🔍🔍 RESET-PASSWORD - This is the NORMAL version 🔍🔍🔍");
-  console.log("🔍🔍🔍 RESET-PASSWORD - Tipo del token:", typeof token, "🔍🔍🔍");
-  console.log("🔍🔍🔍 RESET-PASSWORD - Longitud del token:", token?.length, "🔍🔍🔍");
-  console.log("🔍🔍🔍 RESET-PASSWORD - hasVerifiedToken:", hasVerifiedToken.current, "🔍🔍🔍");
+  console.log(
+    "🔍🔍🔍 RESET-PASSWORD - Tipo del token:",
+    typeof token,
+    "🔍🔍🔍"
+  );
+  console.log(
+    "🔍🔍🔍 RESET-PASSWORD - Longitud del token:",
+    token?.length,
+    "🔍🔍🔍"
+  );
+  console.log(
+    "🔍🔍🔍 RESET-PASSWORD - hasVerifiedToken:",
+    hasVerifiedToken.current,
+    "🔍🔍🔍"
+  );
 
   const { width, height } = useWindowDimensions();
   const colors = Colors.light;
@@ -110,7 +130,7 @@ export default function ResetPassword() {
   const isLandscape = width > height;
 
   const [isSuccess, setIsSuccess] = useState(false); // Agregar este estado
-  
+
   useEffect(() => {
     // PREVENIR múltiples ejecuciones del useEffect
     if (hasVerifiedToken.current) {
@@ -120,9 +140,11 @@ export default function ResetPassword() {
 
     // Función para verificar el token - SOLO UNA VEZ
     const verifyTokenOnce = async () => {
-      console.log("🔍 RESET-PASSWORD - Component mounted, verifying token once");
+      console.log(
+        "🔍 RESET-PASSWORD - Component mounted, verifying token once"
+      );
       hasVerifiedToken.current = true; // Marcar como ejecutado INMEDIATAMENTE
-      
+
       if (!token) {
         console.log("🔍 RESET-PASSWORD - No token provided");
         setIsLoading(false);
@@ -131,13 +153,17 @@ export default function ResetPassword() {
       }
 
       try {
-        console.log("🔍🔍🔍 RESET-PASSWORD - Making API call to verify token:", token, "🔍🔍🔍");
+        console.log(
+          "🔍🔍🔍 RESET-PASSWORD - Making API call to verify token:",
+          token,
+          "🔍🔍🔍"
+        );
         setIsLoading(true);
-        
+
         const response = await apiGetResetToken(
           `${API.ENDPOINTS.AUTH.VERIFY_RESET_TOKEN}/${token}`
         );
-  
+
         if (response.ok) {
           console.log("🔍 RESET-PASSWORD - Token verification successful");
           setIsValidToken(true);
@@ -155,7 +181,9 @@ export default function ResetPassword() {
         setIsValidToken(false);
         setErrors({ token: "Error al verificar el token" });
       } finally {
-        console.log("🔍 RESET-PASSWORD - Token verification complete, setting loading to false");
+        console.log(
+          "🔍 RESET-PASSWORD - Token verification complete, setting loading to false"
+        );
         setIsLoading(false);
       }
     };
@@ -264,7 +292,7 @@ export default function ResetPassword() {
           />
           <TouchableOpacity
             style={styles.button}
-            onPress={() => router.replace("/(auth)/forgot-password")}
+            onPress={() => router.replace("/(auth)/forgotpassword")}
           >
             <AuraText style={styles.buttonText} text="Solicitar nuevo enlace" />
           </TouchableOpacity>

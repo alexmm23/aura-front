@@ -120,7 +120,7 @@ export default function HomeScreen() {
                   style={styles.taskCard}
                   onPress={() =>
                     router.push({
-                      pathname: "/taskDetails",
+                      pathname: "/taskdetails",
                       params: {
                         courseId: task.courseId || index,
                         courseWorkId: task.courseWorkId,

@@ -29,7 +29,7 @@ export default function Index() {
 
   // SIMPLIFICADO: No hacer redirecciones automáticas aquí
   // El AppNavigator ya maneja el estado de autenticación correctamente
-  
+
   // Solo mostrar una pantalla simple de bienvenida o redirigir manualmente si es necesario
   // console.log('📍 INDEX PAGE - Auth state:', { isAuthenticated, isLoading, user: user?.email });
 
@@ -63,7 +63,14 @@ export default function Index() {
           </>
         ) : (
           <>
-            <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' }}>
+            <Text
+              style={{
+                fontSize: 24,
+                fontWeight: "bold",
+                marginBottom: 20,
+                textAlign: "center",
+              }}
+            >
               ¡Bienvenido a AURA!
             </Text>
             <Text
@@ -72,7 +79,7 @@ export default function Index() {
                 fontSize: 12,
                 color: "gray",
                 textAlign: "center",
-                marginBottom: 20
+                marginBottom: 20,
               }}
             >
               {debugInfo}
@@ -96,7 +103,10 @@ export default function Index() {
                 <PrimaryButton
                   title="Ir a Home"
                   onPress={() => {
-                    const homeRoute = user?.role_id === 3 ? '/(tabs_teacher)/HomeTeacher' : '/(tabs)/home';
+                    const homeRoute =
+                      user?.role_id === 3
+                        ? "/(tabs_teacher)/hometeacher"
+                        : "/(tabs)/home";
                     router.push(homeRoute);
                   }}
                   style={{}}

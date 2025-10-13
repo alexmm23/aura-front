@@ -22,10 +22,10 @@ function TabsContent() {
   // ...existing code...
   const MENU_ITEMS = [
     {
-      name: "HomeTeacher",
+      name: "hometeacher",
       icon: require("../../assets/images/home.png"),
       text: "Inicio",
-      route: "(tabs_teacher)/HomeTeacher", // Remove the leading slash
+      route: "(tabs_teacher)/hometeacher", // Remove the leading slash
     },
     {
       name: "reminders",
@@ -115,7 +115,7 @@ function TabsContent() {
         }}
       />
       <Tabs.Screen
-        name="classDetail"
+        name="classdetail"
         options={{
           href: null,
         }}

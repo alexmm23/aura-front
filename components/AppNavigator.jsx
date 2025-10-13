@@ -159,7 +159,7 @@ const ProtectedNavigator = ({ user, shouldPreserveRoute }) => {
 
     if (shouldRedirect) {
       const homeRoute =
-        user?.role_id === 3 ? "/(tabs_teacher)/HomeTeacher" : "/(tabs)/home";
+        user?.role_id === 3 ? "/(tabs_teacher)/hometeacher" : "/(tabs)/home";
       console.log(
         "🔒 PROTECTED NAVIGATOR - Redirecting from",
         currentPath,
