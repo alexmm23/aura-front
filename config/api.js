@@ -56,9 +56,10 @@ export const API={
       PROFILE: '/users/profile',
       AUTH_CHECK: '/auth/check',
       LOGIN_WEB: '/auth/login/web',
-    },    PAYMENT: {
-      CONFIRM: '/payment/confirm',
-      SEND_CONFIRMATION: '/payment/send-confirmation',
+    },
+    PAYMENT: {
+      CONFIRM: '/payments/confirm', // ← AGREGAR ESTE
+      SEND_CONFIRMATION: '/payments/send-confirmation', // ← AGREGAR ESTE
     },
     // Google Classroom endpoints
     GOOGLE_CLASSROOM: {
