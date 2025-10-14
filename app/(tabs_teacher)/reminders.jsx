@@ -21,7 +21,6 @@ import { API, buildApiUrl } from "@/config/api";
 import { Picker } from "@react-native-picker/picker";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 
-// Servicio de notificaciones web (agregar esta función directamente en el archivo)
 const webNotificationService = {
   scheduledTimeouts: new Map(),
 
@@ -221,7 +220,7 @@ export default function Reminders() {
 
       const savedReminder = await response.json();
 
-      // 🔔 AGREGAR: Programar notificación en web
+      // AGREGAR: Programar notificación en web
       if (Platform.OS === 'web' && formData.has_alarm) {
         const timeoutId = await webNotificationService.scheduleReminder({
           id: savedReminder.id || Date.now(),
@@ -569,32 +568,6 @@ export default function Reminders() {
               </TouchableOpacity>
             </View>
 
-            {/* Statistics Cards - Versión más robusta */}
-            {statistics && (
-              <View style={styles.statsContainer}>
-                <View style={styles.statCard}>
-                  <AuraText 
-                    text={getSafeStatValue(statistics.total)} 
-                    style={styles.statNumber} 
-                  />
-                  <AuraText text="Total" style={styles.statLabel} />
-                </View>
-                <View style={styles.statCard}>
-                  <AuraText 
-                    text={getSafeStatValue(statistics.pending)} 
-                    style={styles.statNumber} 
-                  />
-                  <AuraText text="Pendientes" style={styles.statLabel} />
-                </View>
-                <View style={styles.statCard}>
-                  <AuraText 
-                    text={getSafeStatValue(statistics.upcoming_today)} 
-                    style={styles.statNumber} 
-                  />
-                  <AuraText text="Hoy" style={styles.statLabel} />
-                </View>
-              </View>
-            )}
 
             {/* Filters */}
             <View style={styles.filtersContainer}>
@@ -610,7 +583,7 @@ export default function Reminders() {
                   style={[styles.filterButton, filters.status === 'sent' && styles.filterButtonActive]}
                   onPress={() => setFilters({...filters, status: filters.status === 'sent' ? '' : 'sent'})}
                 >
-                  <AuraText text="Enviados" style={styles.filterButtonText} />
+                  <AuraText text="Completados" style={styles.filterButtonText} />
                 </TouchableOpacity>
                 
                 <TouchableOpacity
@@ -701,7 +674,7 @@ export default function Reminders() {
                         style={styles.markSentButton}
                         onPress={() => markAsSent(reminder.id)}
                       >
-                        <AuraText text="Marcar como enviado" style={styles.markSentButtonText} />
+                        <AuraText text="Marcar como completado" style={styles.markSentButtonText} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -934,12 +907,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   contentContainer: {
-    padding: 20,
+    paddingHorizontal: 30, 
     paddingBottom: 100,
   },
   contentWrapper: {
     width: "100%",
-    paddingHorizontal: 20,
+    paddingHorizontal: 30, 
     paddingTop: 20,
     zIndex: 1,
   },
@@ -961,37 +934,12 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#CB8D27",
     textAlign: "left",
-    marginLeft: 200,
-  },
-  
-  // Statistics
-  statsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginVertical: 20,
-  },
-  statCard: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 15,
-    alignItems: "center",
-    minWidth: 80,
-    elevation: 2,
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#A44076",
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 5,
   },
 
   // Filters
   filtersContainer: {
     marginBottom: 20,
+    marginTop: 20,
   },
   filterRow: {
     flexDirection: "row",
