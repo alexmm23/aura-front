@@ -76,7 +76,7 @@ module.exports = {
       shortName: "AURA",
       bundler: "metro",
       output: "static",
-      favicon: "./assets/images/favicon.png"
+      favicon: "./assets/images/icon_small.png"
     },
     plugins: [
       [
