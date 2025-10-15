@@ -1,4 +1,4 @@
-import { View, StyleSheet, TextInput, Pressable } from "react-native";
+import { View, StyleSheet, TextInput, Pressable, Platform } from "react-native";
 import { useState } from "react";
 import { AuraText } from "@/components/AuraText";
 import { Colors } from "@/constants/Colors";
@@ -6,6 +6,7 @@ import { API, buildApiUrl } from "@/config/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { MaterialIcons } from "@expo/vector-icons";
+import { apiPost } from "../../utils/fetchWithAuth";
 
 export const CreateAssignment = ({ classId, onAssignmentCreated }) => {
   const [title, setTitle] = useState("");
@@ -20,22 +21,14 @@ export const CreateAssignment = ({ classId, onAssignmentCreated }) => {
 
     setIsLoading(true);
     try {
-      const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(
-        buildApiUrl(API.ENDPOINTS.GOOGLE_CLASSROOM.COURSEWORK(classId)),
+      const response = await apiPost(
+        API.ENDPOINTS.GOOGLE_CLASSROOM.COURSEWORK(classId),
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            title,
-            description,
-            dueDate: dueDate.toISOString(),
-            maxPoints: 100, // Default value for assignments
-            workType: "ASSIGNMENT",
-          }),
+          title,
+          description,
+          dueDate: dueDate.toISOString(),
+          maxPoints: 100, // Default value for assignments
+          workType: "ASSIGNMENT",
         }
       );
 
@@ -55,6 +48,31 @@ export const CreateAssignment = ({ classId, onAssignmentCreated }) => {
     }
   };
 
+  const formatDateForInput = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const handleDateChange = (event, selectedDate) => {
+    if (Platform.OS !== "web") {
+      setShowDatePicker(false);
+    }
+    if (selectedDate) {
+      setDueDate(selectedDate);
+    }
+  };
+
+  const handleWebDateChange = (event) => {
+    const newDate = new Date(event.target.value);
+    if (!isNaN(newDate.getTime())) {
+      setDueDate(newDate);
+    }
+  };
+
   return (
     <View style={styles.overlay}>
       <View style={styles.modal}>
@@ -67,7 +85,7 @@ export const CreateAssignment = ({ classId, onAssignmentCreated }) => {
             <MaterialIcons name="school" size={26} color="#9C27B0" />
             <MaterialIcons name="local-florist" size={22} color="#4CAF50" />
           </View>
-          <AuraText style={styles.className}>Análisis de Datos</AuraText>
+          <AuraText style={styles.className}>Hello world</AuraText>
         </View>
 
         {/* Formulario */}
@@ -88,6 +106,30 @@ export const CreateAssignment = ({ classId, onAssignmentCreated }) => {
             <AuraText style={styles.dateLabel}>
               Fecha y hora de entrega
             </AuraText>
+            {Platform.OS === "web" ? (
+              <input
+                type="datetime-local"
+                value={formatDateForInput(dueDate)}
+                onChange={handleWebDateChange}
+                style={{
+                  backgroundColor: "#E8E8E8",
+                  borderRadius: 10,
+                  padding: 12,
+                  fontSize: 16,
+                  color: "#333",
+                  marginBottom: 8,
+                  border: "none",
+                  width: "100%",
+                  fontFamily: "inherit",
+                }}
+              />
+            ) : (
+              <Pressable onPress={() => setShowDatePicker(true)}>
+                <AuraText style={styles.titleInput}>
+                  {dueDate.toLocaleDateString()} {dueDate.toLocaleTimeString()}
+                </AuraText>
+              </Pressable>
+            )}
           </View>
 
           {/* Descripción */}
@@ -121,18 +163,13 @@ export const CreateAssignment = ({ classId, onAssignmentCreated }) => {
           </View>
         </View>
 
-        {/* Date picker */}
-        {showDatePicker && (
+        {/* Date picker - Solo para móvil */}
+        {showDatePicker && Platform.OS !== "web" && (
           <DateTimePicker
             value={dueDate}
-            mode="date"
+            mode="datetime"
             display="default"
-            onChange={(event, selectedDate) => {
-              setShowDatePicker(false);
-              if (selectedDate) {
-                setDueDate(selectedDate);
-              }
-            }}
+            onChange={handleDateChange}
           />
         )}
       </View>

@@ -24,8 +24,25 @@ export default function AIResultsModal({ visible, onClose, results, type }) {
   const handleCopyAll = () => {
     let allText = "";
 
-    if (type === "ocr" && results?.extracted_text) {
-      allText = results.extracted_text;
+    if (type === "ocr") {
+      // Manejar la nueva estructura de OCR
+      if (results?.data?.results && results.data.results.length > 0) {
+        allText = results.data.results
+          .map((result) => {
+            let text = `--- Contenido ${result.content_id} ---\n\n`;
+            if (result.texto_corregido) {
+              text += `Texto Corregido:\n${result.texto_corregido}\n\n`;
+            }
+            if (result.texto_extraido) {
+              text += `Texto Original:\n${result.texto_extraido}\n`;
+            }
+            return text;
+          })
+          .join("\n\n");
+      } else if (results?.extracted_text) {
+        // Soporte para formato antiguo
+        allText = results.extracted_text;
+      }
     } else if (type === "study" && results?.questions) {
       allText = results.questions
         .map((q, idx) => `${idx + 1}. ${q.question}\n   Respuesta: ${q.answer}`)
@@ -75,7 +92,114 @@ export default function AIResultsModal({ visible, onClose, results, type }) {
 
           {/* Content */}
           <ScrollView style={styles.scrollContent}>
-            {type === "ocr" && results?.extracted_text && (
+            {type === "ocr" && results?.data?.results && (
+              <View style={styles.ocrContainer}>
+                {results.data.results.map((result, index) => (
+                  <View key={index} style={styles.resultCard}>
+                    {/* Header del resultado */}
+                    <View style={styles.resultHeader}>
+                      <View style={styles.resultHeaderLeft}>
+                        <Ionicons name="document-text" size={20} color="#007bff" />
+                        <AuraText
+                          text={`Contenido ${result.content_id}`}
+                          style={styles.resultTitle}
+                        />
+                      </View>
+                      {result.success && (
+                        <View style={styles.successBadge}>
+                          <Ionicons name="checkmark-circle" size={16} color="#28a745" />
+                          <AuraText text="Exitoso" style={styles.successText} />
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Estadísticas */}
+                    {result.estadisticas && (
+                      <View style={styles.statsContainer}>
+                        <View style={styles.statItem}>
+                          <Ionicons name="text-outline" size={16} color="#666" />
+                          <AuraText
+                            text={`${result.estadisticas.palabras_extraidas} palabras`}
+                            style={styles.statText}
+                          />
+                        </View>
+                        <View style={styles.statItem}>
+                          <Ionicons name="layers-outline" size={16} color="#666" />
+                          <AuraText
+                            text={`${result.estadisticas.detecciones} detecciones`}
+                            style={styles.statText}
+                          />
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Texto Corregido */}
+                    {result.texto_corregido && (
+                      <View style={styles.textSection}>
+                        <View style={styles.sectionHeader}>
+                          <Ionicons name="create-outline" size={18} color="#28a745" />
+                          <AuraText
+                            text="Texto Corregido"
+                            style={styles.sectionTitle}
+                          />
+                          <TouchableOpacity
+                            onPress={() => handleCopyText(result.texto_corregido)}
+                            style={styles.miniCopyButton}
+                          >
+                            <Ionicons name="copy-outline" size={16} color="#007bff" />
+                          </TouchableOpacity>
+                        </View>
+                        <View style={styles.textCard}>
+                          <AuraText
+                            text={result.texto_corregido}
+                            style={styles.extractedText}
+                          />
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Texto Original */}
+                    {result.texto_extraido && (
+                      <View style={styles.textSection}>
+                        <View style={styles.sectionHeader}>
+                          <Ionicons name="scan-outline" size={18} color="#6c757d" />
+                          <AuraText
+                            text="Texto Original (OCR)"
+                            style={[styles.sectionTitle, { color: "#6c757d" }]}
+                          />
+                          <TouchableOpacity
+                            onPress={() => handleCopyText(result.texto_extraido)}
+                            style={styles.miniCopyButton}
+                          >
+                            <Ionicons name="copy-outline" size={16} color="#007bff" />
+                          </TouchableOpacity>
+                        </View>
+                        <View style={[styles.textCard, styles.originalTextCard]}>
+                          <AuraText
+                            text={result.texto_extraido}
+                            style={styles.originalText}
+                          />
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Detalles opcionales */}
+                    {result.detalles && result.detalles.length > 0 && (
+                      <TouchableOpacity style={styles.detailsToggle}>
+                        <Ionicons name="information-circle-outline" size={16} color="#007bff" />
+                        <AuraText
+                          text={`Ver ${result.detalles.length} detalles de detección`}
+                          style={styles.detailsToggleText}
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Formato antiguo de OCR */}
+            {type === "ocr" && results?.extracted_text && !results?.data && (
               <View style={styles.ocrContainer}>
                 <View style={styles.textCard}>
                   <AuraText
@@ -218,6 +342,108 @@ const styles = StyleSheet.create({
   },
   ocrContainer: {
     padding: 20,
+  },
+  resultCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#e9ecef",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  resultHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  resultHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  resultTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  successBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#d4edda",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  successText: {
+    fontSize: 12,
+    color: "#28a745",
+    fontWeight: "600",
+  },
+  statsContainer: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9ecef",
+  },
+  statItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  statText: {
+    fontSize: 12,
+    color: "#666",
+  },
+  textSection: {
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#28a745",
+    flex: 1,
+  },
+  miniCopyButton: {
+    padding: 4,
+  },
+  originalTextCard: {
+    backgroundColor: "#f8f9fa",
+    borderColor: "#dee2e6",
+  },
+  originalText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: "#666",
+  },
+  detailsToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: "#e7f3ff",
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  detailsToggleText: {
+    fontSize: 12,
+    color: "#007bff",
+    fontWeight: "500",
   },
   textCard: {
     backgroundColor: "#f8f9fa",

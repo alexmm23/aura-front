@@ -249,11 +249,11 @@ const NotebookScreen = () => {
     if (result) {
       console.log("Resultados de IA:", result);
       setAiResults(result);
-
+      console.log("Resultados de IA seteados:", result.data.results[0]);
       // Determinar el tipo de resultado
-      if (result.extracted_text) {
+      if (result.data.results[0].texto_extraido) {
         setAiResultType("ocr");
-      } else if (result.questions) {
+      } else if (result.data.results[0].preguntas) {
         setAiResultType("study");
       }
 
