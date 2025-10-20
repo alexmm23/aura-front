@@ -12,9 +12,6 @@ import {
 } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
 import { apiGet, apiPostMultipart, apiPost } from "../../utils/fetchWithAuth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-// import CanvaLiteBoard from "./CanvaLiteBoard";
-
 // Este componente usa Canvas HTML5 nativo para web
 const TOOL_PENCIL = "pen";
 const TOOL_RECT = "rect";
@@ -172,9 +169,27 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   const getCanvasPos = (e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
+
+    // Detectar si es un evento táctil o de mouse
+    let clientX, clientY;
+
+    if (e.touches && e.touches.length > 0) {
+      // Evento táctil
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if (e.changedTouches && e.changedTouches.length > 0) {
+      // Evento táctil finalizado
+      clientX = e.changedTouches[0].clientX;
+      clientY = e.changedTouches[0].clientY;
+    } else {
+      // Evento de mouse
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
     return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: clientX - rect.left,
+      y: clientY - rect.top,
     };
   };
   const startDrawing = (e) => {
@@ -274,7 +289,12 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
 
     lastPointRef.current = pos;
   };
-  const stopDrawing = () => {
+  const stopDrawing = (e) => {
+    // Prevenir el comportamiento por defecto en eventos táctiles
+    if (e && e.type.includes("touch")) {
+      e.preventDefault();
+    }
+
     isDrawingRef.current = false;
     rectStartRef.current = null;
     canvasStateRef.current = null; // Limpiar el estado guardado
@@ -332,20 +352,28 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
-    // Calcular el tamaño de la imagen para que quepa en el canvas
-    const maxWidth = 200;
-    const maxHeight = 200;
+    // Calcular el tamaño de la imagen para que ocupe el 100% del canvas manteniendo proporción
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
     let { width, height } = img;
 
-    if (width > maxWidth || height > maxHeight) {
-      const ratio = Math.min(maxWidth / width, maxHeight / height);
-      width *= ratio;
-      height *= ratio;
-    }
+    // Calcular el ratio para ajustar al 100% del canvas
+    const widthRatio = canvasWidth / width;
+    const heightRatio = canvasHeight / height;
 
-    // Dibujar la imagen en la posición especificada
+    // Usar el ratio menor para mantener la proporción dentro del canvas
+    const ratio = Math.min(widthRatio, heightRatio);
+
+    width *= ratio;
+    height *= ratio;
+
+    // Centrar la imagen en el canvas
+    const centerX = (canvasWidth - width) / 2;
+    const centerY = (canvasHeight - height) / 2;
+
+    // Dibujar la imagen centrada y ajustada al 100% del canvas
     ctx.globalCompositeOperation = "source-over";
-    ctx.drawImage(img, x, y, width, height);
+    ctx.drawImage(img, centerX, centerY, width, height);
   };
   const getCanvasCursor = () => {
     if (tool === TOOL_IMAGE && pendingImage) {
@@ -882,11 +910,16 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
             style={{
               ...styles.canvas,
               cursor: getCanvasCursor(),
+              touchAction: "none", // Prevenir el zoom y scroll en dispositivos táctiles
             }}
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}
             onMouseLeave={stopDrawing}
+            onTouchStart={startDrawing}
+            onTouchMove={draw}
+            onTouchEnd={stopDrawing}
+            onTouchCancel={stopDrawing}
           />
           {textInput.visible && (
             <input
