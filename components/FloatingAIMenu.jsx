@@ -140,14 +140,7 @@ export default function FloatingAIMenu({ onAIOptionPress }) {
             borderColor: "#e0e0e0",
           }}
         >
-          {[
-            "✍️ Escribir un resumen",
-            "📝 Escribir un artículo",
-            "🎭 Escribir un poema",
-            "✏️ Corregir texto",
-            "🌐 Traducir texto",
-            "💡 Generar ideas",
-          ].map((text, idx) => (
+          {["✍️ Generar recurso"].map((text, idx) => (
             <HoverableMenuItem
               key={idx}
               text={text}
