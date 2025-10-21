@@ -72,6 +72,7 @@ export const NotebookListView = ({
         />
 
         <FlatList
+          key={isLargeScreen ? 'large-6' : 'small-3'}
           data={notebooks}
           renderItem={({ item }) => (
             <NotebookItem
@@ -81,9 +82,10 @@ export const NotebookListView = ({
             />
           )}
           keyExtractor={(item) => item.id}
-          numColumns={2}
+          numColumns={isLargeScreen ? 6 : 3}
           contentContainerStyle={styles.notesList}
           showsVerticalScrollIndicator={false}
+          columnWrapperStyle={styles.columnWrapper}
         />
 
         <TouchableOpacity 
@@ -129,13 +131,17 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   contentWrapper: {
-    width: '90%',
-    marginLeft: '5%',
-    marginRight: '5%',
+    width: '100%',
     flex: 1,
   },
   notesList: {
     padding: 16,
+    paddingHorizontal: 16,
+  },
+  columnWrapper: {
+    justifyContent: 'space-evenly',
+    gap: 8,
+    paddingHorizontal: 8,
   },
   floatingHelpButton: {
     position: 'absolute',
