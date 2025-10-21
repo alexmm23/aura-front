@@ -1,300 +1,56 @@
-import React, { useState, useEffect } from "react";
-import * as FileSystem from "expo-file-system";
-import * as Sharing from "expo-sharing";
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Text,
-  Image,
-  useWindowDimensions,
-  ScrollView,
-  Modal,
-  TextInput,
-  Alert,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { useWindowDimensions } from "react-native";
 import Toast from "react-native-toast-message";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import NotebookCanvas from "../../components/notebook/NotebookCanvas";
-import FloatingAIMenu from "../../components/FloatingAIMenu";
-import NotebookSelectorModal from "../../components/NotebookSelectorModal";
-import AIOptionsModal from "../../components/AIOptionsModal";
-import AIResultsModal from "../../components/AIResultsModal";
-import { AuraText } from "../../components/AuraText";
-import { API, buildApiUrl } from "@/config/api";
 import { useRouter } from "expo-router";
-import { apiPost, apiGet } from "../../utils/fetchWithAuth";
+import NotebookCanvas from "@/components/notebook/NotebookCanvas";
+import {
+  NotebookListView,
+  CreateNotebookModal,
+  NotebookAIModals,
+} from "@/components/notebook";
+import { useNotebooks, useNotebookAI } from "@/hooks";
 
 const NotebookScreen = () => {
-  const [notes, setNotes] = useState([]);
-  const [showCanvas, setShowCanvas] = useState(false);
-  const [noteBooks, setNoteBooks] = useState([]);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showNotebookSelector, setShowNotebookSelector] = useState(false);
-  const [showAIModal, setShowAIModal] = useState(false);
-  const [showResultsModal, setShowResultsModal] = useState(false);
-  const [aiResults, setAiResults] = useState(null);
-  const [aiResultType, setAiResultType] = useState(null);
-  const [selectedNotebookForAI, setSelectedNotebookForAI] = useState(null);
-  const [notebookTitle, setNotebookTitle] = useState("");
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const isLargeScreen = width >= 928;
   const router = useRouter();
 
-  useEffect(() => {
-    const loadNotes = async () => {
-      try {
-        const response = await fetchNotes();
-        console.log("Fetched notes:", response);
-        setNoteBooks(response);
-      } catch (error) {
-        console.error("Error fetching notes:", error);
-      }
-    };
+  // Custom hooks para separar la lógica
+  const {
+    noteBooks,
+    showCanvas,
+    setShowCanvas,
+    showCreateDialog,
+    setShowCreateDialog,
+    notebookTitle,
+    setNotebookTitle,
+    lastPngDataUrl,
+    handleCreateNotebook,
+    handleCancelCreate,
+    handleNoteSaved,
+  } = useNotebooks();
 
-    loadNotes();
-  }, []);
+  const {
+    showNotebookSelector,
+    showAIModal,
+    showResultsModal,
+    aiResults,
+    aiResultType,
+    selectedNotebookForAI,
+    handleAIOptionPress,
+    handleNotebookSelect,
+    handleNotebookSelectorClose,
+    handleAIModalClose,
+    handleResultsModalClose,
+    handleNotebookLongPress,
+  } = useNotebookAI();
 
-  useEffect(() => {
-    console.log("Modal state changed:", showCreateDialog);
-  }, [showCreateDialog]);
-
-  const fetchNotes = async () => {
-    const response = await apiGet(API.ENDPOINTS.STUDENT.NOTEBOOKS);
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error);
-    }
-    return await response.json();
+  const handleNotebookPress = (notebook) => {
+    router.push({
+      pathname: "/(tabs)/notebookpages",
+      params: { notebookId: notebook.id },
+    });
   };
-
-  const loadNotes = async () => {
-    try {
-      const keys = await AsyncStorage.getAllKeys();
-      const notebookKeys = keys.filter((key) => key.startsWith("notebook_"));
-      const notesData = await AsyncStorage.multiGet(notebookKeys);
-
-      const parsedNotes = notesData.map(([key, value]) => ({
-        id: key,
-        timestamp: parseInt(key.replace("notebook_", "")),
-        data: value,
-      }));
-
-      setNotes(parsedNotes.sort((a, b) => b.timestamp - a.timestamp));
-    } catch (error) {
-      console.error("Error loading notes:", error);
-    }
-  };
-
-  const handleShare = async () => {
-    try {
-      // Use the last PNG dataURL
-      const dataUrl = lastPngDataUrl || (notes[0] && notes[0].data);
-      if (!dataUrl) {
-        alert("No hay notas para compartir.");
-        return;
-      }
-
-      // Convertir data URL a archivo temporal
-      const filename = `nota-${Date.now()}.png`;
-      const path = `${FileSystem.documentDirectory}${filename}`;
-
-      // Extraer los datos base64 del dataURL
-      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
-
-      // Escribir el archivo
-      await FileSystem.writeAsStringAsync(path, base64Data, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      // Compartir la imagen
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(path, {
-          mimeType: "image/png",
-          dialogTitle: "Compartir nota",
-        });
-      } else {
-        alert("La función de compartir no está disponible en este dispositivo");
-      }
-    } catch (error) {
-      console.error("Error al compartir:", error);
-      alert("Error al compartir nota: " + error.message);
-    }
-  };
-
-  const handleNoteSaved = (dataUrl) => {
-    // Save the note as before (if needed)
-    loadNotes();
-    setShowCanvas(false);
-
-    // Optionally, store the last PNG for sharing
-    setLastPngDataUrl(dataUrl);
-  };
-
-  const handleCreateNotebook = async () => {
-    if (!notebookTitle.trim()) {
-      console.log("Error: Título vacío");
-      try {
-        Alert.alert("Error", "Por favor ingresa un título para el cuaderno");
-      } catch (e) {
-        console.error("Alert no disponible, usando console:", e);
-        alert("Error: Por favor ingresa un título para el cuaderno");
-      }
-      return;
-    }
-
-    try {
-      const token = await AsyncStorage.getItem("userToken");
-      console.log("Creando cuaderno con título:", notebookTitle.trim());
-
-      const response = await apiPost(API.ENDPOINTS.STUDENT.NOTEBOOK_CREATE, {
-        title: notebookTitle.trim(),
-      });
-
-      const responseData = await response.json();
-
-      console.log("Response status:", response.status);
-
-      if (!response.ok) {
-        console.log("Error del servidor:", responseData);
-        setShowCreateDialog(false);
-        if (response.status === 409) {
-          Toast.show({
-            type: "error",
-            text1: "Error",
-            text2: "Ya existe un cuaderno con ese título",
-          });
-          return;
-        }
-        Toast.show({
-          type: "error",
-          text1: "Error",
-          text2: responseData.error || "Error al crear el cuaderno",
-        });
-        return;
-      }
-
-      console.log("Nuevo cuaderno creado:", responseData);
-
-      // Actualizar la lista de cuadernos
-      setNoteBooks((prev) => [responseData, ...prev]);
-
-      // Limpiar el formulario y cerrar el diálogo
-      setNotebookTitle("");
-      setShowCreateDialog(false);
-
-      try {
-        Alert.alert("Éxito", "Cuaderno creado exitosamente");
-      } catch (e) {
-        console.error("Alert no disponible, usando console:", e);
-        alert("Éxito: Cuaderno creado exitosamente");
-      }
-    } catch (error) {
-      console.error("Error creating notebook:", error);
-
-      try {
-        Alert.alert("Error", "No se pudo crear el cuaderno");
-      } catch (e) {
-        console.error("Alert no disponible, usando console:", e);
-        alert("Error: No se pudo crear el cuaderno");
-      }
-    }
-  };
-
-  const handleCancelCreate = () => {
-    console.log("Cerrando modal");
-    setNotebookTitle("");
-    setShowCreateDialog(false);
-  };
-
-  const handleAIOptionPress = (option) => {
-    console.log("Opción de IA seleccionada:", option);
-
-    // Verificar que hay cuadernos disponibles
-    if (noteBooks.length === 0) {
-      Alert.alert(
-        "Sin cuadernos",
-        "Debes crear un cuaderno primero antes de usar las funciones de IA"
-      );
-      return;
-    }
-
-    // Mostrar el selector de cuadernos
-    setShowNotebookSelector(true);
-  };
-
-  const handleNotebookSelect = (notebookId) => {
-    console.log("Cuaderno seleccionado:", notebookId);
-    setSelectedNotebookForAI(notebookId);
-    setShowNotebookSelector(false);
-    // Abrir el modal de opciones de IA con el cuaderno seleccionado
-    setTimeout(() => {
-      setShowAIModal(true);
-    }, 300);
-  };
-
-  const handleNotebookSelectorClose = () => {
-    setShowNotebookSelector(false);
-  };
-
-  const handleAIModalClose = (result) => {
-    console.log("Modal de IA cerrado con resultado:", result);
-    setShowAIModal(false);
-    setSelectedNotebookForAI(null);
-
-    // Si hay resultado, mostrarlo en el modal de resultados
-    if (result) {
-      console.log("Resultados de IA:", result);
-      setAiResults(result);
-      console.log("Resultados de IA seteados:", result.data.results[0]);
-      // Determinar el tipo de resultado
-      if (result.data.results[0].texto_extraido) {
-        setAiResultType("ocr");
-      } else if (result.data.results[0].preguntas) {
-        setAiResultType("study");
-      }
-
-      setShowResultsModal(true);
-    }
-  };
-
-  const handleResultsModalClose = () => {
-    setShowResultsModal(false);
-    setAiResults(null);
-    setAiResultType(null);
-  };
-
-  const [lastPngDataUrl, setLastPngDataUrl] = useState(null);
-
-  const renderNote = ({ item }) => (
-    <TouchableOpacity
-      style={styles.noteItem}
-      onPress={() =>
-        router.push({
-          pathname: "/(tabs)/notebookpages",
-          params: { notebookId: item.id },
-        })
-      }
-      onLongPress={() => {
-        // Al mantener presionado, seleccionar para IA
-        setSelectedNotebookForAI(item.id);
-        setShowAIModal(true);
-      }}
-    >
-      {/* <Image source={{ uri: item.data }} style={styles.notePreview} /> */}
-      <AuraText
-        text={item.title}
-        style={{ fontWeight: "bold", textAlign: "center" }}
-      />
-      <AuraText
-        style={styles.noteDate}
-        text={new Date(item.created_at).toLocaleDateString()}
-      />
-    </TouchableOpacity>
-  );
 
   if (showCanvas) {
     return (
@@ -305,485 +61,44 @@ const NotebookScreen = () => {
     );
   }
 
-  if (isLargeScreen) {
-    return (
-      <View style={responsiveStyles.landscapeContainer}>
-        <Image
-          source={require("../../assets/images/fondonotas.png")}
-          style={responsiveStyles.landscapeImage}
-          resizeMode="contain"
-          pointerEvents="none"
-        />
-
-        <View style={responsiveStyles.contentWrapper}>
-          <View style={responsiveStyles.header}>
-            <AuraText text={"Mis Cuadernos"} style={responsiveStyles.title} />
-            <View style={responsiveStyles.headerButtons}>
-              <TouchableOpacity
-                style={responsiveStyles.createNotebookButton}
-                onPress={() => {
-                  console.log("Abriendo modal crear cuaderno");
-                  setShowCreateDialog(true);
-                }}
-              >
-                <Ionicons name="add-circle" size={20} color="#fff" />
-                <AuraText
-                  text={"Crear Cuaderno"}
-                  style={responsiveStyles.createButtonText}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={responsiveStyles.newNoteButton}
-                onPress={() => setShowCanvas(true)}
-              >
-                <AuraText
-                  text={"+ Nueva Nota"}
-                  style={responsiveStyles.newNoteText}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <FlatList
-            data={noteBooks}
-            renderItem={renderNote}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            contentContainerStyle={responsiveStyles.notesList}
-            showsVerticalScrollIndicator={false}
-          />
-
-          {/* Add the share button here */}
-          <TouchableOpacity
-            style={styles.floatingHelpButton}
-            onPress={handleShare}
-          >
-            <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 24 }}>
-              ⇪
-            </Text>
-          </TouchableOpacity>
-
-          <FloatingAIMenu onAIOptionPress={handleAIOptionPress} />
-        </View>
-
-        {/* Modal de Selección de Cuaderno */}
-        <NotebookSelectorModal
-          visible={showNotebookSelector}
-          onClose={handleNotebookSelectorClose}
-          notebooks={noteBooks}
-          onSelectNotebook={handleNotebookSelect}
-        />
-
-        {/* Modal de IA */}
-        <AIOptionsModal
-          visible={showAIModal}
-          onClose={handleAIModalClose}
-          notebookId={selectedNotebookForAI}
-        />
-
-        {/* Modal de Resultados de IA */}
-        <AIResultsModal
-          visible={showResultsModal}
-          onClose={handleResultsModalClose}
-          results={aiResults}
-          type={aiResultType}
-        />
-
-        {/* Modal para crear cuaderno - Layout Landscape */}
-        <Modal
-          visible={showCreateDialog}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={handleCancelCreate}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Crear Nuevo Cuaderno</Text>
-
-              <TextInput
-                style={styles.titleInput}
-                placeholder="Título del cuaderno"
-                value={notebookTitle}
-                onChangeText={setNotebookTitle}
-                autoFocus
-                maxLength={50}
-              />
-
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={handleCancelCreate}
-                >
-                  <Text style={styles.cancelButtonText}>Cancelar</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.createButton]}
-                  onPress={handleCreateNotebook}
-                >
-                  <Text style={styles.createButtonText}>Crear</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      </View>
-    );
-  }
-
-  // Portrait / mobile layout
   return (
-    <View style={styles.container}>
-      <Image
-        source={require("../../assets/images/fondonotas.png")}
-        style={styles.backgroundImage}
-        resizeMode="contain"
-        pointerEvents="none"
-      />
-      <View style={styles.header}>
-        <AuraText text={"Mis Cuadernos"} style={styles.title} />
-        <View style={styles.headerButtons}>
-          <TouchableOpacity
-            style={styles.createNotebookButton}
-            onPress={() => {
-              console.log("Abriendo modal crear cuaderno - Portrait");
-              setShowCreateDialog(true);
-            }}
-          >
-            <Ionicons name="add-circle" size={16} color="#fff" />
-            <AuraText text={"Crear"} style={styles.createButtonText} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.newNoteButton}
-            onPress={() => setShowCanvas(true)}
-          >
-            <AuraText text={"+ Nota"} style={styles.newNoteText} />
-          </TouchableOpacity>
-        </View>
-      </View>
-      <FlatList
-        data={noteBooks}
-        renderItem={renderNote}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        contentContainerStyle={styles.notesList}
-        showsVerticalScrollIndicator={false}
-      />
-      <TouchableOpacity style={styles.floatingHelpButton} onPress={handleShare}>
-        <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 24 }}>
-          ⇪
-        </Text>
-      </TouchableOpacity>
-      <FloatingAIMenu onAIOptionPress={handleAIOptionPress} />
-
-      {/* Modal de Selección de Cuaderno */}
-      <NotebookSelectorModal
-        visible={showNotebookSelector}
-        onClose={handleNotebookSelectorClose}
+    <>
+      <NotebookListView
         notebooks={noteBooks}
-        onSelectNotebook={handleNotebookSelect}
+        isLargeScreen={isLargeScreen}
+        onNotebookPress={handleNotebookPress}
+        onNotebookLongPress={handleNotebookLongPress}
+        onCreatePress={() => setShowCreateDialog(true)}
+        onNewNotePress={() => setShowCanvas(true)}
+        onAIOptionPress={() => handleAIOptionPress(noteBooks)}
+        lastPngDataUrl={lastPngDataUrl}
       />
 
-      {/* Modal de IA */}
-      <AIOptionsModal
-        visible={showAIModal}
-        onClose={handleAIModalClose}
-        notebookId={selectedNotebookForAI}
-      />
-
-      {/* Modal de Resultados de IA */}
-      <AIResultsModal
-        visible={showResultsModal}
-        onClose={handleResultsModalClose}
-        results={aiResults}
-        type={aiResultType}
-      />
-
-      {/* Modal para crear cuaderno */}
-      <Modal
+      <CreateNotebookModal
         visible={showCreateDialog}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={handleCancelCreate}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Crear Nuevo Cuaderno</Text>
+        title={notebookTitle}
+        onTitleChange={setNotebookTitle}
+        onCreate={handleCreateNotebook}
+        onCancel={handleCancelCreate}
+      />
 
-            <TextInput
-              style={styles.titleInput}
-              placeholder="Título del cuaderno"
-              value={notebookTitle}
-              onChangeText={setNotebookTitle}
-              autoFocus
-              maxLength={50}
-            />
+      <NotebookAIModals
+        showNotebookSelector={showNotebookSelector}
+        showAIModal={showAIModal}
+        showResultsModal={showResultsModal}
+        notebooks={noteBooks}
+        selectedNotebookForAI={selectedNotebookForAI}
+        aiResults={aiResults}
+        aiResultType={aiResultType}
+        onNotebookSelectorClose={handleNotebookSelectorClose}
+        onNotebookSelect={handleNotebookSelect}
+        onAIModalClose={handleAIModalClose}
+        onResultsModalClose={handleResultsModalClose}
+      />
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={handleCancelCreate}
-              >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalButton, styles.createButton]}
-                onPress={handleCreateNotebook}
-              >
-                <Text style={styles.createButtonText}>Crear</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
       <Toast />
-    </View>
+    </>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#E6E2D2",
-    position: "relative",
-  },
-  backgroundImage: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    zIndex: 0,
-    transform: [{ rotate: "-45deg" }, { scale: 1.5 }],
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    marginTop: 48,
-    marginLeft: 24,
-    marginRight: 24,
-    backgroundColor: "transparent",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e9ecef",
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: "#CB8D27",
-  },
-  headerButtons: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  createNotebookButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#28a745",
-    borderRadius: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  createButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  newNoteButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: "#007bff",
-    borderRadius: 6,
-  },
-  newNoteText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  notesList: {
-    padding: 16,
-  },
-  noteItem: {
-    flex: 1,
-    margin: 8,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  notePreview: {
-    width: "100%",
-    height: 120,
-    borderRadius: 4,
-    backgroundColor: "#f8f9fa",
-  },
-  floatingHelpButton: {
-    position: "absolute",
-    bottom: 90, // Just above the AI menu
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#28a745",
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    zIndex: 100,
-  },
-  noteDate: {
-    marginTop: 8,
-    fontSize: 12,
-    color: "#6c757d",
-    textAlign: "center",
-  },
-  // Estilos del modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 24,
-    width: "90%",
-    maxWidth: 400,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  titleInput: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 20,
-    backgroundColor: "#f8f9fa",
-  },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  cancelButton: {
-    backgroundColor: "#6c757d",
-  },
-  cancelButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  createButton: {
-    backgroundColor: "#28a745",
-  },
-});
-
-const responsiveStyles = StyleSheet.create({
-  landscapeContainer: {
-    flex: 1,
-    backgroundColor: "#E6E2D2",
-    alignItems: "center",
-  },
-  landscapeImage: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "90%",
-    height: "100%",
-    marginLeft: "5%",
-    zIndex: 0,
-  },
-  rightSide: {
-    flex: 1,
-    padding: 40,
-    alignItems: "center",
-    backgroundColor: "transparent",
-    width: "100%",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    marginTop: 24,
-    marginLeft: 24,
-    marginRight: 24,
-    backgroundColor: "transparent",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e9ecef",
-    width: "100%",
-  },
-  headerButtons: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  createNotebookButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#28a745",
-    borderRadius: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  createButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  title: {
-    fontSize: 48,
-    fontWeight: "bold",
-    color: "#CB8D27",
-  },
-  newNoteButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: "#007bff",
-    borderRadius: 6,
-  },
-  newNoteText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  notesList: {
-    padding: 16,
-    width: "100%",
-  },
-  contentWrapper: {
-    width: "90%",
-    marginLeft: "5%",
-    marginRight: "5%",
-    flex: 1,
-  },
-});
 
 export default NotebookScreen;
