@@ -202,7 +202,7 @@ export const AuthProvider = ({ children }) => {
 
       const endpoint = isWeb()
         ? API.ENDPOINTS.AUTH.LOGIN_WEB
-        : API.ENDPOINTS.AUTH.LOGIN_MOBILE;
+        : API.ENDPOINTS.AUTH.LOGIN;
 
       console.log("Using endpoint:", endpoint);
 
