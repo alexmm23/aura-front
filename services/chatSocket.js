@@ -1,5 +1,6 @@
 import io from 'socket.io-client';
 import { CONFIG } from '../config/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 class ChatSocketService {
     constructor() {
