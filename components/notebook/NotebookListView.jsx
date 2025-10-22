@@ -1,10 +1,17 @@
-import React from 'react';
-import { View, Image, FlatList, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { NotebookItem } from './NotebookItem';
-import { NotebookHeader } from './NotebookHeader';
-import FloatingAIMenu from '@/components/FloatingAIMenu';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
+import React from "react";
+import {
+  View,
+  Image,
+  FlatList,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+} from "react-native";
+import { NotebookItem } from "./NotebookItem";
+import { NotebookHeader } from "./NotebookHeader";
+import FloatingAIMenu from "@/components/FloatingAIMenu";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 
 export const NotebookListView = ({
   notebooks,
@@ -21,13 +28,13 @@ export const NotebookListView = ({
     try {
       const dataUrl = lastPngDataUrl;
       if (!dataUrl) {
-        alert('No hay notas para compartir.');
+        alert("No hay notas para compartir.");
         return;
       }
 
       const filename = `nota-${Date.now()}.png`;
       const path = `${FileSystem.documentDirectory}${filename}`;
-      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
+      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
 
       await FileSystem.writeAsStringAsync(path, base64Data, {
         encoding: FileSystem.EncodingType.Base64,
@@ -35,30 +42,28 @@ export const NotebookListView = ({
 
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(path, {
-          mimeType: 'image/png',
-          dialogTitle: 'Compartir nota',
+          mimeType: "image/png",
+          dialogTitle: "Compartir nota",
         });
       } else {
-        alert('La función de compartir no está disponible en este dispositivo');
+        alert("La función de compartir no está disponible en este dispositivo");
       }
     } catch (error) {
-      console.error('Error al compartir:', error);
-      alert('Error al compartir nota: ' + error.message);
+      console.error("Error al compartir:", error);
+      alert("Error al compartir nota: " + error.message);
     }
   };
 
-  const containerStyle = isLargeScreen 
-    ? styles.landscapeContainer 
+  const containerStyle = isLargeScreen
+    ? styles.landscapeContainer
     : styles.container;
 
-  const contentWrapperStyle = isLargeScreen 
-    ? styles.contentWrapper 
-    : null;
+  const contentWrapperStyle = isLargeScreen ? styles.contentWrapper : null;
 
   return (
     <View style={containerStyle}>
       <Image
-        source={require('@/assets/images/fondonotas.png')}
+        source={require("@/assets/images/fondonotas.png")}
         style={isLargeScreen ? styles.landscapeImage : styles.backgroundImage}
         resizeMode="contain"
         pointerEvents="none"
@@ -72,7 +77,7 @@ export const NotebookListView = ({
         />
 
         <FlatList
-          key={isLargeScreen ? 'large-6' : 'small-3'}
+          key={isLargeScreen ? "large-6" : "small-3"}
           data={notebooks}
           renderItem={({ item }) => (
             <NotebookItem
@@ -88,8 +93,8 @@ export const NotebookListView = ({
           columnWrapperStyle={styles.columnWrapper}
         />
 
-        <TouchableOpacity 
-          style={styles.floatingHelpButton} 
+        <TouchableOpacity
+          style={styles.floatingHelpButton}
           onPress={handleShare}
         >
           <Text style={styles.shareButtonText}>⇪</Text>
@@ -104,34 +109,34 @@ export const NotebookListView = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E6E2D2',
-    position: 'relative',
+    backgroundColor: "#E6E2D2",
+    position: "relative",
   },
   landscapeContainer: {
     flex: 1,
-    backgroundColor: '#E6E2D2',
-    alignItems: 'center',
+    backgroundColor: "#E6E2D2",
+    alignItems: "center",
   },
   backgroundImage: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
     zIndex: 0,
-    transform: [{ rotate: '-45deg' }, { scale: 1.5 }],
+    transform: [{ rotate: "-45deg" }, { scale: 1.5 }],
   },
   landscapeImage: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
-    width: '90%',
-    height: '100%',
-    marginLeft: '5%',
+    width: "90%",
+    height: "100%",
+    marginLeft: "5%",
     zIndex: 0,
   },
   contentWrapper: {
-    width: '100%',
+    width: "100%",
     flex: 1,
   },
   notesList: {
@@ -139,30 +144,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   columnWrapper: {
-    justifyContent: 'space-evenly',
+    justifyContent: "space-evenly",
     gap: 8,
     paddingHorizontal: 8,
   },
   floatingHelpButton: {
-    position: 'absolute',
-    bottom: 90,
-    right: 24,
+    position: "absolute",
+    bottom: 20,
+    right: 100,
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#28a745',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#28a745",
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    zIndex: 100,
+    zIndex: 9998,
   },
   shareButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
     fontSize: 24,
   },
 });

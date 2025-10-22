@@ -100,7 +100,7 @@ export default function FloatingAIMenu({ onAIOptionPress }) {
   };
 
   return (
-    <View style={{ position: "absolute", bottom: 0, right: 0, zIndex: 1000 }}>
+    <View style={{ position: "absolute", bottom: 20, right: 20, zIndex: 9999 }}>
       {/* Backdrop transparente para cerrar el menú */}
       {menuVisible && Platform.OS === "web" && (
         <TouchableOpacity
@@ -111,7 +111,7 @@ export default function FloatingAIMenu({ onAIOptionPress }) {
             right: 0,
             bottom: 0,
             backgroundColor: "transparent",
-            zIndex: 998,
+            zIndex: 9998,
           }}
           onPress={handleBackdropPress}
           activeOpacity={1}
@@ -124,7 +124,7 @@ export default function FloatingAIMenu({ onAIOptionPress }) {
           style={{
             position: "absolute",
             bottom: 80,
-            right: 20,
+            right: 0,
             backgroundColor: "#fff",
             borderRadius: 12,
             padding: 8,
@@ -135,7 +135,7 @@ export default function FloatingAIMenu({ onAIOptionPress }) {
             shadowOffset: { width: 0, height: 4 },
             minWidth: 200,
             maxWidth: 250,
-            zIndex: 999,
+            zIndex: 9999,
             borderWidth: 1,
             borderColor: "#e0e0e0",
           }}
@@ -157,7 +157,6 @@ export default function FloatingAIMenu({ onAIOptionPress }) {
           width: 60,
           height: 60,
           borderRadius: 30,
-          margin: 20,
           justifyContent: "center",
           alignItems: "center",
           elevation: 8,
@@ -165,7 +164,7 @@ export default function FloatingAIMenu({ onAIOptionPress }) {
           shadowOpacity: 0.3,
           shadowRadius: 6,
           shadowOffset: { width: 0, height: 3 },
-          zIndex: 1000,
+          zIndex: 9999,
         }}
         onPress={handleMenuClick}
         activeOpacity={0.8}
