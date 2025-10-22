@@ -37,6 +37,7 @@ module.exports = {
       bundleIdentifier: "com.alexmm23.aurafront"
     },
     android: {
+      versionCode: 2, // <-- INCREMENTA este número en cada build nueva
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff"
