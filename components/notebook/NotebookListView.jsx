@@ -92,16 +92,14 @@ export const NotebookListView = ({
           showsVerticalScrollIndicator={false}
           columnWrapperStyle={styles.columnWrapper}
         />
-
-        <TouchableOpacity
-          style={styles.floatingHelpButton}
-          onPress={handleShare}
-        >
-          <Text style={styles.shareButtonText}>⇪</Text>
-        </TouchableOpacity>
-
-        <FloatingAIMenu onAIOptionPress={onAIOptionPress} />
       </View>
+
+      {/* Botones flotantes fijos en la parte inferior derecha */}
+      <TouchableOpacity style={styles.floatingHelpButton} onPress={handleShare}>
+        <Text style={styles.shareButtonText}>⇪</Text>
+      </TouchableOpacity>
+
+      <FloatingAIMenu onAIOptionPress={onAIOptionPress} />
     </View>
   );
 };
