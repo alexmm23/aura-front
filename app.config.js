@@ -6,11 +6,11 @@ const getEnvironment = () => {
     name: isProduction ? "AURA" : "AURA Dev",
     apiUrl: customApiUrl || (isProduction
       ? "https://back.aurapp.com.mx/api"
-      : "http://localhost:3000/api"),
+      : "https://back.aurapp.com.mx/api"),
     environment: isProduction ? 'production' : 'development',
     webUrl: isProduction 
-      ? "https://aurapp.com.mx" 
-      : "http://localhost:3000"
+      ? "https://my.aurapp.com.mx" 
+      : "https://my.aurapp.com.mx"
   };
 };
 
@@ -22,7 +22,7 @@ module.exports = {
     name: env.name,
     slug: "aura-front",
     owner: "alexmm23",
-    version: "1.3.0",
+    version: "1.4.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "aura", // ✅ Cambiado de "myapp" a "aura" para consistencia
@@ -92,7 +92,7 @@ module.exports = {
         "expo-splash-screen",
         {
           image: "./assets/images/splash-icon.png",
-          imageWidth: 200,
+          imageWidth: 500,
           resizeMode: "contain",
           backgroundColor: "#ffffff"
         }
