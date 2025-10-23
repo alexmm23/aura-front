@@ -9,7 +9,9 @@ import {
   Platform,
   useWindowDimensions,
   Alert,
+  KeyboardAvoidingView, 
 } from "react-native";
+import { SafeAreaView as SafeAreaViewContext } from "react-native-safe-area-context"; // ← AGREGAR
 import { API, buildApiUrl } from "@/config/api";
 import Svg, { Path } from "react-native-svg";
 import { StatusBar } from "expo-status-bar";
@@ -17,17 +19,14 @@ import { Colors } from "@/constants/Colors";
 import FormRegister from "@/components/FormRegister";
 import { useRouter } from "expo-router";
 import { AuraText } from "@/components/AuraText";
-import Toast from "react-native-toast-message"; // Para mostrar mensajes de error
+import Toast from "react-native-toast-message";
 
 export default function Register() {
-  const Container = Platform.OS === "web" ? ScrollView : SafeAreaView;
   const { height, width } = useWindowDimensions();
-
   const isLargeScreen = width >= 928;
   const isLandscape = width > height;
 
   const router = useRouter();
-  // const { login } = useAuth();
   const colors = Colors.light;
   const styles = createStyles(colors, isLandscape);
 
@@ -37,7 +36,7 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "2", // Estudiante por defecto
+    role: "2",
   });
 
   const [errors, setErrors] = useState({});
@@ -127,64 +126,81 @@ export default function Register() {
     }
   };
 
+  const ContainerComponent = Platform.OS === "web" ? View : SafeAreaViewContext;
+  const containerProps = Platform.OS === "web" ? {} : { edges: [] };
+
   return (
-    <Container contentContainerStyle={styles.container}>
-      <StatusBar style="light" />
+    <ContainerComponent style={styles.container} {...containerProps}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 10}}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={true}
+          keyboardShouldPersistTaps="handled"
+        >
+          <StatusBar style="light" />
 
-      {isLandscape ? (
-        <View style={localStyles.landscapeContainer}>
-          {/* Lado Izquierdo con Imagen */}
-          <View style={localStyles.leftSide}>
-            <Svg
-              width="100%"
-              height="50%"
-              viewBox="0 0 500 500"
-              preserveAspectRatio="xMidYMid meet"
-              style={localStyles.svgBackground}
-            >
-              <Path
-                d="M419 42C51.0001 115 326.5 164.5 163 305.5C79.5 368 -15 408.336 -15 315C-15 221.664 -246.583 -43 -148 -43C-49.4172 -43 419 -51.3361 419 42Z"
-                fill="#7752CC"
-              />
-            </Svg>
-            <Image
-              source={require("../../assets/images/books-illustration.png")}
-              style={localStyles.image}
-              resizeMode="contain"
-            />
-          </View>
+          {isLandscape ? (
+            <View style={localStyles.landscapeContainer}>
+              {/* Lado Izquierdo con Imagen */}
+              <View style={localStyles.leftSide}>
+                <Svg
+                  width="100%"
+                  height="50%"
+                  viewBox="0 0 500 500"
+                  preserveAspectRatio="xMidYMid meet"
+                  style={localStyles.svgBackground}
+                >
+                  <Path
+                    d="M419 42C51.0001 115 326.5 164.5 163 305.5C79.5 368 -15 408.336 -15 315C-15 221.664 -246.583 -43 -148 -43C-49.4172 -43 419 -51.3361 419 42Z"
+                    fill="#7752CC"
+                  />
+                </Svg>
+                <Image
+                  source={require("../../assets/images/books-illustration.png")}
+                  style={localStyles.image}
+                  resizeMode="contain"
+                />
+              </View>
 
-          {/* Lado Derecho con Formulario */}
-          <View style={localStyles.rightSide}>
-            <View style={styles.cardLandscape}>
-              <AuraText style={styles.title} text="Registrate" />
-              <FormRegister
-                formData={formData}
-                setFormData={setFormData}
-                errors={errors}
-                handleSubmit={handleSubmit}
-                isSubmitting={isSubmitting}
-              />
+              {/* Lado Derecho con Formulario */}
+              <View style={localStyles.rightSide}>
+                <View style={styles.cardLandscape}>
+                  <AuraText style={styles.title} text="Registrate" />
+                  <FormRegister
+                    formData={formData}
+                    setFormData={setFormData}
+                    errors={errors}
+                    handleSubmit={handleSubmit}
+                    isSubmitting={isSubmitting}
+                  />
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
-      ) : (
-        <>
-          <PortraitHeader colors={colors} styles={styles} />
-          <View style={styles.card}>
-            <AuraText style={styles.title} text="Registrate" />
-            <FormRegister
-              formData={formData}
-              setFormData={setFormData}
-              errors={errors}
-              handleSubmit={handleSubmit}
-              isSubmitting={isSubmitting}
-            />
-          </View>
-        </>
-      )}
+          ) : (
+            <>
+              <PortraitHeader colors={colors} styles={styles} />
+              <View style={styles.card}>
+                <AuraText style={styles.title} text="Registrate" />
+                <FormRegister
+                  formData={formData}
+                  setFormData={setFormData}
+                  errors={errors}
+                  handleSubmit={handleSubmit}
+                  isSubmitting={isSubmitting}
+                />
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+
       <Toast />
-    </Container>
+    </ContainerComponent>
   );
 }
 
@@ -214,8 +230,8 @@ const PortraitHeader = ({ colors, styles }) => (
 
 const createStyles = (theme, isLandscape) => {
   return StyleSheet.create({
-    container: {
-      flexGrow: 1,
+    container: { // ✨ ACTUALIZAR: agregar flex
+      flex: 1,
       backgroundColor: "#e4d7c2",
     },
     backgroundContainer: {
@@ -252,8 +268,7 @@ const createStyles = (theme, isLandscape) => {
       width: "90%",
       marginTop: 0,
       alignSelf: "center",
-      marginBottom: 50,
-      //maxWidth: 650,
+      marginBottom: 10,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,

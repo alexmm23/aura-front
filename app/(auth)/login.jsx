@@ -164,7 +164,7 @@ const createStyles = (theme, isLandscape) => {
     },
     buttonText: {
       fontWeight: "600",
-      fontSize: 20,
+      fontSize: 16,
       color: "#11181C",
     },
     linkContainer: {
