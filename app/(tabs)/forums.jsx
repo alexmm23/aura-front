@@ -19,7 +19,7 @@ import { API } from "@/config/api";
 import { AuraText } from "../../components/AuraText";
 import { apiGet, apiPost } from "../../utils/fetchWithAuth";
 import { ForumCard } from "../../components/forums/ForumCard";
-
+import Head from "expo-router/head";
 const ForumsScreen = () => {
   const router = useRouter();
   const [forums, setForums] = useState([]);
@@ -134,6 +134,19 @@ const ForumsScreen = () => {
   }
 
   return (
+    <>
+     <Head>
+            <title>Foros - AURA | Plataforma Educativa</title>
+            <meta
+              name="description"
+              content="Visualiza y gestiona todos los foros de discusión en un solo lugar. Participa en conversaciones relevantes y colabora con otros usuarios."
+            />
+            <meta
+              name="keywords"
+              content="foros, discusión, educación, AURA"
+            />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          </Head>
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -339,6 +352,7 @@ const ForumsScreen = () => {
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
+    </>
   );
 };
 
