@@ -20,6 +20,8 @@ import { CustomDateTimePicker } from '@/components/CustomDateTimePicker';
 import { API, buildApiUrl } from "@/config/api";
 import { Picker } from "@react-native-picker/picker";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
+import { CustomAlert } from '@/components/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
 
 const webNotificationService = {
   scheduledTimeouts: new Map(),
@@ -115,6 +117,9 @@ export default function Reminders() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
+  // Custom alert
+  const { alertConfig, showAlert, hideAlert } = useCustomAlert();
+
   // Load data
   const loadReminders = async () => {
     try {
@@ -184,7 +189,16 @@ export default function Reminders() {
   const saveReminder = async () => {
     try {
       if (!formData.title.trim()) {
-        Alert.alert('Error', 'El título es requerido');
+        if (Platform.OS === 'web') {
+          showAlert({
+            title: 'Campo requerido',
+            message: 'El título es requerido',
+            type: 'warning',
+            confirmText: 'Entendido'
+          });
+        } else {
+          Alert.alert('Error', 'El título es requerido');
+        }
         return;
       }
 
@@ -231,22 +245,37 @@ export default function Reminders() {
         });
 
         if (timeoutId) {
-          console.log('🔔 Notificación web programada');
+          console.log('Notificación web programada');
         }
       }
 
-      Alert.alert(
-        'Éxito', 
-        editingReminder ? 'Recordatorio actualizado' : 'Recordatorio creado' +
-        (Platform.OS === 'web' && formData.has_alarm ? '\n🔔 ¡Te notificaremos cuando llegue la hora!' : '')
-      );
+      if (Platform.OS === 'web') {
+        showAlert({
+          title: '¡Éxito!',
+          message: editingReminder ? 'Recordatorio actualizado correctamente' : 'Recordatorio creado correctamente',
+          type: 'success',
+          confirmText: 'Entendido'
+        });
+      } else {
+        Alert.alert('Éxito', editingReminder ? 'Recordatorio actualizado' : 'Recordatorio creado');
+      }
       
       closeModal();
       loadReminders();
       loadStatistics();
     } catch (error) {
       console.error('Error saving reminder:', error);
-      Alert.alert('Error', 'No se pudo guardar el recordatorio');
+      
+      if (Platform.OS === 'web') {
+        showAlert({
+          title: 'Error',
+          message: 'No se pudo guardar el recordatorio',
+          type: 'error',
+          confirmText: 'Entendido'
+        });
+      } else {
+        Alert.alert('Error', 'No se pudo guardar el recordatorio');
+      }
     }
   };
 
@@ -268,64 +297,98 @@ export default function Reminders() {
     });
     setShowModal(true);
   };
-
+//ELIMINAR RECORDATORIOS
   const deleteReminder = (id) => {
-    console.log('🗑️ Attempting to delete reminder:', id); // Para debugging
+    console.log('🗑️ Step 1: deleteReminder called with ID:', id);
+    console.log('🗑️ Type of ID:', typeof id);
     
-    Alert.alert(
-      'Confirmar eliminación',
-      '¿Estás seguro de que quieres eliminar este recordatorio?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('🔄 Starting delete process for reminder:', id);
-              
-              // Cancelar notificación web
-              if (Platform.OS === 'web') {
-                webNotificationService.cancelReminder(id);
-                console.log('🔔 Web notification cancelled for reminder:', id);
-              }
-
-              const deleteUrl = buildApiUrl(API.ENDPOINTS.REMINDERS.DELETE.replace(':id', id));
-              console.log('🌐 Delete URL:', deleteUrl);
-
-              const response = await fetchWithAuth(deleteUrl, {
-                method: "DELETE",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-              });
-
-              console.log('📡 Delete response status:', response.status);
-
-              if (!response.ok) {
-                const errorData = await response.json();
-                console.error('❌ Delete error response:', errorData);
-                throw new Error(`HTTP error! status: ${response.status}`);
-              }
-
-              const result = await response.json();
-              console.log('✅ Delete successful:', result);
-
-              Alert.alert('✅ Éxito', 'Recordatorio eliminado');
-              
-              // Recargar datos
-              await loadReminders();
-              await loadStatistics();
-              
-            } catch (error) {
-              console.error('❌ Error deleting reminder:', error);
-              Alert.alert('❌ Error', `No se pudo eliminar el recordatorio: ${error.message}`);
-            }
+    if (Platform.OS === 'web') {
+      // ✅ Para WEB: usar alerta personalizada
+      showAlert({
+        title: 'Confirmar eliminación',
+        message: '¿Estás seguro de que quieres eliminar este recordatorio?',
+        type: 'confirm',
+        showCancel: true,
+        confirmText: 'Eliminar',
+        cancelText: 'Cancelar',
+        onConfirm: () => executeDelete(id)
+      });
+    } else {
+      // Para MÓVIL: usar Alert.alert nativo
+      Alert.alert(
+        'Confirmar eliminación',
+        '¿Estás seguro de que quieres eliminar este recordatorio?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Eliminar',
+            style: 'destructive',
+            onPress: () => executeDelete(id)
           }
-        }
-      ]
-    );
+        ]
+      );
+    }
   };
+
+// ✅ NUEVA FUNCIÓN: Lógica de eliminación separada
+const executeDelete = async (id) => {
+  try {
+    console.log('🗑️ Step 2: User confirmed deletion');
+    
+    const endpoint = API.ENDPOINTS.REMINDERS.DELETE.replace(':id', id);
+    const deleteUrl = buildApiUrl(endpoint);
+
+    if (Platform.OS === 'web') {
+      if (webNotificationService.scheduledTimeouts.has(id)) {
+        clearTimeout(webNotificationService.scheduledTimeouts.get(id));
+        webNotificationService.scheduledTimeouts.delete(id);
+      }
+    }
+
+    const response = await fetchWithAuth(deleteUrl, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('✅ Delete response:', result);
+
+    setReminders(prevReminders => prevReminders.filter(r => r.id !== id));
+    await loadReminders();
+    await loadStatistics();
+
+    // ✅ Mostrar alerta de éxito bonita
+    if (Platform.OS === 'web') {
+      showAlert({
+        title: '¡Éxito!',
+        message: 'Recordatorio eliminado correctamente',
+        type: 'success',
+        confirmText: 'Entendido'
+      });
+    } else {
+      Alert.alert('✅ Éxito', 'Recordatorio eliminado correctamente');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error deleting reminder:', error);
+    
+    // ✅ Mostrar alerta de error bonita
+    if (Platform.OS === 'web') {
+      showAlert({
+        title: 'Error',
+        message: `No se pudo eliminar: ${error.message}`,
+        type: 'error',
+        confirmText: 'Entendido'
+      });
+    } else {
+      Alert.alert('❌ Error', `No se pudo eliminar: ${error.message}`);
+    }
+  }
+};
 
   const markAsSent = async (id) => {
     try {
@@ -352,7 +415,6 @@ export default function Reminders() {
     }
   };
 
-  // 📧 Función para enviar email manual
   const sendReminderEmail = async (reminderId) => {
     try {
       Alert.alert(
@@ -393,7 +455,6 @@ export default function Reminders() {
     }
   };
 
-  // 🔔 Función para próximos recordatorios
   const sendUpcomingNotification = async () => {
     try {
       const response = await fetchWithAuth(
@@ -562,10 +623,6 @@ export default function Reminders() {
                 style={isLandscape ? styles.titleLandscape : styles.title}
               />
               
-              {/* 🔔 AGREGAR ESTE BOTÓN */}
-              <TouchableOpacity onPress={sendUpcomingNotification}>
-                <Ionicons name="notifications-outline" size={24} color="#A44076" />
-              </TouchableOpacity>
             </View>
 
 
@@ -633,13 +690,6 @@ export default function Reminders() {
                     <View style={styles.reminderActions}>
                       {reminder.has_alarm && (
                         <Ionicons name="alarm-outline" size={20} color="#A44076" />
-                      )}
-                      
-                      {/* 📧 AGREGAR ESTE BOTÓN AQUÍ */}
-                      {reminder.status === 'pending' && (
-                        <TouchableOpacity onPress={() => sendReminderEmail(reminder.id)}>
-                          <Ionicons name="mail-outline" size={20} color="#A44076" />
-                        </TouchableOpacity>
                       )}
                       
                       <TouchableOpacity onPress={() => editReminder(reminder)}>
@@ -851,6 +901,19 @@ export default function Reminders() {
               />
             )}
           </Modal>
+
+          {/* ✅ AGREGAR el componente CustomAlert al final */}
+          <CustomAlert
+            visible={alertConfig.visible}
+            title={alertConfig.title}
+            message={alertConfig.message}
+            type={alertConfig.type}
+            onClose={hideAlert}
+            onConfirm={alertConfig.onConfirm}
+            confirmText={alertConfig.confirmText}
+            cancelText={alertConfig.cancelText}
+            showCancel={alertConfig.showCancel}
+          />
         </SafeAreaView>
       </SafeAreaProvider>
     </>
