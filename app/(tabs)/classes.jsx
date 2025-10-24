@@ -5,6 +5,8 @@ import {
   StyleSheet,
   useWindowDimensions,
   Image,
+  ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -16,145 +18,170 @@ import { Colors } from "@/constants/Colors";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiGet } from "../../utils/fetchWithAuth";
+import Toast from "react-native-toast-message";
+import { useRouter } from "expo-router";
 
 export default function HomeTeacher() {
-  const [homework, setHomework] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
   const { height, width } = useWindowDimensions();
   const colors = Colors.light;
   const isLandscape = width > height;
-  const fetchHomework = async () => {
+  const router = useRouter();
+
+  const fetchClasses = async () => {
     try {
-      const token = await AsyncStorage.getItem("userToken");
-      const response = await apiGet(API.ENDPOINTS.TEACHER.HOMEWORK);
+      setLoading(true);
+      const response = await apiGet(API.ENDPOINTS.STUDENT.COURSES);
+
       if (!response.ok) {
-        throw new Error("Network response was not ok");
+        const data = await response.json();
+
+        if (data.error === "No Google account linked") {
+          // Mostrar mensaje específico para cuenta no linkeada
+          // Toast.show({
+          //   type: "info",
+          //   text1: "Cuenta de Google no vinculada",
+          //   text2: "Vincula tu cuenta para ver tus clases",
+          // });
+          setClasses([]);
+          return;
+        }
+
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
       const data = await response.json();
-      console.log("Homework data:", data);
-      setHomework(data);
-      console.log(data);
+      console.log("Classes data:", data);
+      setClasses(data);
     } catch (error) {
-      console.error("Error fetching homework:", error);
+      console.error("Error fetching classes:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error al cargar clases",
+        text2: "No se pudieron cargar tus clases",
+      });
+    } finally {
+      setLoading(false);
     }
   };
+
   useEffect(() => {
-    fetchHomework();
+    fetchClasses();
   }, []);
 
   return (
     <>
       <Head>
-        <title>Inicio - AURA </title>
+        <title>Mis Clases - AURA | Plataforma Educativa</title>
+        <meta
+          name="description"
+          content="Visualiza y gestiona todas tus clases de Google Classroom y Microsoft Teams en un solo lugar. Accede fácilmente a tus cursos académicos."
+        />
+        <meta
+          name="keywords"
+          content="clases, cursos, educación, Google Classroom, Microsoft Teams, AURA"
+        />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
       <SafeAreaProvider>
         <SafeAreaView style={styles.container} edges={["right", "left", "top"]}>
-          {/* Header con SVG */}
-          {isLandscape ? (
-            <LandscapeHeader colors={colors} styles={styles} />
-          ) : (
-            <PortraitHeader colors={colors} styles={styles} />
-          )}
-
-          {/* Título responsive */}
-          <View style={styles.contentWrapper}>
-            <View style={styles.headerTitle}>
-              <AuraText
-                text={"Mis Clases"}
-                style={
-                  isLandscape ? styles.titleLandscape : styles.title
-                }
-              />
-            </View>
-          </View>
-
-          {/* Contenido scrollable */}
           <ScrollView
-            contentContainerStyle={styles.contentContainer}
             style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={true}
           >
-            {/* Card de clase */}
-            <View style={styles.classCard}>
-                <View style={styles.classContent}>
-                    <Text style={styles.className}>Informática Forense</Text>
-                    {/* Línea divisoria gris */}
-                        <View style={styles.divider} />
-                    <View style={styles.classInfo}>
-                    <Text style={styles.classPeriod}>Febrero-Junio 2025</Text>
-                    <Text style={styles.teacherName}>Dr. Jose López</Text>
-                    </View>
-                </View>
-                <Image 
-                    source={require("../../assets/images/classroom.png")}
-                    style={styles.platformIcon}
+            {/* Header con SVG */}
+            {isLandscape ? (
+              <LandscapeHeader colors={colors} styles={styles} />
+            ) : (
+              <PortraitHeader colors={colors} styles={styles} />
+            )}
+
+            {/* Título responsive */}
+            <View style={styles.contentWrapper}>
+              <View style={styles.headerTitle}>
+                <AuraText
+                  text={"Mis Clases"}
+                  style={isLandscape ? styles.titleLandscape : styles.title}
                 />
+              </View>
             </View>
 
-            <View style={styles.classCard}>
-                <View style={styles.classContent}>
-                    <Text style={styles.className}>Hacking Ético</Text>
-                    {/* Línea divisoria gris */}
-                        <View style={styles.divider} />
-                    <View style={styles.classInfo}>
-                    <Text style={styles.classPeriod}>Febrero-Junio 2025</Text>
-                    <Text style={styles.teacherName}>Dr. Jose López</Text>
-                    </View>
+            {/* Contenido */}
+            <View style={styles.contentContainer}>
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#CB8D27" />
+                  <Text style={styles.loadingText}>Cargando clases...</Text>
                 </View>
-                <Image 
-                    source={require("../../assets/images/teams.png")}
-                    style={styles.platformIcon}
-                />
-            </View>
-
-
-            <View style={styles.classCard}>
-                <View style={styles.classContent}>
-                    <Text style={styles.className}>Ingles</Text>
-                        {/* Línea divisoria gris */}
-                        <View style={styles.divider} />
-                    <View style={styles.classInfo}>
-                    <Text style={styles.classPeriod}>Febrero-Junio 2025</Text>
-                    <Text style={styles.teacherName}>Dr. Jose López</Text>
-                    </View>
+              ) : classes.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="school-outline" size={80} color="#ccc" />
+                  <Text style={styles.emptyText}>
+                    No tienes clases registradas
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.connectButton}
+                    onPress={() => router.push("/(tabs)/profile")}
+                  >
+                    <Ionicons
+                      name="logo-google"
+                      size={24}
+                      color="#fff"
+                      style={styles.buttonIcon}
+                    />
+                    <Text style={styles.connectButtonText}>
+                      Conectar Google Classroom
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-                <Image 
-                    source={require("../../assets/images/classroom.png")}
-                    style={styles.platformIcon}
-                />
-            </View>
-
-            <View style={styles.classCard}>
-                <View style={styles.classContent}>
-                    <Text style={styles.className}>Calculo diferencial</Text>
-                    {/* Línea divisoria gris */}
+              ) : (
+                <View style={styles.classesGrid}>
+                  {classes.map((classItem) => (
+                    <View
+                      key={classItem.id}
+                      style={[
+                        styles.classCard,
+                        width >= 1200
+                          ? styles.classCardLarge
+                          : width >= 768
+                          ? styles.classCardMedium
+                          : styles.classCardSmall,
+                      ]}
+                    >
+                      <View style={styles.classContent}>
+                        <Text style={styles.className}>
+                          {classItem.name || "Sin nombre"}
+                        </Text>
                         <View style={styles.divider} />
-                    <View style={styles.classInfo}>
-                    <Text style={styles.classPeriod}>Febrero-Junio 2025</Text>
-                    <Text style={styles.teacherName}>Dr. Jose López</Text>
+                        <View style={styles.classInfo}>
+                          <Text style={styles.classPeriod}>
+                            {classItem.descriptionHeading || "Sin período"}
+                          </Text>
+                          <Text style={styles.teacherName}>
+                            {classItem.teacher ||
+                              classItem.ownerId ||
+                              "Sin profesor"}
+                          </Text>
+                        </View>
+                      </View>
+                      <Image
+                        source={
+                          classItem.platform === "teams" ||
+                          classItem.source === "teams"
+                            ? require("../../assets/images/teams.png")
+                            : require("../../assets/images/classroom.png")
+                        }
+                        style={styles.platformIcon}
+                      />
                     </View>
+                  ))}
                 </View>
-                <Image 
-                    source={require("../../assets/images/classroom.png")}
-                    style={styles.platformIcon}
-                />
-            </View>
-
-            <View style={styles.classCard}>
-                <View style={styles.classContent}>
-                    <Text style={styles.className}>Informática Forense</Text>
-                    {/* Línea divisoria gris */}
-                        <View style={styles.divider} />
-                    <View style={styles.classInfo}>
-                    <Text style={styles.classPeriod}>Febrero-Junio 2025</Text>
-                    <Text style={styles.teacherName}>Dr. Jose López</Text>
-                    </View>
-                </View>
-                <Image 
-                    source={require("../../assets/images/teams.png")}
-                    style={styles.platformIcon}
-                />
+              )}
             </View>
           </ScrollView>
+          <Toast />
         </SafeAreaView>
       </SafeAreaProvider>
     </>
@@ -206,11 +233,48 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    marginTop: 10, // Añadir algo de margen para separar del header
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   contentContainer: {
-    padding: 300,
-    paddingTop: 50, // Reducido de 120 para ajustar al nuevo tamaño del header
+    padding: 20,
+    paddingTop: 20,
+    paddingBottom: 100,
+  },
+  classesGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+    alignItems: "flex-start",
+    gap: 16,
+  },
+  classCard: {
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  // 3 columnas en pantallas grandes (>= 1200px)
+  classCardLarge: {
+    width: "31.5%",
+    minWidth: 300,
+  },
+  // 2 columnas en pantallas medianas (768px - 1199px)
+  classCardMedium: {
+    width: "48%",
+    minWidth: 280,
+  },
+  // 1 columna en pantallas pequeñas (< 768px)
+  classCardSmall: {
+    width: "100%",
   },
   card: {
     width: "100%",
@@ -321,9 +385,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     //marginRight:250,
     top: 0,
-    right: 0,        // Cambiado de left a right
-    width: "80%",    // Ancho relativo
-    height: "90%",   // Alto relativo
+    right: 0, // Cambiado de left a right
+    width: "80%", // Ancho relativo
+    height: "90%", // Alto relativo
     zIndex: 0,
     overflow: "hidden",
   },
@@ -366,25 +430,10 @@ const styles = StyleSheet.create({
     textAlign: "left",
     marginLeft: 200, // Más margen en modo landscape
   },
-  classCard: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-
-    flexDirection: "row", // pone los elementos en fila
-    justifyContent: "space-between", // separa texto e imagen
-    alignItems: "center", // alinea verticalmente
-  },
   classContent: {
     flex: 1, // ocupa el espacio restante
     paddingRight: 10, // espacio entre texto e imagen (opcional)
-    },
+  },
   className: {
     fontSize: 18,
     fontWeight: "bold",
@@ -408,14 +457,66 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   platformIcon: {
-  width: 60,
-  height: 60,
-  resizeMode: "contain",
-},
-divider: {
-  height: 1,
-  backgroundColor: "#ccc", // gris claro
-  marginVertical: 3, // espacio arriba y abajo de la línea
-},
-
+    width: 60,
+    height: 60,
+    resizeMode: "contain",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#ccc", // gris claro
+    marginVertical: 3, // espacio arriba y abajo de la línea
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 100,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#666",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 100,
+    paddingHorizontal: 40,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#999",
+    marginTop: 20,
+    textAlign: "center",
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: "#aaa",
+    marginTop: 10,
+    textAlign: "center",
+  },
+  connectButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#4285F4",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  buttonIcon: {
+    marginRight: 10,
+  },
+  connectButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });
