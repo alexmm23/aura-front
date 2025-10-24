@@ -27,13 +27,6 @@ export default function Index() {
     );
   }, [isLoading, isAuthenticated, user]);
 
-  // SIMPLIFICADO: No hacer redirecciones automáticas aquí
-  // El AppNavigator ya maneja el estado de autenticación correctamente
-
-  // Solo mostrar una pantalla simple de bienvenida o redirigir manualmente si es necesario
-  // console.log('📍 INDEX PAGE - Auth state:', { isAuthenticated, isLoading, user: user?.email });
-
-  // Renderizamos una pantalla de carga mientras se verifica el estado de autenticación
   return (
     <Container style={{ flex: 1, marginHorizontal: 0, marginVertical: "auto" }}>
       <View
@@ -50,7 +43,7 @@ export default function Index() {
             <Text style={{ marginTop: 16, textAlign: "center" }}>
               Cargando...
             </Text>
-            <Text
+            {/* <Text
               style={{
                 marginTop: 8,
                 fontSize: 12,
@@ -59,7 +52,7 @@ export default function Index() {
               }}
             >
               {debugInfo}
-            </Text>
+            </Text> */}
           </>
         ) : (
           <>

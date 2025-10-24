@@ -54,6 +54,14 @@ export const AuthProvider = ({ children }) => {
     // Verificar si estamos en una ruta protegida para preservarla
     const currentPath =
       typeof window !== "undefined" ? window.location.pathname : "";
+    
+    // Si estamos en reset-password, no hacer verificación de auth
+    if (currentPath === "/reset-password" || currentPath.includes("reset-password")) {
+      console.log("🔐 AuthContext - Skipping auth check for reset-password route");
+      setIsLoading(false);
+      return;
+    }
+    
     const isProtectedRoute =
       currentPath.startsWith("/(tabs") ||
       currentPath.includes("/classes") ||

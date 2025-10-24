@@ -9,6 +9,7 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   console.log("RootLayout rendered");
+  
   const [fontsLoaded] = useFonts({
     "fredoka-regular": require("../assets/fonts/Fredoka-Regular.ttf"),
     "fredoka-bold": require("../assets/fonts/Fredoka-Bold.ttf"),
@@ -25,6 +26,7 @@ export default function RootLayout() {
   if (!fontsLoaded) {
     return null;
   }
+
   return (
     <>
       <StatusBar style="auto" />
