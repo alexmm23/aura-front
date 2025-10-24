@@ -8,7 +8,7 @@ import {
   Text, 
   TouchableOpacity, 
   useWindowDimensions,
-  Alert // ← Agregar Alert
+  Alert
 } from "react-native";
 import { AuraText } from "@/components/AuraText";
 import { useRouter } from "expo-router";
@@ -17,11 +17,9 @@ import Svg, { Path } from "react-native-svg";
 import Head from "expo-router/head";
 import { API } from "@/config/api";
 
-// Importación estática para web
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 
-// Crea la promesa de Stripe
 const stripePromise = loadStripe("pk_test_51S2EFIRwhQTBuCWGg60RzjqoaAoZQKUplUNsEu2xzJ64ujbCJGzrrHACoOJ8JBDE6G4OOwLTepRv9F1o2hcRK9nB00gflAM0c9");
 
 import { apiPost, apiGet } from "../../../utils/fetchWithAuth";
@@ -29,12 +27,225 @@ import { apiPost, apiGet } from "../../../utils/fetchWithAuth";
 export default function PaymentWeb() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
 
+  const [processing, setProcessing] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const showSuccessAlert = (message) => {
+    setErrorMessage('');
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(''), 5000); 
+  };
+
+  const showErrorAlert = (message) => {
+    setSuccessMessage('');
+    setErrorMessage(message);
+    setTimeout(() => setErrorMessage(''), 8000); 
+  };
+
+  const sendManualEmail = async () => {
+    try {
+      setProcessing(true);
+      console.log('📧 Sending separate manual email...');
+      
+      const response = await apiPost(API.ENDPOINTS.PAYMENT.SEND_CONFIRMATION, {
+        email: subscriptionStatus?.email || 'email@ejemplo.com',
+        paymentData: {
+          amount: '99.00',
+          currency: 'MXN',
+          paymentId: 'manual_request',
+          date: new Date().toISOString(),
+          phone: subscriptionStatus?.phone || '',
+          country: subscriptionStatus?.country || 'MX'
+        }
+      });
+      
+      if (response.ok) {
+        showSuccessAlert('📧 Email de confirmación enviado exitosamente');
+      } else {
+        showErrorAlert('Error enviando email de confirmación');
+      }
+    } catch (error) {
+      console.error('Error sending separate manual email:', error);
+      showErrorAlert('Error enviando email de confirmación');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const checkSubscriptionStatus = async () => {
+    try {
+      setLoading(true);
+      console.log('🔍 Verificando estado de suscripción...');
+      
+      const response = await apiGet(API.ENDPOINTS.PAYMENT.SUBSCRIPTION_STATUS);
+      
+      if (response.status === 401) {
+        console.log('❌ Sesión expirada, redirigiendo al login...');
+        setHasActiveSubscription(false);
+        return;
+      }
+
+      const data = await response.json();
+      console.log('📊 Estado de suscripción:', data);
+      
+      if (data.success && data.hasActiveSubscription && data.subscriptionData) {
+        setHasActiveSubscription(data.hasActiveSubscription);
+        setSubscriptionStatus(data.subscriptionData);
+        console.log('✅ Suscripción activa encontrada:', data.subscriptionData);
+      } else {
+        setHasActiveSubscription(false);
+        setSubscriptionStatus(null);
+        console.log('❌ No se encontró suscripción activa');
+      }
+    } catch (error) {
+      console.error('❌ Error verificando suscripción:', error);
+      setHasActiveSubscription(false);
+      setSubscriptionStatus(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setLoading(false);
+    checkSubscriptionStatus();
   }, []);
+
+  if (loading) {
+    return (
+      <>
+        <Head>
+          <title>Verificando Suscripción</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        </Head>
+        <View style={styles.container}>
+          <PortraitHeader />
+          <View style={styles.loadingContainer}>
+            <AuraText style={styles.loadingText} text="Verificando tu suscripción..." />
+          </View>
+        </View>
+      </>
+    );
+  }
+
+  if (hasActiveSubscription && subscriptionStatus) {
+    return (
+      <>
+        <Head>
+          <title>Mi Suscripción</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        </Head>
+        <View style={styles.container}>
+          <PortraitHeader />
+          
+          <LinearGradient
+            colors={["#B065C4", "#F4A45B"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.cardheader}
+          >
+            <TouchableOpacity 
+              style={styles.backButton} 
+              onPress={() => router.push("/(tabs)/profile")}
+            >
+              <Image
+                source={require("@/assets/images/volver.png")}
+                style={styles.backIcon}
+              />
+            </TouchableOpacity>
+          </LinearGradient>
+
+          <View style={styles.cardImageContainer}>
+            <Image
+              source={require("@/assets/images/card.png")}
+              style={styles.cardImage}
+              resizeMode="contain"
+            />
+          </View>
+
+          <ScrollView contentContainerStyle={styles.content}>
+            <View style={styles.card}>
+              <AuraText style={styles.title} text="Tu Suscripción Activa" />
+              
+              {successMessage ? (
+                <View style={styles.successAlert}>
+                  <Text style={styles.successText}>{successMessage}</Text>
+                </View>
+              ) : null}
+
+              {errorMessage ? (
+                <View style={styles.errorAlert}>
+                  <Text style={styles.errorText}>{errorMessage}</Text>
+                </View>
+              ) : null}
+              
+              <View style={styles.subscriptionInfo}>
+                <View style={styles.statusBadge}>
+                  <AuraText style={styles.statusText} text="✅ ACTIVA" />
+                </View>
+                
+                <View style={styles.infoRow}>
+                  <AuraText style={styles.infoLabel} text="Plan:" />
+                  <AuraText style={styles.infoValue} text={subscriptionStatus.type || "AURA Premium"} />
+                </View>
+                
+                <View style={styles.infoRow}>
+                  <AuraText style={styles.infoLabel} text="Estado:" />
+                  <AuraText style={styles.infoValue} text={subscriptionStatus.status || "Activa"} />
+                </View>
+                
+                <View style={styles.infoRow}>
+                  <AuraText style={styles.infoLabel} text="Precio:" />
+                  <AuraText style={styles.infoValue} text="MXN$99/mes" />
+                </View>
+                
+                {subscriptionStatus.startDate && (
+                  <View style={styles.infoRow}>
+                    <AuraText style={styles.infoLabel} text="Inicio:" />
+                    <AuraText style={styles.infoValue} text={new Date(subscriptionStatus.startDate).toLocaleDateString('es-MX')} />
+                  </View>
+                )}
+                
+                {subscriptionStatus.endDate && (
+                  <View style={styles.infoRow}>
+                    <AuraText style={styles.infoLabel} text="Próxima renovación:" />
+                    <AuraText style={styles.infoValue} text={new Date(subscriptionStatus.endDate).toLocaleDateString('es-MX')} />
+                  </View>
+                )}
+                
+                {subscriptionStatus.paymentMethod && (
+                  <View style={styles.infoRow}>
+                    <AuraText style={styles.infoLabel} text="Método de pago:" />
+                    <AuraText style={styles.infoValue} text={`**** ${subscriptionStatus.paymentMethod.last4 || '****'}`} />
+                  </View>
+                )}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.secondaryButton, processing && styles.secondaryButtonDisabled]}
+                onPress={sendManualEmail}
+                disabled={processing}
+              >
+                <AuraText style={styles.secondaryButtonText} text={processing ? "Enviando..." : "📧 Enviar recibo"} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.renewButton}
+                onPress={checkSubscriptionStatus}
+              >
+                <AuraText style={styles.renewButtonText} text="🔄 Actualizar Estado" />
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </>
+    );
+  }
 
   return (
     <>
@@ -43,17 +254,14 @@ export default function PaymentWeb() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
       <View style={styles.container}>
-        {/* Fondo con PortraitHeader */}
         <PortraitHeader />
 
-        {/* Header con gradiente */}
         <LinearGradient
           colors={["#B065C4", "#F4A45B"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.cardheader}
         >
-          {/* Botón volver */}
           <TouchableOpacity 
             style={styles.backButton} 
             onPress={() => router.push("/(tabs)/profile")}
@@ -65,24 +273,21 @@ export default function PaymentWeb() {
           </TouchableOpacity>
         </LinearGradient>
 
-        {/* Imagen de tarjeta superpuesta */}
         <View style={styles.cardImageContainer}>
           <Image
-            source={require("@/assets/images/card.png")} // Tu imagen de tarjeta
+            source={require("@/assets/images/card.png")}
             style={styles.cardImage}
-            resizeMode="contain" // Cambio para que no se corte
+            resizeMode="contain"
           />
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
-          {/* Card principal con formulario */}
           <View style={styles.card}>
-            {/* Precio dentro del card */}
             <AuraText style={styles.priceText} text="MXN$99 al mes" />
             <AuraText style={styles.title} text="Realiza tu Pago" />
             
             <Elements stripe={stripePromise}>
-              <CheckoutForm router={router} />
+              <CheckoutForm router={router} checkSubscriptionStatus={checkSubscriptionStatus} />
             </Elements>
           </View>
         </ScrollView>
@@ -91,7 +296,7 @@ export default function PaymentWeb() {
   );
 }
 
-const CheckoutForm = ({ router }) => {
+const CheckoutForm = ({ router, checkSubscriptionStatus }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
@@ -102,18 +307,17 @@ const CheckoutForm = ({ router }) => {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Agregar estados para modal de confirmación:
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingCardElement, setPendingCardElement] = useState(null);
 
   const showSuccessAlert = (message) => {
-    setErrorMessage(''); // Limpiar errores
+    setErrorMessage('');
     setSuccessMessage(message);
     setTimeout(() => setSuccessMessage(''), 5000); 
   };
 
   const showErrorAlert = (message) => {
-    setSuccessMessage(''); // Limpiar éxitos
+    setSuccessMessage('');
     setErrorMessage(message);
     setTimeout(() => setErrorMessage(''), 8000); 
   };
@@ -122,7 +326,6 @@ const CheckoutForm = ({ router }) => {
     event.preventDefault();
     if (!stripe || !elements) return;
 
-    // Validaciones básicas
     if (!email.trim()) {
       showErrorAlert('Por favor ingresa tu correo electrónico');
       return;
@@ -144,12 +347,10 @@ const CheckoutForm = ({ router }) => {
       return;
     }
 
-    // ✨ MOSTRAR MODAL DE CONFIRMACIÓN
     setPendingCardElement(cardElement);
     setShowConfirmModal(true);
   };
 
-  // Funciones para el modal:
   const handleConfirmPayment = () => {
     setShowConfirmModal(false);
     processPayment(pendingCardElement);
@@ -161,19 +362,17 @@ const CheckoutForm = ({ router }) => {
     setPendingCardElement(null);
   };
 
-  // ✨ Actualizar: función processPayment
   const processPayment = async (cardElement) => {
     setProcessing(true);
     setErrorMessage('');
     setSuccessMessage('');
 
     try {
-      // Crea PaymentMethod con información adicional
       const { error, paymentMethod } = await stripe.createPaymentMethod({
         type: "card",
         card: cardElement,
         billing_details: {
-          email: email, // ← Este es el email del formulario
+          email: email,
           phone: phone,
           address: {
             country: country,
@@ -187,15 +386,11 @@ const CheckoutForm = ({ router }) => {
         return;
       }
 
-      const token = localStorage.getItem("token");
-      console.log("Token being sent:", token);
-
-      // ✨ ACTUALIZAR: Enviar el email del formulario como billingEmail
       const paymentData = {
         paymentMethodId: paymentMethod.id, 
         amount: 9900, 
         currency: "mxn",
-        billingEmail: email, // ← Cambiar de 'email' a 'billingEmail' 
+        billingEmail: email, 
         phone: phone,
         country: country,
         sendConfirmationEmail: true
@@ -206,6 +401,14 @@ const CheckoutForm = ({ router }) => {
 
       const response = await apiPost(API.ENDPOINTS.PAYMENT.CONFIRM, paymentData);
       
+      if (response.status === 401) {
+        showErrorAlert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
+        setTimeout(() => {
+          router.push("/(auth)/login");
+        }, 2000);
+        return;
+      }
+
       console.log("Response from backend:", response);
 
       const data = await response.json();
@@ -216,37 +419,53 @@ const CheckoutForm = ({ router }) => {
           `¡Pago realizado con éxito! Bienvenido a AURA Premium 🎉\n📧 Se ha enviado un correo de confirmación a: ${email}`
         );
         
-        // ✨ OPCIONAL: Envío manual de email solo si el backend no lo hizo automáticamente
         if (!data.emailSent) {
           console.log('⚠️ Email not sent automatically, sending manually...');
-          await sendManualConfirmationEmail(data, email); // ← Usar email del formulario
+          await sendManualConfirmationEmail(data, email);
         } else {
           console.log(`✅ Confirmation email sent automatically to: ${email}`);
         }
         
-        // Redirigir después de 5 segundos para que el usuario lea el mensaje
-        setTimeout(() => {
-          router.replace("/home");
-        }, 5000);
+        // Actualizar el estado de la suscripción después del pago exitoso
+        console.log('🔄 Actualizando estado de suscripción después del pago...');
+        
+        // Esperar un poco para que el backend procese completamente el pago
+        setTimeout(async () => {
+          try {
+            // Acceder a la función checkSubscriptionStatus del componente padre
+            await checkSubscriptionStatus();
+            console.log('✅ Estado de suscripción actualizado exitosamente');
+          } catch (error) {
+            console.error('❌ Error actualizando estado de suscripción:', error);
+          }
+        }, 2000);
+        
       } else {
         showErrorAlert(`Error en el pago: ${data.error || 'Ocurrió un error inesperado'}`);
       }
 
     } catch (error) {
       console.error('Error during payment:', error);
-      showErrorAlert('Error de conexión. Por favor intenta nuevamente.');
+      
+      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+        showErrorAlert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
+        setTimeout(() => {
+          router.push("/(auth)/login");
+        }, 2000);
+      } else {
+        showErrorAlert('Error de conexión. Por favor intenta nuevamente.');
+      }
     } finally {
       setProcessing(false);
     }
   };
 
-  // ACTUALIZAR: Función para envío manual de email (backup)
   const sendManualConfirmationEmail = async (paymentData, userEmail) => {
     try {
       console.log('📧 Sending manual payment confirmation email to:', userEmail);
 
-      const emailResponse = await apiPost(API.ENDPOINTS.SEND_PAYMENT_CONFIRMATION, {
-        email: email, // ← Usar email del formulario
+      const emailResponse = await apiPost(API.ENDPOINTS.PAYMENT.SEND_CONFIRMATION, {
+        email: email,
         paymentData: {
           amount: 99,
           currency: 'MXN',
@@ -264,37 +483,11 @@ const CheckoutForm = ({ router }) => {
       }
     } catch (error) {
       console.error('❌ Error sending manual payment confirmation email:', error);
-      // No mostramos error al usuario porque el pago ya fue exitoso
-    }
-  };
-
-  // ✨ AGREGAR: Función para envío manual por separado (si necesitas)
-  const sendManualEmail = async () => {
-    try {
-      console.log('📧 Sending separate manual email...');
-      
-      await apiPost("/auth/send-payment-confirmation", {
-        email: email,
-        paymentData: {
-          amount: '99.00',
-          currency: 'MXN',
-          paymentId: 'manual_request',
-          date: new Date().toISOString(),
-          phone: phone,
-          country: country
-        }
-      });
-      
-      showSuccessAlert('📧 Email de confirmación enviado exitosamente');
-    } catch (error) {
-      console.error('Error sending separate manual email:', error);
-      showErrorAlert('Error enviando email de confirmación');
     }
   };
 
   return (
     <View style={styles.form}>
-      {/* Modal de confirmación */}
       {showConfirmModal && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -337,7 +530,6 @@ const CheckoutForm = ({ router }) => {
         </View>
       ) : null}
 
-      {/* Información del contacto */}
       <Text style={styles.sectionTitle}>Información del contacto</Text>
       <TextInput
         style={styles.input}
@@ -349,10 +541,8 @@ const CheckoutForm = ({ router }) => {
         autoCapitalize="none"
       />
 
-      {/* Información de la tarjeta */}
       <Text style={styles.sectionTitle}>Información de la tarjeta</Text>
       
-      {/* Stripe Card Element */}
       <View style={styles.stripeCardContainer}>
         <CardElement
           options={{
@@ -376,7 +566,6 @@ const CheckoutForm = ({ router }) => {
         />
       </View>
 
-      {/* País/Región */}
       <Text style={styles.sectionTitle}>País/Región</Text>
       <TextInput
         style={styles.input}
@@ -395,7 +584,6 @@ const CheckoutForm = ({ router }) => {
         keyboardType="phone-pad"
       />
 
-      {/* Botón de Pago */}
       <TouchableOpacity
         style={[styles.payButton, processing && styles.payButtonDisabled]}
         onPress={handleSubmit}
@@ -403,20 +591,10 @@ const CheckoutForm = ({ router }) => {
       >
         <AuraText style={styles.payButtonText} text={processing ? "Procesando..." : "Pagar MXN$99"} />
       </TouchableOpacity>
-
-      {/* Agregar después del botón de pago principal */}
-      <TouchableOpacity
-        style={[styles.secondaryButton]}
-        onPress={sendManualEmail}
-        disabled={processing}
-      >
-        <Text style={styles.secondaryButtonText}>📧 Reenviar Email de Confirmación</Text>
-      </TouchableOpacity>
     </View>
   );
 };
 
-// Componente PortraitHeader (igual que en el perfil)
 const PortraitHeader = () => (
   <View style={styles.backgroundContainer}>
     <Svg
@@ -435,8 +613,6 @@ const PortraitHeader = () => (
 );
 
 const styles = StyleSheet.create({
-  // ...estilos existentes...
-  
   successAlert: {
     backgroundColor: '#D4F4DD',
     borderColor: '#4CAF50',
@@ -445,6 +621,7 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 20,
     alignItems: 'center',
+    width: '100%',
   },
   successText: {
     color: '#2E7D32',
@@ -460,6 +637,7 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 20,
     alignItems: 'center',
+    width: '100%',
   },
   errorText: {
     color: '#C62828',
@@ -542,7 +720,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-
   container: {
     flex: 1,
     backgroundColor: "#EDE6DB",
@@ -683,7 +860,67 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '600',
   },
-  // Estilos del fondo (igual que en perfil)
+  secondaryButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+    opacity: 0.6,
+  },
+  renewButton: {
+    backgroundColor: '#2196F3',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    width: "100%",
+    marginTop: 10,
+    alignItems: "center",
+  },
+  renewButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#666',
+  },
+  subscriptionInfo: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  statusBadge: {
+    backgroundColor: '#E8F5E8',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  statusText: {
+    color: '#4CAF50',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  infoLabel: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+  },
+  infoValue: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: 'bold',
+  },
   backgroundContainer: {
     position: "absolute",
     top: 0,

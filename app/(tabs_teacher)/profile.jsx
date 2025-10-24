@@ -139,18 +139,7 @@ export default function Profile() {
             >
               <AuraText style={styles.buttonText} text="Editar Perfil" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => {
-                console.log("Administrar Suscripción pressed");
-                router.push("/auth/payment");
-              }}
-            >
-            <AuraText
-              style={styles.buttonText}
-              text="Administrar Suscripción"
-            />
-            </TouchableOpacity>
+          
             <TouchableOpacity
               style={[styles.button, styles.logoutButton]}
               onPress={handleLogout}
