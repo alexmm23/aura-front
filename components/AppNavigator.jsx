@@ -70,7 +70,6 @@ const PublicNavigator = () => {
   useEffect(() => {
     const handleUrl = (event) => {
       const url = event.url;
-      console.log("🔗 PUBLIC NAVIGATOR - Deep link received:", url);
 
       const currentUrl = window?.location?.href || "";
       if (url === currentUrl) {
@@ -89,8 +88,6 @@ const PublicNavigator = () => {
     const subscription = Linking.addEventListener("url", handleUrl);
     return () => subscription?.remove();
   }, [router]);
-
-  console.log("🌐 Rendering PUBLIC Navigator - ONLY public routes available");
 
   return (
     <Stack
@@ -214,7 +211,6 @@ const AppNavigator = ({ isAuthenticated, user, shouldPreserveRoute }) => {
       />
     );
   } else {
-    console.log("🌐 AppNavigator - Rendering PUBLIC Navigator");
     return <PublicNavigator />;
   }
 };

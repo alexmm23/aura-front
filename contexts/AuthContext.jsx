@@ -24,31 +24,12 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [shouldPreserveRoute, setShouldPreserveRoute] = useState(false);
 
-  // DEBUG: Log cuando el estado cambia
   useEffect(() => {
-    console.log("🔐 AuthContext - State changed:", {
-      isAuthenticated,
-      isLoading,
-      hasUser: !!user,
-      userEmail: user?.email || "none",
-      currentPath:
-        typeof window !== "undefined" ? window.location.pathname : "unknown",
-    });
 
-    // Log adicional cuando el usuario está autenticado
-    if (isAuthenticated && user) {
-      console.log("🔐 Authenticated user details:", {
-        id: user.id || user.userId,
-        email: user.email,
-        role: user.role_id,
-        exp: user.exp ? new Date(user.exp * 1000).toISOString() : "unknown",
-      });
-    }
   }, [isAuthenticated, isLoading, user]);
 
   // Verificación inicial de autenticación - SOLO UNA VEZ
   useEffect(() => {
-    console.log("🔐 AuthContext - Starting initial auth check (ONCE)");
     let isMounted = true;
 
     // Verificar si estamos en una ruta protegida para preservarla
@@ -57,7 +38,6 @@ export const AuthProvider = ({ children }) => {
     
     // Si estamos en reset-password, no hacer verificación de auth
     if (currentPath === "/reset-password" || currentPath.includes("reset-password")) {
-      console.log("🔐 AuthContext - Skipping auth check for reset-password route");
       setIsLoading(false);
       return;
     }
@@ -69,13 +49,7 @@ export const AuthProvider = ({ children }) => {
       currentPath.includes("/home");
 
     setShouldPreserveRoute(isProtectedRoute);
-    console.log(
-      "🔐 AuthContext - Should preserve route:",
-      isProtectedRoute,
-      "for path:",
-      currentPath
-    );
-
+    
     const runAuthCheck = async () => {
       if (isMounted) {
         await checkAuthStatus();
@@ -93,7 +67,6 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
-      console.log("🔐 AuthContext - checkAuthStatus START");
 
       setIsLoading(true);
 
@@ -104,25 +77,18 @@ export const AuthProvider = ({ children }) => {
 
           if (response.ok) {
             const data = await response.json();
-            console.log("🔐 Auth check web exitoso:", data);
             setUser(data.user);
             setIsAuthenticated(true);
           } else {
-            console.log("🔐 No hay sesión web válida");
             setUser(null);
             setIsAuthenticated(false);
           }
         } catch (apiError) {
-          console.log(
-            "🔐 Error en API call, asumiendo no autenticado:",
-            apiError.message
-          );
           setUser(null);
           setIsAuthenticated(false);
         }
       } else {
         // Para móvil, verificar tokens locales SIN LLAMADAS AL API
-        console.log("🔐 Checking mobile tokens locally...");
         const token = await AsyncStorage.getItem("userToken");
 
         if (token) {
@@ -133,33 +99,27 @@ export const AuthProvider = ({ children }) => {
             // Verificar si el token ha expirado
             const currentTime = Date.now() / 1000;
             if (decodedUser.exp && decodedUser.exp > currentTime) {
-              console.log("🔐 Token válido localmente");
               setUser(decodedUser);
               setIsAuthenticated(true);
             } else {
-              console.log("🔐 Token expirado");
               await clearAuthData();
               setUser(null);
               setIsAuthenticated(false);
             }
           } catch (tokenError) {
-            console.log("🔐 Error decodificando token:", tokenError.message);
             await clearAuthData();
             setUser(null);
             setIsAuthenticated(false);
           }
         } else {
-          console.log("🔐 No hay token móvil");
           setUser(null);
           setIsAuthenticated(false);
         }
       }
     } catch (error) {
-      console.error("🔐 AuthContext - Error en checkAuthStatus:", error);
       setUser(null);
       setIsAuthenticated(false);
     } finally {
-      console.log("🔐 AuthContext - checkAuthStatus COMPLETE");
       setIsLoading(false);
     }
   };
@@ -200,10 +160,6 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      console.log("=== LOGIN DEBUG START ===");
-      console.log("Received credentials:", credentials);
-      console.log("Platform:", isWeb() ? "web" : "mobile");
-
       if (!credentials || !credentials.email || !credentials.password) {
         throw new Error("Email y contraseña son requeridos");
       }
@@ -211,17 +167,10 @@ export const AuthProvider = ({ children }) => {
       const endpoint = isWeb()
         ? API.ENDPOINTS.AUTH.LOGIN_WEB
         : API.ENDPOINTS.AUTH.LOGIN;
-
-      console.log("Using endpoint:", endpoint);
-
       const response = await apiPostNoAuth(endpoint, {
         email: credentials.email.trim(),
         password: credentials.password,
       });
-
-      console.log("Response status:", response.status);
-      console.log("Response ok:", response.ok);
-
       if (!response.ok) {
         const errorData = await response.json();
         console.error("Login failed with error:", errorData);
@@ -229,14 +178,12 @@ export const AuthProvider = ({ children }) => {
       }
 
       const data = await response.json();
-      console.log("Login successful, received data:", data);
 
       if (isWeb()) {
         // Para web, el token se maneja con cookies httpOnly
         if (data.user) {
           setUser(data.user);
           setIsAuthenticated(true);
-          console.log("Web login successful, user set");
           return { success: true, message: "Login exitoso" };
         } else {
           throw new Error("No se recibieron datos del usuario");
@@ -246,7 +193,6 @@ export const AuthProvider = ({ children }) => {
         const { token, refreshToken } = data;
 
         if (!token) {
-          console.error("No token received in mobile login");
           throw new Error("No se recibió el token de autenticación");
         }
 
@@ -258,12 +204,9 @@ export const AuthProvider = ({ children }) => {
         const decodedUser = jwtDecode(token);
         setUser(decodedUser);
         setIsAuthenticated(true);
-
-        console.log("Mobile login successful, tokens stored");
         return { success: true, message: "Login exitoso" };
       }
     } catch (error) {
-      console.error("Error durante login:", error);
       return {
         success: false,
         message: error.message || "Error desconocido durante el login",
@@ -273,29 +216,20 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      console.log("Starting logout process...");
-
       if (isWeb()) {
         await apiPost(`${API.ENDPOINTS.AUTH.LOGOUT}/web`);
-        console.log("Web logout API call completed");
       } else {
         await apiPost(API.ENDPOINTS.AUTH.LOGOUT);
         await clearAuthData();
-        console.log("Mobile logout API call and clear data completed");
       }
     } catch (error) {
-      console.error("Error durante logout:", error);
       // Incluso si hay error en el API call, limpiar estado local
       if (!isWeb()) {
         await clearAuthData();
       }
     } finally {
-      console.log("Setting user to null and isAuthenticated to false");
       setUser(null);
       setIsAuthenticated(false);
-      console.log(
-        "Logout completed - user should be null and isAuthenticated should be false"
-      );
     }
   };
 
