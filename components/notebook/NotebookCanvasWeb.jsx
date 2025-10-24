@@ -10,6 +10,7 @@ import {
   FlatList,
   ActivityIndicator,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import { API, buildApiUrl } from "@/config/api";
 import { apiGet, apiPostMultipart, apiPost } from "../../utils/fetchWithAuth";
 // Este componente usa Canvas HTML5 nativo para web
@@ -444,11 +445,19 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         setNotebooks(data);
       } else {
         console.error("Error fetching notebooks:", response.status);
-        alert("Error al cargar los cuadernos");
+        Toast.show({
+          type: "error",
+          text1: "Error al cargar cuadernos",
+          text2: "No se pudieron cargar los cuadernos disponibles",
+        });
       }
     } catch (error) {
       console.error("Error fetching notebooks:", error);
-      alert("Error de conexión al cargar los cuadernos");
+      Toast.show({
+        type: "error",
+        text1: "Error de conexión",
+        text2: "No se pudo conectar con el servidor",
+      });
     } finally {
       setLoadingNotebooks(false);
     }
@@ -477,17 +486,37 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
       );
 
       if (saveResponse.ok) {
-        alert("Nota guardada exitosamente en el cuaderno");
+        // Cerrar el modal inmediatamente
         setShowNotebookModal(false);
         setCanvasDataToSave(null);
-        onSave?.(canvasDataToSave);
+
+        // Mostrar el Toast de éxito
+        Toast.show({
+          type: "success",
+          text1: "¡Nota guardada!",
+          text2: "Tu nota se guardó exitosamente en el cuaderno",
+          visibilityTime: 3000,
+        });
+
+        // Esperar 2 segundos antes de ejecutar el callback de guardado
+        setTimeout(() => {
+          onSave?.(canvasDataToSave);
+        }, 2000);
       } else {
         console.error("Error saving note:", saveResponse.status);
-        alert("Error al guardar la nota en el cuaderno");
+        Toast.show({
+          type: "error",
+          text1: "Error al guardar",
+          text2: "No se pudo guardar la nota en el cuaderno",
+        });
       }
     } catch (error) {
       console.error("Error saving note:", error);
-      alert("Error de conexión al guardar la nota");
+      Toast.show({
+        type: "error",
+        text1: "Error de conexión",
+        text2: "No se pudo guardar la nota. Intenta de nuevo",
+      });
     } finally {
       setSavingNote(false);
     }
@@ -957,6 +986,9 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
 
       {/* Modal para seleccionar cuaderno */}
       <NotebookSelectorModal />
+
+      {/* Toast para notificaciones */}
+      <Toast />
     </View>
   );
 };

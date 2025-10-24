@@ -100,7 +100,13 @@ const NotebookPages = () => {
         <View style={styles.headerContainer}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.push("/(tabs)/NoteBookScreen");
+              }
+            }}
           >
             <Ionicons name="arrow-back" size={24} color="#CB8D27" />
           </TouchableOpacity>
