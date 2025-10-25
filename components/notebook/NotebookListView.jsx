@@ -6,10 +6,12 @@ import {
   TouchableOpacity,
   Text,
   StyleSheet,
+  ScrollView,
 } from "react-native";
 import { NotebookItem } from "./NotebookItem";
 import { NotebookHeader } from "./NotebookHeader";
 import FloatingAIMenu from "@/components/FloatingAIMenu";
+import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 
@@ -62,12 +64,15 @@ export const NotebookListView = ({
 
   return (
     <View style={containerStyle}>
-      <Image
-        source={require("@/assets/images/fondonotas.png")}
-        style={isLargeScreen ? styles.landscapeImage : styles.backgroundImage}
-        resizeMode="contain"
-        pointerEvents="none"
-      />
+      {/* Fondo decorativo con overlay */}
+      <View style={styles.backgroundOverlay}>
+        <Image
+          source={require("@/assets/images/fondonotas.png")}
+          style={isLargeScreen ? styles.landscapeImage : styles.backgroundImage}
+          resizeMode="contain"
+          pointerEvents="none"
+        />
+      </View>
 
       <View style={contentWrapperStyle}>
         <NotebookHeader
@@ -75,6 +80,15 @@ export const NotebookListView = ({
           onNewNotePress={onNewNotePress}
           isLargeScreen={isLargeScreen}
         />
+
+        {/* Contenedor con estadísticas */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Ionicons name="book" size={24} color="#4A90E2" />
+            <Text style={styles.statNumber}>{notebooks.length}</Text>
+            <Text style={styles.statLabel}>Cuadernos</Text>
+          </View>
+        </View>
 
         <FlatList
           key={isLargeScreen ? "large-6" : "small-3"}
@@ -91,12 +105,25 @@ export const NotebookListView = ({
           contentContainerStyle={styles.notesList}
           showsVerticalScrollIndicator={false}
           columnWrapperStyle={styles.columnWrapper}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="book-outline" size={80} color="#ccc" />
+              <Text style={styles.emptyText}>No tienes cuadernos aún</Text>
+              <Text style={styles.emptySubtext}>
+                Crea tu primer cuaderno para comenzar
+              </Text>
+            </View>
+          }
         />
       </View>
 
-      {/* Botones flotantes fijos en la parte inferior derecha */}
-      <TouchableOpacity style={styles.floatingHelpButton} onPress={handleShare}>
-        <Text style={styles.shareButtonText}>⇪</Text>
+      {/* Botones flotantes con diseño mejorado */}
+      <TouchableOpacity 
+        style={[styles.floatingButton, styles.shareButton]} 
+        onPress={handleShare}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="share-social" size={24} color="#fff" />
       </TouchableOpacity>
 
       <FloatingAIMenu onAIOptionPress={onAIOptionPress} />
@@ -114,6 +141,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#E6E2D2",
     alignItems: "center",
+  },
+  backgroundOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    zIndex: 0,
+    opacity: 0.6,
   },
   backgroundImage: {
     position: "absolute",
@@ -136,36 +172,89 @@ const styles = StyleSheet.create({
   contentWrapper: {
     width: "100%",
     flex: 1,
+    zIndex: 1,
+  },
+  statsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  statCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: "center",
+    minWidth: 120,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.05)",
+  },
+  statNumber: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#2C3E50",
+    marginTop: 8,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: "#7F8C8D",
+    marginTop: 4,
+    fontWeight: "500",
   },
   notesList: {
     padding: 16,
     paddingHorizontal: 16,
+    paddingBottom: 100,
   },
   columnWrapper: {
     justifyContent: "space-evenly",
     gap: 8,
     paddingHorizontal: 8,
   },
-  floatingHelpButton: {
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 80,
+    paddingHorizontal: 40,
+  },
+  emptyText: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#95a5a6",
+    marginTop: 20,
+    textAlign: "center",
+  },
+  emptySubtext: {
+    fontSize: 16,
+    color: "#bdc3c7",
+    marginTop: 8,
+    textAlign: "center",
+  },
+  floatingButton: {
     position: "absolute",
     bottom: 20,
     right: 100,
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#28a745",
     justifyContent: "center",
     alignItems: "center",
-    elevation: 4,
+    elevation: 6,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
     zIndex: 9998,
   },
-  shareButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 24,
+  shareButton: {
+    backgroundColor: "#28a745",
   },
 });

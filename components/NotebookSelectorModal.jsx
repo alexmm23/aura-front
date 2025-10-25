@@ -6,6 +6,8 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  Platform,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AuraText } from "./AuraText";
@@ -17,6 +19,9 @@ export default function NotebookSelectorModal({
   onSelectNotebook,
   loading = false,
 }) {
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width >= 768;
+
   return (
     <Modal
       visible={visible}
@@ -25,7 +30,10 @@ export default function NotebookSelectorModal({
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <View style={[
+          styles.modalContent,
+          isLargeScreen && styles.modalContentLarge
+        ]}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
@@ -38,7 +46,10 @@ export default function NotebookSelectorModal({
           </View>
 
           {/* Content */}
-          <ScrollView style={styles.scrollContent}>
+          <ScrollView 
+            style={styles.scrollContent}
+            contentContainerStyle={styles.scrollContentContainer}
+          >
             {loading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#007bff" />
@@ -64,8 +75,12 @@ export default function NotebookSelectorModal({
                 {notebooks.map((notebook) => (
                   <TouchableOpacity
                     key={notebook.id}
-                    style={styles.notebookCard}
+                    style={[
+                      styles.notebookCard,
+                      isLargeScreen ? styles.notebookCardLarge : styles.notebookCardSmall
+                    ]}
                     onPress={() => onSelectNotebook(notebook.id)}
+                    activeOpacity={0.7}
                   >
                     <View style={styles.notebookIcon}>
                       <Ionicons name="book" size={32} color="#007bff" />
@@ -114,25 +129,29 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: 16,
   },
   modalContent: {
     backgroundColor: "#fff",
     borderRadius: 16,
     width: "100%",
-    maxWidth: 600,
-    maxHeight: "80%",
+    maxWidth: 500,
+    maxHeight: "85%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 8,
   },
+  modalContentLarge: {
+    maxWidth: 700,
+    maxHeight: "80%",
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#e9ecef",
   },
@@ -143,16 +162,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#333",
+    flexShrink: 1,
   },
   closeButton: {
     padding: 4,
   },
   scrollContent: {
     flex: 1,
-    padding: 20,
+  },
+  scrollContentContainer: {
+    padding: 16,
+    flexGrow: 1,
   },
   loadingContainer: {
     alignItems: "center",
@@ -179,15 +202,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#999",
     textAlign: "center",
+    paddingHorizontal: 20,
   },
   notebooksGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginHorizontal: -8,
+    justifyContent: "space-between",
+    gap: 12,
   },
   notebookCard: {
-    width: "48%",
-    margin: "1%",
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
@@ -199,6 +222,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  notebookCardSmall: {
+    width: "100%",
+    marginBottom: 8,
+  },
+  notebookCardLarge: {
+    width: "48%",
   },
   notebookIcon: {
     width: 64,
@@ -238,7 +268,7 @@ const styles = StyleSheet.create({
     color: "#007bff",
   },
   footer: {
-    padding: 20,
+    padding: 16,
     borderTopWidth: 1,
     borderTopColor: "#e9ecef",
   },
