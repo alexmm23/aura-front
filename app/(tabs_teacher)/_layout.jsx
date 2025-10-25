@@ -120,6 +120,12 @@ function TabsContent() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="profile/profile_edit"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
