@@ -16,9 +16,14 @@ import {
   ScrollView,
   Modal,
   Dimensions,
+  ActivityIndicator,
+  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
+import { API } from "@/config/api";
+import { apiGet, apiPost } from "../../utils/fetchWithAuth";
+import Toast from "react-native-toast-message";
 
 // Constantes de herramientas
 const TOOL_PENCIL = "pen";
@@ -65,6 +70,12 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
     text: "",
     editingId: null,
   });
+
+  // Estados para guardar en cuadernos
+  const [showNotebookModal, setShowNotebookModal] = useState(false);
+  const [notebooks, setNotebooks] = useState([]);
+  const [loadingNotebooks, setLoadingNotebooks] = useState(false);
+  const [savingNote, setSavingNote] = useState(false);
 
   // Funciones auxiliares
   const generateId = () =>
@@ -309,12 +320,134 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
     ]);
   };
 
+  // Función para obtener los cuadernos del usuario
+  const fetchUserNotebooks = async () => {
+    setLoadingNotebooks(true);
+    try {
+      const response = await apiGet(API.ENDPOINTS.STUDENT.NOTEBOOKS);
+
+      if (!response.ok) {
+        throw new Error("Error al obtener cuadernos");
+      }
+
+      const data = await response.json();
+      setNotebooks(data.notebooks || []);
+    } catch (error) {
+      console.error("Error fetching notebooks:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error al cargar cuadernos",
+        text2: "No se pudieron cargar tus cuadernos",
+      });
+    } finally {
+      setLoadingNotebooks(false);
+    }
+  };
+
+  // Función para capturar el canvas como imagen
+  const captureCanvas = async () => {
+    try {
+      // Usar makeImageSnapshot del canvas ref
+      const snapshot = canvasRef.current?.makeImageSnapshot();
+      
+      if (!snapshot) {
+        throw new Error("No se pudo capturar el canvas");
+      }
+
+      // Convertir a base64
+      const base64 = snapshot.encodeToBase64();
+      
+      // Liberar memoria del snapshot
+      snapshot.dispose?.();
+      
+      return `data:image/png;base64,${base64}`;
+    } catch (error) {
+      console.error("Error capturing canvas:", error);
+      
+      // Fallback: crear una imagen vacía o usar un método alternativo
+      Toast.show({
+        type: "error",
+        text1: "Error al capturar",
+        text2: "No se pudo capturar el contenido del canvas",
+      });
+      throw error;
+    }
+  };
+
+  // Función para guardar la nota en un cuaderno específico
+  const saveNoteToNotebook = async (notebookId) => {
+    setSavingNote(true);
+    try {
+      // Capturar el canvas
+      const imageDataURL = await captureCanvas();
+
+      // Convertir data URL a Blob para React Native
+      const formData = new FormData();
+      formData.append("notebook_id", notebookId.toString());
+      formData.append("title", `Nota ${new Date().toLocaleDateString()}`);
+      
+      // En React Native, el formato de imagen para FormData es diferente
+      formData.append("images", {
+        uri: imageDataURL,
+        type: "image/png",
+        name: `note-${Date.now()}.png`,
+      });
+
+      // Enviar al backend usando el endpoint correcto
+      const saveResponse = await apiPost(
+        API.ENDPOINTS.STUDENT.NOTE_CREATE,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (!saveResponse.ok) {
+        const errorData = await saveResponse.json();
+        throw new Error(errorData.message || "Error al guardar la nota");
+      }
+
+      Toast.show({
+        type: "success",
+        text1: "Nota guardada",
+        text2: "Tu nota se guardó correctamente en el cuaderno",
+      });
+
+      // Cerrar modal y regresar después de un delay
+      setShowNotebookModal(false);
+      setTimeout(() => {
+        onSave?.();
+      }, 1500);
+    } catch (error) {
+      console.error("Error saving note:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error al guardar",
+        text2: error.message || "No se pudo guardar la nota",
+      });
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  // Función para abrir el modal de selección de cuadernos
+  const openNotebookSelector = () => {
+    setShowNotebookModal(true);
+    fetchUserNotebooks();
+  };
+
   const saveCanvas = async () => {
     try {
-      Alert.alert("Guardar", "Canvas guardado exitosamente");
-      onSave?.();
+      // En lugar de solo mostrar un alert, abrir el selector de cuadernos
+      openNotebookSelector();
     } catch (error) {
-      Alert.alert("Error", "No se pudo guardar el canvas");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "No se pudo preparar el canvas para guardar",
+      });
     }
   };
 
@@ -819,6 +952,83 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
               </View>
             </View>
           </Modal>
+
+          {/* Modal para seleccionar cuaderno */}
+          <Modal
+            visible={showNotebookModal}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setShowNotebookModal(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.notebookModalContainer}>
+                <View style={styles.notebookModalHeader}>
+                  <Text style={styles.notebookModalTitle}>
+                    Seleccionar Cuaderno
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => setShowNotebookModal(false)}
+                  >
+                    <Ionicons name="close" size={24} color="#6c757d" />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.notebookModalSubtitle}>
+                  Selecciona en qué cuaderno quieres guardar tu nota:
+                </Text>
+
+                {loadingNotebooks ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#007bff" />
+                    <Text style={styles.loadingText}>
+                      Cargando cuadernos...
+                    </Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={notebooks}
+                    keyExtractor={(item) => item.id.toString()}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={styles.notebookItem}
+                        onPress={() => saveNoteToNotebook(item.id)}
+                        disabled={savingNote}
+                      >
+                        <View style={styles.notebookInfo}>
+                          <Text style={styles.notebookName}>{item.title}</Text>
+                          <Text style={styles.notebookDate}>
+                            {new Date(item.created_at).toLocaleDateString()}
+                          </Text>
+                        </View>
+                        {savingNote && (
+                          <ActivityIndicator size="small" color="#007bff" />
+                        )}
+                      </TouchableOpacity>
+                    )}
+                    style={styles.notebookList}
+                    showsVerticalScrollIndicator={true}
+                    ListEmptyComponent={
+                      <View style={styles.emptyContainer}>
+                        <Ionicons
+                          name="book-outline"
+                          size={60}
+                          color="#ccc"
+                        />
+                        <Text style={styles.emptyText}>
+                          No tienes cuadernos disponibles.{"\n"}
+                          Crea un cuaderno primero para guardar tus notas.
+                        </Text>
+                      </View>
+                    }
+                  />
+                )}
+              </View>
+            </View>
+          </Modal>
+
+          {/* Toast para notificaciones */}
+          <Toast />
         </View>
       </SafeAreaView>
     </SafeAreaProvider>
@@ -1018,6 +1228,97 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  // Estilos para el modal de cuadernos
+  notebookModalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    width: "90%",
+    maxWidth: 500,
+    maxHeight: "80%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  notebookModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9ecef",
+  },
+  notebookModalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f8f9fa",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  notebookModalSubtitle: {
+    fontSize: 16,
+    color: "#6c757d",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    textAlign: "center",
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#6c757d",
+  },
+  notebookList: {
+    maxHeight: 300,
+    paddingHorizontal: 20,
+  },
+  notebookItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginVertical: 4,
+    backgroundColor: "#f8f9fa",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#dee2e6",
+  },
+  notebookInfo: {
+    flex: 1,
+  },
+  notebookName: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 4,
+  },
+  notebookDate: {
+    fontSize: 14,
+    color: "#6c757d",
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#6c757d",
+    textAlign: "center",
+    lineHeight: 22,
+    marginTop: 16,
   },
 });
 
