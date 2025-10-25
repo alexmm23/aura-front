@@ -15,7 +15,7 @@ import Svg, { Path } from "react-native-svg";
 import { AuraText } from "@/components/AuraText";
 import { AuraTextInput } from "@/components/AuraTextInput";
 import { Image } from "react-native";
-import { apiPost } from "../../utils/fetchWithAuth";
+import { apiPostNoAuth } from "../../utils/fetchWithAuth";
 
 const LandscapeHeader = ({ colors, styles, children }) => {
   return (
@@ -104,17 +104,11 @@ export default function ForgotPassword() {
     try {
       setIsSubmitting(true);
       setErrors({});
-
-      // Usar el endpoint correcto de tu backend
-      const response = await apiPost(API.ENDPOINTS.AUTH.RESET_PASSWORD, { email });
-      
-      // Tu backend siempre devuelve status 200 por seguridad
+      const response = await apiPostNoAuth(API.ENDPOINTS.AUTH.RESET_PASSWORD, { email });
       if (response.ok) {
         setEmail("");
         setErrors({});
         setIsSubmitted(true);
-        
-        // Opcional: redirigir después de unos segundos
         setTimeout(() => {
           router.replace("/(auth)/login");
         }, 3000);

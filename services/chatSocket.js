@@ -15,7 +15,7 @@ class ChatSocketService {
     async connect() {
         try {
             // Get WebSocket URL (remove /api from the end and add WebSocket path)
-            const wsUrl=CONFIG.API_URL.replace('/api', '');
+            let wsUrl=CONFIG.API_URL.replace('/api', '');
             const token=await AsyncStorage.getItem('userToken');
             if (token) {
                 wsUrl+=`?token=${token}`;
