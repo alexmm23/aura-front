@@ -60,6 +60,7 @@ export const API={
       CONFIRM: '/payment/confirm',
       SEND_CONFIRMATION: '/payment/send-confirmation',
       SUBSCRIPTION_STATUS: '/payments/subscription-status',
+      CREATE_CHECKOUT_SESSION: '/payments/create-checkout-session'
     },
     // Google Classroom endpoints
     GOOGLE_CLASSROOM: {

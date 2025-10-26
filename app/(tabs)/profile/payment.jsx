@@ -8,7 +8,10 @@ import {
   Text, 
   TouchableOpacity, 
   useWindowDimensions,
-  Alert
+  Alert,
+  Platform,
+  Linking,
+  ActivityIndicator
 } from "react-native";
 import { AuraText } from "@/components/AuraText";
 import { useRouter } from "expo-router";
@@ -23,6 +26,8 @@ import { loadStripe } from "@stripe/stripe-js";
 const stripePromise = loadStripe("pk_test_51S2EFIRwhQTBuCWGg60RzjqoaAoZQKUplUNsEu2xzJ64ujbCJGzrrHACoOJ8JBDE6G4OOwLTepRv9F1o2hcRK9nB00gflAM0c9");
 
 import { apiPost, apiGet } from "../../../utils/fetchWithAuth";
+
+const isMobile = Platform.OS === 'ios' || Platform.OS === 'android';
 
 export default function PaymentWeb() {
   const router = useRouter();
@@ -286,15 +291,126 @@ export default function PaymentWeb() {
             <AuraText style={styles.priceText} text="MXN$99 al mes" />
             <AuraText style={styles.title} text="Realiza tu Pago" />
             
-            <Elements stripe={stripePromise}>
-              <CheckoutForm router={router} checkSubscriptionStatus={checkSubscriptionStatus} />
-            </Elements>
+            {isMobile ? (
+              <MobileCheckoutButton 
+                router={router} 
+                checkSubscriptionStatus={checkSubscriptionStatus}
+                showSuccessAlert={showSuccessAlert}
+                showErrorAlert={showErrorAlert}
+              />
+            ) : (
+              <Elements stripe={stripePromise}>
+                <CheckoutForm 
+                  router={router} 
+                  checkSubscriptionStatus={checkSubscriptionStatus} 
+                />
+              </Elements>
+            )}
           </View>
         </ScrollView>
       </View>
     </>
   );
 }
+
+const MobileCheckoutButton = ({ router, checkSubscriptionStatus, showSuccessAlert, showErrorAlert }) => {
+  const [processing, setProcessing] = useState(false);
+
+  const handleMobileCheckout = async () => {
+    try {
+      setProcessing(true);
+      console.log('📱 Creando sesión de Stripe Checkout para móvil...');
+
+      const response = await apiPost(API.ENDPOINTS.PAYMENT.CREATE_CHECKOUT_SESSION, {
+        successUrl: `exp://192.168.0.128:8081/--/payment/success`, // Cambiar según tu IP
+        cancelUrl: `exp://192.168.0.128:8081/--/payment/cancel`,
+      });
+
+      if (response.status === 401) {
+        Alert.alert(
+          'Sesión Expirada',
+          'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
+          [{ text: 'OK', onPress: () => router.push("/(auth)/login") }]
+        );
+        return;
+      }
+
+      const data = await response.json();
+      console.log('📦 Respuesta del servidor:', data);
+
+      // ✅ CAMBIO: usar 'url' en lugar de 'checkoutUrl'
+      if (data.success && data.url) {
+        console.log('✅ URL de Stripe Checkout obtenida:', data.url);
+        
+        const supported = await Linking.canOpenURL(data.url);
+        
+        if (supported) {
+          await Linking.openURL(data.url);
+          console.log('🌐 Redirigiendo a Stripe Checkout...');
+          
+          Alert.alert(
+            '🔗 Redirigiendo a Stripe',
+            'Después de completar el pago, regresa a la app.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          console.error('❌ No se puede abrir la URL:', data.url);
+          Alert.alert(
+            'Error',
+            'No se pudo abrir el navegador. Por favor intenta de nuevo.',
+            [{ text: 'OK' }]
+          );
+        }
+      } else {
+        console.error('❌ Respuesta sin URL:', data);
+        Alert.alert(
+          'Error',
+          data.error || 'No se recibió la URL de pago',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error creando sesión de checkout:', error);
+      
+      let errorMessage = 'Error de conexión. Por favor intenta nuevamente.';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert(
+        'Error',
+        errorMessage,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <View style={styles.mobileCheckoutContainer}>
+      <Text style={styles.mobileInfoText}>
+        💳 Serás redirigido a Stripe para completar tu pago de forma segura
+      </Text>
+
+      <TouchableOpacity
+        style={[styles.payButton, processing && styles.payButtonDisabled]}
+        onPress={handleMobileCheckout}
+        disabled={processing}
+      >
+        <AuraText 
+          style={styles.payButtonText} 
+          text={processing ? "Redirigiendo..." : "🔒 Ir a Stripe para Pagar MXN$99"} 
+        />
+      </TouchableOpacity>
+
+      {processing && (
+        <ActivityIndicator size="large" color="#F4A45B" style={{ marginTop: 20 }} />
+      )}
+    </View>
+  );
+};
 
 const CheckoutForm = ({ router, checkSubscriptionStatus }) => {
   const stripe = useStripe();
@@ -426,13 +542,10 @@ const CheckoutForm = ({ router, checkSubscriptionStatus }) => {
           console.log(`✅ Confirmation email sent automatically to: ${email}`);
         }
         
-        // Actualizar el estado de la suscripción después del pago exitoso
         console.log('🔄 Actualizando estado de suscripción después del pago...');
         
-        // Esperar un poco para que el backend procese completamente el pago
         setTimeout(async () => {
           try {
-            // Acceder a la función checkSubscriptionStatus del componente padre
             await checkSubscriptionStatus();
             console.log('✅ Estado de suscripción actualizado exitosamente');
           } catch (error) {
@@ -932,5 +1045,18 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     left: 0,
+  },
+  mobileCheckoutContainer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  mobileInfoText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 25,
+    paddingHorizontal: 20,
+    lineHeight: 24,
   },
 });
