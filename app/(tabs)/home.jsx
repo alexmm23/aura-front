@@ -6,8 +6,9 @@ import {
   useWindowDimensions,
   Image,
   TouchableOpacity,
+  Animated,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { AuraText } from "@/components/AuraText";
 import { fetchWithAuth, apiGet } from "../../utils/fetchWithAuth";
@@ -22,12 +23,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export default function HomeScreen() {
   const [homework, setHomework] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [isLoadingHomework, setIsLoadingHomework] = useState(true);
+  const [isLoadingNotes, setIsLoadingNotes] = useState(true);
   const { height, width } = useWindowDimensions();
   const colors = Colors.light;
   const isLandscape = width > height;
   const router = useRouter();
+  
   const fetchHomework = async () => {
     try {
+      setIsLoadingHomework(true);
       const response = await apiGet(API.ENDPOINTS.STUDENT.HOMEWORK);
 
       if (!response.ok) {
@@ -39,10 +44,14 @@ export default function HomeScreen() {
       console.log(data);
     } catch (error) {
       console.error("Error fetching homework:", error);
+    } finally {
+      setIsLoadingHomework(false);
     }
   };
+  
   const fetchNotes = async () => {
     try {
+      setIsLoadingNotes(true);
       const response = await apiGet(API.ENDPOINTS.STUDENT.NOTES);
 
       if (!response.ok) {
@@ -54,8 +63,11 @@ export default function HomeScreen() {
       setNotes(newNotes);
     } catch (error) {
       console.error("Error fetching notes:", error);
+    } finally {
+      setIsLoadingNotes(false);
     }
   };
+  
   useEffect(() => {
     fetchHomework();
     fetchNotes();
@@ -84,68 +96,85 @@ export default function HomeScreen() {
             {/* Mis notas */}
             <View style={styles.card}>
               <AuraText style={styles.title} text="Mis Notas"></AuraText>
-              {notes.map((note, index) => (
-                <View key={index} style={styles.noteCard}>
-                  <AuraText
-                    style={styles.noteTitle}
-                    text={`Nota #${index + 1}`}
-                  ></AuraText>
-                  <AuraText
-                    style={styles.noteText}
-                    text={note.content}
-                  ></AuraText>
-                </View>
-              ))}
+              {isLoadingNotes ? (
+                <>
+                  <NoteCardSkeleton />
+                  <NoteCardSkeleton />
+                </>
+              ) : (
+                <>
+                  {notes.map((note, index) => (
+                    <View key={index} style={styles.noteCard}>
+                      <AuraText
+                        style={styles.noteTitle}
+                        text={`Nota #${index + 1}`}
+                      ></AuraText>
+                      <AuraText
+                        style={styles.noteText}
+                        text={note.content}
+                      ></AuraText>
+                    </View>
+                  ))}
 
-              {notes.length === 0 && (
-                <View style={styles.noteCard}>
-                  <AuraText
-                    style={styles.noteTitle}
-                    text={"No hay notas por mostrar"}
-                  ></AuraText>
-                  <AuraText
-                    style={styles.noteText}
-                    text={"No hay contenido disponible"}
-                  ></AuraText>
-                </View>
+                  {notes.length === 0 && (
+                    <View style={styles.noteCard}>
+                      <AuraText
+                        style={styles.noteTitle}
+                        text={"No hay notas por mostrar"}
+                      ></AuraText>
+                      <AuraText
+                        style={styles.noteText}
+                        text={"No hay contenido disponible"}
+                      ></AuraText>
+                    </View>
+                  )}
+                </>
               )}
             </View>
 
             {/* Mis Tareas */}
             <View style={styles.card}>
               <AuraText style={styles.title} text="Mis Tareas"></AuraText>
-              {homework.map((task, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.taskCard}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/taskdetails",
-                      params: {
-                        courseId: task.courseId || index,
-                        courseWorkId: task.courseWorkId,
-                        submissionId: task.submissionId,
-                      },
-                    })
-                  }
-                >
-                  <View style={{ flex: 1, marginRight: 10 }}>
-                    <Text style={styles.taskSubject}>{task.courseName}</Text>
-                    <Text style={styles.taskDescription}>{task.title}</Text>
-                    <Text style={styles.taskDueDate}>
-                      {task.dueDate
-                        ? `${task.dueDate.day || 0}-${task.dueDate.month}-${
-                            task.dueDate.year
-                          }`
-                        : "Sin fecha"}
-                    </Text>
-                  </View>
-                  <Image
-                    source={getPlatformIcon(task.platform)}
-                    style={styles.platformIcon}
-                  />
-                </TouchableOpacity>
-              ))}
+              {isLoadingHomework ? (
+                <>
+                  <TaskCardSkeleton />
+                  <TaskCardSkeleton />
+                  <TaskCardSkeleton />
+                </>
+              ) : (
+                homework.map((task, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.taskCard}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/taskdetails",
+                        params: {
+                          courseId: task.courseId || index,
+                          courseWorkId: task.courseWorkId,
+                          submissionId: task.submissionId,
+                        },
+                      })
+                    }
+                  >
+                    <View style={{ flex: 1, marginRight: 10 }}>
+                      <Text style={styles.taskSubject}>{task.courseName}</Text>
+                      <Text style={styles.taskDescription}>{task.title}</Text>
+                      <Text style={styles.taskDueDate}>
+                        {task.dueDate
+                          ? `${task.dueDate.day || 0}-${task.dueDate.month}-${
+                              task.dueDate.year
+                            }`
+                          : "Sin fecha"}
+                      </Text>
+                    </View>
+                    <Image
+                      source={getPlatformIcon(task.platform)}
+                      style={styles.platformIcon}
+                    />
+                  </TouchableOpacity>
+                ))
+              )}
             </View>
           </ScrollView>
         </SafeAreaView>
@@ -195,6 +224,72 @@ const getPlatformIcon = (platform) => {
     teams: require("@/assets/images/teams.png"),
   };
   return icons[platform?.toLowerCase()] || icons.classroom; // fallback to classroom if platform is unknown
+};
+
+// Componente de skeleton loader con animación
+const TaskCardSkeleton = () => {
+  const fadeAnim = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 0.3,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [fadeAnim]);
+
+  return (
+    <Animated.View style={[styles.taskCard, { opacity: fadeAnim }]}>
+      <View style={{ flex: 1, marginRight: 10 }}>
+        <View style={styles.skeletonLine} />
+        <View style={[styles.skeletonLine, styles.skeletonLineShort]} />
+        <View style={[styles.skeletonLine, styles.skeletonLineSmall]} />
+      </View>
+      <View style={styles.skeletonIcon} />
+    </Animated.View>
+  );
+};
+
+// Componente de skeleton loader para notas
+const NoteCardSkeleton = () => {
+  const fadeAnim = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 0.3,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [fadeAnim]);
+
+  return (
+    <Animated.View style={[styles.noteCard, { opacity: fadeAnim }]}>
+      <View style={styles.skeletonLine} />
+      <View style={[styles.skeletonLine, styles.skeletonLineShort]} />
+    </Animated.View>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -350,5 +445,26 @@ const styles = StyleSheet.create({
   emptyStateText: {
     color: "#999",
     fontSize: 16,
+  },
+  // Estilos para skeleton loader
+  skeletonLine: {
+    height: 14,
+    backgroundColor: "#e0e0e0",
+    borderRadius: 4,
+    marginBottom: 8,
+    width: "100%",
+  },
+  skeletonLineShort: {
+    width: "70%",
+  },
+  skeletonLineSmall: {
+    width: "50%",
+    height: 12,
+  },
+  skeletonIcon: {
+    width: 40,
+    height: 40,
+    backgroundColor: "#e0e0e0",
+    borderRadius: 8,
   },
 });
