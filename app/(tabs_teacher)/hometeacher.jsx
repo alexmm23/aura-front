@@ -4,22 +4,30 @@ import {
   ScrollView,
   StyleSheet,
   useWindowDimensions,
+  ActivityIndicator,
+  RefreshControl,
+  TouchableOpacity, // ✅ AGREGAR
 } from "react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AuraText } from "@/components/AuraText";
 import { API, buildApiUrl } from "@/config/api";
 import Head from "expo-router/head";
 import Svg, { Path } from "react-native-svg";
 import { Colors } from "@/constants/Colors";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiGet } from "@/utils/fetchWithAuth";
+import { useRouter } from "expo-router"; // ✅ AGREGAR
 
 export default function HomeTeacher() {
   const [homework, setHomework] = useState([]);
+  const [reminders, setReminders] = useState([]);
+  const [isLoadingReminders, setIsLoadingReminders] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { height, width } = useWindowDimensions();
   const colors = Colors.light;
   const isLandscape = width > height;
+  const router = useRouter(); // ✅ AGREGAR
+
   const fetchHomework = async () => {
     try {
       const response = await apiGet(API.ENDPOINTS.TEACHER.COURSES);
@@ -27,16 +35,92 @@ export default function HomeTeacher() {
         throw new Error("Network response was not ok");
       }
       const data = await response.json();
-      console.log("Homework data:", data);
       setHomework(data);
-      console.log(data);
     } catch (error) {
       console.error("Error fetching homework:", error);
     }
   };
+
+  const fetchReminders = async () => {
+    try {
+      setIsLoadingReminders(true);
+      const response = await apiGet(API.ENDPOINTS.REMINDERS.PENDING_HOME);
+      
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      const data = await response.json();
+      console.log("Reminders data:", data);
+      
+      if (data.success) {
+        setReminders(data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching reminders:", error);
+      setReminders([]);
+    } finally {
+      setIsLoadingReminders(false);
+    }
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchHomework(), fetchReminders()]);
+    setRefreshing(false);
+  }, []);
+
   useEffect(() => {
     fetchHomework();
+    fetchReminders();
   }, []);
+
+  const formatDate = (dateString) => { // ✅ Sin tipo
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = date.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
+
+    // Formatear fecha legible
+    const dateFormat = new Intl.DateTimeFormat("es-MX", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+
+    // Agregar información de tiempo relativo
+    if (diffHours < 1) {
+      const diffMinutes = Math.ceil(diffTime / (1000 * 60));
+      return `${dateFormat} (en ${diffMinutes} min)`;
+    } else if (diffHours < 24) {
+      return `${dateFormat} (en ${diffHours}h)`;
+    } else if (diffDays === 1) {
+      return `${dateFormat} (mañana)`;
+    } else if (diffDays <= 7) {
+      return `${dateFormat} (en ${diffDays} días)`;
+    }
+
+    return dateFormat;
+  };
+
+  const getFrequencyText = (frequency) => { // ✅ Sin tipo
+    const freqMap = { // ✅ Sin tipo Record
+      once: "Una vez",
+      daily: "Diario",
+      weekly: "Semanal",
+      monthly: "Mensual",
+    };
+    return freqMap[frequency] || frequency;
+  };
+
+  // ✅ AGREGAR: Función para navegar a reminders
+  const navigateToReminders = () => {
+    router.push({
+      pathname: "/(tabs_teacher)/reminders",
+      params: { filterStatus: "pending" } // Pasar filtro de pendientes
+    });
+  };
 
   return (
     <>
@@ -57,50 +141,91 @@ export default function HomeTeacher() {
           <ScrollView
             contentContainerStyle={styles.contentContainer}
             style={styles.scrollView}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
           >
             {/* Mis recordatorios */}
             <View style={styles.card}>
-              <AuraText
-                style={styles.title}
-                text="Mis Recordatorios"
-              ></AuraText>
-              <View style={styles.noteCard}>
-                <AuraText style={styles.noteTitle} text="Recordatorio #1" />
-                <AuraText
-                  style={styles.noteText}
-                  text="Entregar avance del proyecto el viernes a las 3:00 PM."
-                />
-              </View>
-              <View style={styles.noteCard}>
-                <AuraText style={styles.noteTitle} text="Recordatorio #2" />
-                <AuraText
-                  style={styles.noteText}
-                  text="Revisar lectura pendiente de ética profesional antes del lunes."
-                />
-              </View>
+              {/* ✅ CORREGIR: Header clickeable con Text nativo */}
+              <TouchableOpacity 
+                onPress={navigateToReminders}
+                style={styles.cardHeader}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.titleText}>Mis Recordatorios</Text>
+                <Text style={styles.seeAllText}>Ver todos →</Text>
+              </TouchableOpacity>
+
+              {isLoadingReminders ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#A64AC9" />
+                  <Text style={styles.loadingTextNative}>
+                    Cargando recordatorios...
+                  </Text>
+                </View>
+              ) : reminders.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyEmoji}>🎉</Text>
+                  <Text style={styles.emptyTitleNative}>
+                    ¡Estás libre de pendientes!
+                  </Text>
+                  <Text style={styles.emptyTextNative}>
+                    No tienes recordatorios pendientes en este momento.
+                  </Text>
+                </View>
+              ) : (
+                <ScrollView
+                  style={styles.remindersScrollView}
+                  nestedScrollEnabled={true}
+                  showsVerticalScrollIndicator={true}
+                >
+                  {reminders.map((reminder) => (
+                    <TouchableOpacity
+                      key={reminder.id}
+                      style={styles.noteCard}
+                      onPress={navigateToReminders}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.reminderHeader}>
+                        <Text style={styles.noteTitleText} numberOfLines={2}>
+                          {reminder.title}
+                        </Text>
+                        {reminder.frequency !== "once" && (
+                          <View style={styles.frequencyBadge}>
+                            <Text style={styles.frequencyText}>
+                              {getFrequencyText(reminder.frequency)}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      {reminder.description && (
+                        <Text style={styles.noteTextNative} numberOfLines={2}>
+                          {reminder.description}
+                        </Text>
+                      )}
+                      <View style={styles.reminderFooter}>
+                        <Text style={styles.dateText}>
+                          📅 {formatDate(reminder.date_time)}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
             </View>
 
-            {/* Mis Tareas */}
+            {/* Mis Cursos */}
             <View style={styles.card}>
-              <AuraText style={styles.title} text="Mis Cursos"></AuraText>
-              {/*Aqui irian las clases de cada maestro}
-              {homework.map((task, index) => (
-                <View key={index} style={styles.taskCard}>
-                  <View>
-                    <Text style={styles.taskSubject}>{task.courseName}</Text>
-                    <Text style={styles.taskDescription}>{task.title}</Text>
-                    <Text style={styles.taskDueDate}>
-                      {task.dueDate
-                        ? `${task.dueDate.day || 0}-${task.dueDate.month}-${task.dueDate.year}`
-                        : "Sin fecha"}
-                    </Text>
-                  </View>
-                  <Image
-                    source={getPlatformIcon(task.platform)}
-                    style={styles.platformIcon}
+              <AuraText style={styles.title} text="Mis Cursos" />
+              {homework.length === 0 && (
+                <View style={styles.emptyContainer}>
+                  <AuraText
+                    style={styles.emptyText}
+                    text="No hay cursos disponibles"
                   />
                 </View>
-              ))}*/}
+              )}
             </View>
           </ScrollView>
         </SafeAreaView>
@@ -109,6 +234,7 @@ export default function HomeTeacher() {
   );
 }
 
+// ✅ Sin tipos en las props
 const LandscapeHeader = ({ colors, styles }) => (
   <View style={styles.backgroundContainerLandscape}>
     <Svg
@@ -126,6 +252,7 @@ const LandscapeHeader = ({ colors, styles }) => (
   </View>
 );
 
+// ✅ Sin tipos en las props
 const PortraitHeader = ({ colors, styles }) => (
   <View style={styles.backgroundContainer}>
     <Svg
@@ -143,15 +270,6 @@ const PortraitHeader = ({ colors, styles }) => (
   </View>
 );
 
-const getPlatformIcon = (platform) => {
-  const icons = {
-    classroom: require("@/assets/images/classroom.png"),
-    moodle: require("@/assets/images/moodle.png"),
-    teams: require("@/assets/images/teams.png"),
-  };
-  return icons[platform?.toLowerCase()] || icons.classroom; // fallback to classroom if platform is unknown
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -159,11 +277,11 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    marginTop: 10, // Añadir algo de margen para separar del header
+    marginTop: 10,
   },
   contentContainer: {
     padding: 20,
-    paddingTop: 120, // Dar espacio al header para que no tape el contenido
+    paddingTop: 120,
   },
   card: {
     width: "100%",
@@ -181,7 +299,17 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     color: "#FF9900",
-    marginBottom: 10,
+    marginBottom: 15,
+  },
+  // ✅ AGREGAR: Nuevo estilo para título con Text nativo
+  titleText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#FF9900",
+    fontFamily: "Jost_400Regular",
+  },
+  remindersScrollView: {
+    maxHeight: 300,
   },
   noteCard: {
     backgroundColor: "#E4E3DD",
@@ -193,69 +321,125 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 3,
   },
+  reminderHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
   noteTitle: {
     fontWeight: "bold",
     color: "#A64AC9",
-    marginBottom: 5,
+    fontSize: 16,
+    flex: 1,
+    marginRight: 10,
+  },
+  // ✅ AGREGAR: Nuevo estilo para título de nota con Text nativo
+  noteTitleText: {
+    fontWeight: "bold",
+    color: "#A64AC9",
+    fontSize: 16,
+    flex: 1,
+    marginRight: 10,
+    fontFamily: "Jost_700Bold",
+  },
+  frequencyBadge: {
+    backgroundColor: "#A64AC9",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  frequencyText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "600",
+    fontFamily: "Jost_600SemiBold",
   },
   noteText: {
     fontSize: 14,
     color: "#555",
+    marginBottom: 8,
   },
-  taskCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#E4E3DD",
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  taskSubject: {
-    fontWeight: "bold",
-    fontSize: 16,
-    color: "#E91E63",
-  },
-  taskDescription: {
+  // ✅ AGREGAR: Nuevo estilo para texto de nota con Text nativo
+  noteTextNative: {
     fontSize: 14,
     color: "#555",
+    marginBottom: 8,
+    fontFamily: "Jost_400Regular",
   },
-  taskDueDate: {
+  reminderFooter: {
+    borderTopWidth: 1,
+    borderTopColor: "#D0CFC9",
+    paddingTop: 8,
+    marginTop: 4,
+  },
+  dateText: {
     fontSize: 12,
-    color: "#999",
+    color: "#666",
+    fontWeight: "500",
+    fontFamily: "Jost_500Medium",
   },
-  navbar: {
-    flexDirection: "row",
-    backgroundColor: "#9C27B0",
-    paddingVertical: 10,
-    justifyContent: "space-around",
+  loadingContainer: {
     alignItems: "center",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    justifyContent: "center",
+    paddingVertical: 40,
   },
-  navItem: {
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: "#666",
+  },
+  // ✅ AGREGAR: Nuevo estilo para loading con Text nativo
+  loadingTextNative: {
+    marginTop: 10,
+    fontSize: 14,
+    color: "#666",
+    fontFamily: "Jost_400Regular",
+  },
+  emptyContainer: {
     alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 30,
   },
-  navText: {
-    color: "white",
-    fontSize: 12,
-    marginTop: 2,
+  emptyEmoji: {
+    fontSize: 48,
+    marginBottom: 10,
   },
-  // Estilos para modo vertical
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#A64AC9",
+    marginBottom: 8,
+  },
+  // ✅ AGREGAR: Nuevo estilo para empty title con Text nativo
+  emptyTitleNative: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#A64AC9",
+    marginBottom: 8,
+    fontFamily: "Jost_700Bold",
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+  },
+  // ✅ AGREGAR: Nuevo estilo para empty text con Text nativo
+  emptyTextNative: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    fontFamily: "Jost_400Regular",
+  },
   backgroundContainer: {
-    height: 350, // o 400 si quieres más altura
+    height: 350,
     width: "100%",
-    position: "absolute", // <-- posición absoluta
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    zIndex: -1, // <-- para que esté detrás del contenido
+    zIndex: -1,
   },
-  // Estilos para modo horizontal
   backgroundContainerLandscape: {
     position: "absolute",
     top: 0,
@@ -263,7 +447,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: "40%",
     height: "100%",
-    zIndex: -1, // <-- también para que esté detrás
+    zIndex: -1,
   },
   svg: {
     position: "absolute",
@@ -272,29 +456,16 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  headerContent: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 350, // igual que el contenedor
-    justifyContent: "center",
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: 40, //mas espacio arriba
+    marginBottom: 15,
   },
-  headerContentLandscape: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 30, // mas espacio al rededor
-  },
-  platformIcon: {
-    width: 50,
-    height: 50,
-    resizeMode: "contain",
+  seeAllText: {
+    fontSize: 14,
+    color: "#A64AC9",
+    fontWeight: "600",
+    fontFamily: "Jost_600SemiBold",
   },
 });

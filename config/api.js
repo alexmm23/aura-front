@@ -84,6 +84,7 @@ export const API={
       PROFILE: '/users/profile',
       AUTH_CHECK: '/auth/check',
       LOGIN_WEB: '/auth/login/web',
+      COURSES: '/api/teacher/courses',
     },
     REMINDERS: {
       BASE: '/reminders',
@@ -96,6 +97,8 @@ export const API={
       SEND_EMAIL: '/reminders/:id/send-email',
       SEND_UPCOMING: '/reminders/send-upcoming',
       CHECK_PENDING: '/reminders/check-pending',
+      PENDING_HOME: '/reminders/pending-home',
+      UPCOMING: '/reminders/upcoming',
     },
     // Student endpoints
     STUDENT: {
@@ -263,6 +266,7 @@ export const universalFetch=async (url, options={}) => {
   const { fetchWithAuth }=await import('../utils/fetchWithAuth');
   return fetchWithAuth(url, options);
 };
+
 
 /* Para confirmar pago (automático con email)
 export const confirmPayment = async (paymentMethodId) => {
