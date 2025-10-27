@@ -22,7 +22,8 @@ import { API } from "@/config/api";
 
 import { apiPost, apiGet } from "../../../utils/fetchWithAuth";
 
-const isMobile = Platform.OS === 'ios' || Platform.OS === 'android';
+const isWeb = Platform.OS === 'web';
+const isNative = Platform.OS === 'ios' || Platform.OS === 'android';
 
 export default function PaymentWeb() {
   const router = useRouter();
@@ -36,7 +37,6 @@ export default function PaymentWeb() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   
-  // ✅ Estado para cargar Stripe dinámicamente
   const [StripeComponents, setStripeComponents] = useState(null);
   const [WebCheckoutForm, setWebCheckoutForm] = useState(null);
 
@@ -119,8 +119,7 @@ export default function PaymentWeb() {
   useEffect(() => {
     checkSubscriptionStatus();
     
-    // ✅ Cargar Stripe solo en web
-    if (!isMobile) {
+    if (isWeb) {
       Promise.all([
         import("@stripe/react-stripe-js"),
         import("@stripe/stripe-js")
@@ -135,7 +134,6 @@ export default function PaymentWeb() {
           stripePromise
         });
 
-        // ✅ Crear el componente de formulario web dinámicamente
         setWebCheckoutForm(() => createCheckoutForm(stripeReact));
       }).catch(err => {
         console.error('Error loading Stripe:', err);
@@ -143,33 +141,27 @@ export default function PaymentWeb() {
     }
   }, []);
 
-  // ✅ Listener para deep links
   useEffect(() => {
     const handleDeepLink = (event) => {
       const url = event.url;
       console.log('🔗 Deep link recibido:', url);
 
-      // Verificar si es un deep link de pago exitoso
       if (url.includes('payment/success') || url.includes('session_id')) {
         console.log('✅ Pago exitoso detectado');
         showSuccessAlert('¡Pago realizado con éxito! Actualizando suscripción...');
         
-        // Actualizar el estado después de 1 segundo
         setTimeout(() => {
           checkSubscriptionStatus();
         }, 1000);
       } 
-      // Verificar si es un pago cancelado
       else if (url.includes('payment/cancel')) {
         console.log('❌ Pago cancelado');
         showErrorAlert('Pago cancelado. Puedes intentarlo nuevamente.');
       }
     };
 
-    // Suscribirse a eventos de deep link
     const subscription = Linking.addEventListener('url', handleDeepLink);
 
-    // Verificar si la app se abrió con un deep link inicial
     Linking.getInitialURL().then((url) => {
       if (url) {
         console.log('🔗 App abierta con URL inicial:', url);
@@ -177,7 +169,6 @@ export default function PaymentWeb() {
       }
     });
 
-    // Cleanup
     return () => {
       subscription.remove();
     };
@@ -353,8 +344,7 @@ export default function PaymentWeb() {
             <AuraText style={styles.priceText} text="MXN$99 al mes" />
             <AuraText style={styles.title} text="Realiza tu Pago" />
             
-            {/* Solo móvil usa el botón de redirección */}
-            {isMobile && (
+            {isNative && (
               <MobileCheckoutButton 
                 router={router} 
                 checkSubscriptionStatus={checkSubscriptionStatus}
@@ -363,8 +353,7 @@ export default function PaymentWeb() {
               />
             )}
             
-            {/* Solo web usa Stripe Elements */}
-            {!isMobile && StripeComponents && WebCheckoutForm && (
+            {isWeb && StripeComponents && WebCheckoutForm && (
               <StripeComponents.Elements stripe={StripeComponents.stripePromise}>
                 <WebCheckoutForm 
                   router={router} 
@@ -384,13 +373,12 @@ const MobileCheckoutButton = ({ router, checkSubscriptionStatus, showSuccessAler
   const [processing, setProcessing] = useState(false);
   const [pollingActive, setPollingActive] = useState(false);
 
-  // ✅ Función de polling para verificar el estado
   const startPolling = () => {
     console.log('🔄 Iniciando polling para verificar estado de pago...');
     setPollingActive(true);
 
     let attempts = 0;
-    const maxAttempts = 60; // 5 minutos máximo (60 intentos x 5 segundos)
+    const maxAttempts = 60;
 
     const pollInterval = setInterval(async () => {
       attempts++;
@@ -412,7 +400,6 @@ const MobileCheckoutButton = ({ router, checkSubscriptionStatus, showSuccessAler
 
         const data = await response.json();
         
-        // ✅ Si se detecta una suscripción activa, detener el polling
         if (data.success && data.hasActiveSubscription) {
           console.log('✅ ¡Pago detectado! Suscripción activada');
           clearInterval(pollInterval);
@@ -420,13 +407,11 @@ const MobileCheckoutButton = ({ router, checkSubscriptionStatus, showSuccessAler
           
           showSuccessAlert('¡Pago confirmado exitosamente! 🎉');
           
-          // Actualizar el estado después de 1 segundo
           setTimeout(() => {
             checkSubscriptionStatus();
           }, 1000);
         }
         
-        // Si alcanzamos el máximo de intentos, detenemos
         if (attempts >= maxAttempts) {
           console.log('⏱️ Tiempo de espera agotado');
           clearInterval(pollInterval);
@@ -450,9 +435,8 @@ const MobileCheckoutButton = ({ router, checkSubscriptionStatus, showSuccessAler
       } catch (error) {
         console.error('❌ Error en polling:', error);
       }
-    }, 5000); // Verificar cada 5 segundos
+    }, 5000);
 
-    // Guardar el intervalo para limpiarlo si es necesario
     return pollInterval;
   };
 
@@ -494,16 +478,11 @@ const MobileCheckoutButton = ({ router, checkSubscriptionStatus, showSuccessAler
         const supported = await Linking.canOpenURL(data.url);
         
         if (supported) {
-          // ✅ INICIAR POLLING INMEDIATAMENTE antes de abrir Stripe
           startPolling();
           
-          // ✅ Abrir Stripe
           await Linking.openURL(data.url);
           console.log('🌐 Redirigiendo a Stripe Checkout...');
           console.log('🔄 Polling iniciado automáticamente');
-          
-          // Opcional: Mostrar un toast o notificación sutil
-          // en lugar de un Alert que requiera confirmación
         } else {
           console.error('❌ No se puede abrir la URL:', data.url);
           Alert.alert(
@@ -575,7 +554,6 @@ const MobileCheckoutButton = ({ router, checkSubscriptionStatus, showSuccessAler
   );
 };
 
-// ✅ Función factory que crea el componente CheckoutForm solo en web
 const createCheckoutForm = (stripeReact) => {
   return ({ router, checkSubscriptionStatus, StripeComponents }) => {
     const stripe = stripeReact.useStripe();
