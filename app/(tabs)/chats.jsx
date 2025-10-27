@@ -6,6 +6,8 @@ import {
   TextInput,
   Alert,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import React, { useState } from "react";
 import { AuraText } from "@/components/AuraText";
@@ -89,148 +91,160 @@ export default function Chats() {
 
   if (selectedChat) {
     return (
-      <SafeAreaView style={styles.container}>
-        {/* Header del chat */}
-        <View style={styles.chatHeader}>
-          <Pressable onPress={goBack} style={styles.backButton}>
-            <MaterialIcons name="arrow-back" size={24} color="#fff" />
-          </Pressable>
-          <View style={styles.chatHeaderInfo}>
-            <View style={styles.avatarContainer}>
-              <AuraText style={styles.avatarText}>
-                {selectedChat.avatar}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.container}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      >
+        <SafeAreaView style={styles.container}>
+          {/* Header del chat */}
+          <View style={styles.chatHeader}>
+            <Pressable onPress={goBack} style={styles.backButton}>
+              <MaterialIcons name="arrow-back" size={24} color="#fff" />
+            </Pressable>
+            <View style={styles.chatHeaderInfo}>
+              <View style={styles.avatarContainer}>
+                <AuraText style={styles.avatarText}>
+                  {selectedChat.avatar}
+                </AuraText>
+              </View>
+              <AuraText style={styles.chatHeaderName}>
+                {selectedChat.name}
               </AuraText>
             </View>
-            <AuraText style={styles.chatHeaderName}>
-              {selectedChat.name}
-            </AuraText>
-          </View>
-          <Pressable style={styles.moreButton}>
-            <MaterialIcons name="more-vert" size={24} color="#fff" />
-          </Pressable>
-        </View>
-
-        {/* Messages */}
-        <ScrollView style={styles.messagesContainer}>
-          {messages.length === 0 && !loading && (
-            <View style={styles.emptyState}>
-              <MaterialIcons
-                name="chat-bubble-outline"
-                size={48}
-                color="#999"
+            
+            {/* ✅ MOVER: Connection Status dentro del header */}
+            <View
+              style={[
+                styles.connectionStatusInline,
+                {
+                  backgroundColor: socketConnected ? "#4CAF50" : "#FFB800",
+                },
+              ]}
+            >
+              <MaterialIcons 
+                name={socketConnected ? "check-circle" : "cancel"} 
+                size={14} 
+                color="#fff" 
+                style={{ marginRight: 4 }}
               />
-              <AuraText style={styles.emptyText}>No hay mensajes aún</AuraText>
+              <AuraText style={styles.connectionTextInline}>
+                {socketConnected ? "●" : "●"}
+              </AuraText>
+            </View>
+          </View>
+
+          {/* Messages */}
+          <ScrollView 
+            ref={messagesEndRef}
+            style={styles.messagesContainer}
+          >
+            {messages.length === 0 && !loading && (
+              <View style={styles.emptyState}>
+                <MaterialIcons
+                  name="chat-bubble-outline"
+                  size={48}
+                  color="#999"
+                />
+                <AuraText style={styles.emptyText}>No hay mensajes aún</AuraText>
+              </View>
+            )}
+
+            {messages.map((message) => (
+              <View
+                key={message.id}
+                style={[
+                  styles.messageContainer,
+                  message.isOwn ? styles.ownMessage : styles.otherMessage,
+                ]}
+              >
+                {!message.isOwn && (
+                  <AuraText style={styles.senderName}>
+                    {message.senderName}
+                  </AuraText>
+                )}
+                <View
+                  style={[
+                    styles.messageBubble,
+                    message.isOwn ? styles.ownBubble : styles.otherBubble,
+                  ]}
+                >
+                  <AuraText
+                    style={[
+                      styles.messageText,
+                      message.isOwn
+                        ? styles.ownMessageText
+                        : styles.otherMessageText,
+                    ]}
+                  >
+                    {message.content}
+                  </AuraText>
+                  <AuraText
+                    style={[
+                      styles.messageTime,
+                      message.isOwn
+                        ? styles.ownMessageTime
+                        : styles.otherMessageTime,
+                    ]}
+                  >
+                    {message.time}
+                  </AuraText>
+                </View>
+              </View>
+            ))}
+            <View ref={messagesEndRef} />
+          </ScrollView>
+
+          {/* Typing Indicator */}
+          {typingUsers.size > 0 && (
+            <View style={styles.typingIndicator}>
+              <AuraText style={styles.typingText}>
+                {Array.from(typingUsers).length === 1
+                  ? "Escribiendo..."
+                  : `${Array.from(typingUsers).length} personas escribiendo...`}
+              </AuraText>
             </View>
           )}
 
-          {messages.map((message) => (
-            <View
-              key={message.id}
-              style={[
-                styles.messageContainer,
-                message.isOwn ? styles.ownMessage : styles.otherMessage,
-              ]}
-            >
-              {!message.isOwn && (
-                <AuraText style={styles.senderName}>
-                  {message.senderName}
-                </AuraText>
-              )}
-              <View
-                style={[
-                  styles.messageBubble,
-                  message.isOwn ? styles.ownBubble : styles.otherBubble,
-                ]}
-              >
-                <AuraText
-                  style={[
-                    styles.messageText,
-                    message.isOwn
-                      ? styles.ownMessageText
-                      : styles.otherMessageText,
-                  ]}
-                >
-                  {message.content}
-                </AuraText>
-                <AuraText
-                  style={[
-                    styles.messageTime,
-                    message.isOwn
-                      ? styles.ownMessageTime
-                      : styles.otherMessageTime,
-                  ]}
-                >
-                  {message.time}
-                </AuraText>
-              </View>
-            </View>
-          ))}
-          <View ref={messagesEndRef} />
-        </ScrollView>
-
-        {/* Input */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.messageInput}
-            placeholder="Escribe un Mensaje"
-            placeholderTextColor="#999"
-            value={newMessage}
-            onChangeText={(text) => {
-              setNewMessage(text);
-              handleTyping();
-            }}
-            onBlur={stopTyping}
-            onSubmitEditing={(e) => {
-              e.preventDefault();
-              handleSendMessage();
-            }}
-            blurOnSubmit={false}
-            multiline
-            returnKeyType="send"
-            onKeyPress={(e) => {
-              if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+          {/* Input */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.messageInput}
+              placeholder="Escribe un Mensaje"
+              placeholderTextColor="#999"
+              value={newMessage}
+              onChangeText={(text) => {
+                setNewMessage(text);
+                handleTyping();
+              }}
+              onBlur={stopTyping}
+              onSubmitEditing={(e) => {
                 e.preventDefault();
                 handleSendMessage();
-              }
-            }}
-          />
-          <Pressable
-            style={[
-              styles.sendButton,
-              { opacity: newMessage.trim() ? 1 : 0.5 },
-            ]}
-            onPress={handleSendMessage}
-            disabled={sending || !newMessage.trim()}
-          >
-            <MaterialIcons name="send" size={24} color="#fff" />
-          </Pressable>
-        </View>
-
-        {/* Typing Indicator */}
-        {typingUsers.size > 0 && (
-          <View style={styles.typingIndicator}>
-            <AuraText style={styles.typingText}>
-              {Array.from(typingUsers).length === 1
-                ? "Escribiendo..."
-                : `${Array.from(typingUsers).length} personas escribiendo...`}
-            </AuraText>
+              }}
+              blurOnSubmit={false}
+              multiline
+              returnKeyType="send"
+              onKeyPress={(e) => {
+                if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+            />
+            <Pressable
+              style={[
+                styles.sendButton,
+                { opacity: newMessage.trim() ? 1 : 0.5 },
+              ]}
+              onPress={handleSendMessage}
+              disabled={sending || !newMessage.trim()}
+            >
+              <MaterialIcons name="send" size={24} color="#fff" />
+            </Pressable>
           </View>
-        )}
-
-        {/* Connection Status */}
-        <View
-          style={[
-            styles.connectionStatus,
-            {
-              backgroundColor: socketConnected ? "#4CAF50" : "#FF5722",
-            },
-          ]}
-        >
-          <AuraText style={styles.connectionText}>
-            {socketConnected ? "🟢 Conectado" : "🔴 Desconectado"}
-          </AuraText>
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -543,6 +557,20 @@ const styles = StyleSheet.create({
   },
   connectionText: {
     fontSize: 10,
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  connectionStatusInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    marginLeft: 10,
+  },
+  connectionTextInline: {
+    fontSize: 8,
     color: "#fff",
     fontWeight: "bold",
   },

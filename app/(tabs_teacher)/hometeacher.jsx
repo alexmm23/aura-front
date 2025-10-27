@@ -4,10 +4,8 @@ import {
   ScrollView,
   StyleSheet,
   useWindowDimensions,
-  Image,
 } from "react-native";
-import React, { useEffect, useState } from "react";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
 import { AuraText } from "@/components/AuraText";
 import { API, buildApiUrl } from "@/config/api";
 import Head from "expo-router/head";

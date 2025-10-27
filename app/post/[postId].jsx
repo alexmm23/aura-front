@@ -18,13 +18,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { API } from "@/config/api";
-import { AuraText } from "../../components/AuraText";
+
 import {
   apiGet,
   apiPost,
   apiPostMultipart,
   apiDelete,
 } from "../../utils/fetchWithAuth";
+import * as FileSystem from "expo-file-system";
 import {
   AttachmentViewer,
   LinksViewer,
@@ -147,36 +148,42 @@ const PostDetail = () => {
 
       let response;
 
-      // Si hay archivos, usar multipart/form-data
+      // Convertir archivos a base64 si existen
+      const attachments = [];
       if (selectedFiles.length > 0) {
-        const formData = new FormData();
-        formData.append("content", commentText);
+        for (const file of selectedFiles) {
+          // Leer el archivo como base64
+          const fileObject = new File(
+            [await fetch(file.uri).then((r) => r.blob())],
+            file.name,
+            {
+              type: file.mimeType || "application/octet-stream",
+            }
+          );
+          const arrayBuffer = await fileObject.arrayBuffer();
+          const base64 = btoa(
+            String.fromCharCode(...new Uint8Array(arrayBuffer))
+          );
 
-        // Agregar links
-        commentData.links.forEach((link, index) => {
-          formData.append(`links[${index}]`, link);
-        });
-
-        // Agregar archivos
-        selectedFiles.forEach((file, index) => {
-          formData.append("attachments", {
-            uri: file.uri,
-            type: file.mimeType || "application/octet-stream",
+          attachments.push({
             name: file.name,
+            type: file.mimeType || "application/octet-stream",
+            data: base64,
           });
-        });
-
-        response = await apiPostMultipart(
-          API.ENDPOINTS.POSTS.CREATE_COMMENT.replace(":id", postId),
-          formData
-        );
-      } else {
-        // Solo datos JSON
-        response = await apiPost(
-          API.ENDPOINTS.POSTS.CREATE_COMMENT.replace(":id", postId),
-          commentData
-        );
+        }
       }
+
+      // Preparar datos completos incluyendo archivos en base64
+      const completeCommentData = {
+        ...commentData,
+        attachments,
+      };
+
+      // Siempre usar JSON
+      response = await apiPost(
+        API.ENDPOINTS.POSTS.CREATE_COMMENT.replace(":id", postId),
+        completeCommentData
+      );
 
       if (response.ok) {
         Alert.alert("Éxito", "Comentario agregado correctamente");
@@ -311,7 +318,7 @@ const PostDetail = () => {
             <View style={styles.authorInfo}>
               <Ionicons name="person-circle-outline" size={20} color="#666" />
               <Text style={styles.authorName}>
-                {post.author?.name || "Usuario"}
+                {post.user?.name || "Usuario"}
               </Text>
             </View>
             <Text style={styles.postDate}>

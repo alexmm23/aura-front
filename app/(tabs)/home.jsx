@@ -8,17 +8,15 @@ import {
   TouchableOpacity,
   Animated,
 } from "react-native";
-import React, { useEffect, useState, useRef } from "react";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import  { useEffect, useState, useRef } from "react";
 import { AuraText } from "@/components/AuraText";
-import { fetchWithAuth, apiGet } from "../../utils/fetchWithAuth";
+import {  apiGet } from "../../utils/fetchWithAuth";
 import { API } from "../../config/api";
 import Head from "expo-router/head";
 import Svg, { Path } from "react-native-svg";
 import { Colors } from "@/constants/Colors";
 import { useRouter } from "expo-router";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HomeScreen() {
   const [homework, setHomework] = useState([]);
@@ -105,14 +103,17 @@ export default function HomeScreen() {
                 <>
                   {notes.map((note, index) => (
                     <View key={index} style={styles.noteCard}>
-                      <AuraText
-                        style={styles.noteTitle}
-                        text={`Nota #${index + 1}`}
-                      ></AuraText>
-                      <AuraText
-                        style={styles.noteText}
-                        text={note.content}
-                      ></AuraText>
+                      <View style={{ flex: 1, marginRight: 10 }}>
+                        <AuraText
+                          style={styles.noteTitle}
+                          text={`Nota #${index + 1}`}
+                        ></AuraText>
+                      </View>
+                      <Image
+                        source={{ uri: note.data }}
+                        style={styles.noteImage}
+                        resizeMode="cover"
+                      />
                     </View>
                   ))}
 
@@ -324,6 +325,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   noteCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     backgroundColor: "#E4E3DD",
     borderRadius: 10,
     padding: 15,
@@ -337,6 +341,12 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#A64AC9",
     marginBottom: 5,
+  },
+  noteImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: "#d0d0d0",
   },
   noteText: {
     fontSize: 14,
