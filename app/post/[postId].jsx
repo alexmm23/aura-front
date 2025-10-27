@@ -318,7 +318,7 @@ const PostDetail = () => {
             <View style={styles.authorInfo}>
               <Ionicons name="person-circle-outline" size={20} color="#666" />
               <Text style={styles.authorName}>
-                {post.author?.name || "Usuario"}
+                {post.user?.name || "Usuario"}
               </Text>
             </View>
             <Text style={styles.postDate}>

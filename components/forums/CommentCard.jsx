@@ -17,7 +17,7 @@ export const CommentCard = ({
           <Ionicons name="person-circle-outline" size={20} color="#666" />
           <View style={styles.authorDetails}>
             <Text style={styles.authorName}>
-              {comment.author?.name || "Usuario"}
+              {comment.user?.name || "Usuario"}
             </Text>
             <Text style={styles.date}>
               {new Date(comment.created_at).toLocaleString("es-ES")}
