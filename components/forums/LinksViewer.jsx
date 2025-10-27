@@ -56,12 +56,22 @@ export const LinksViewer = ({ links, compact = false }) => {
   if (compact) {
     return (
       <View style={styles.compactContainer}>
-        <View style={styles.compactHeader}>
-          <Ionicons name="link" size={14} color="#4285F4" />
-          <Text style={styles.compactText}>
-            {links.length} enlace{links.length > 1 ? "s" : ""}
-          </Text>
-        </View>
+        {links.map((link, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.compactLinkItem}
+            onPress={() => openLink(link)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.compactLinkContent}>
+              <Ionicons name={getLinkIcon(link)} size={18} color="#4285F4" />
+              <Text style={styles.compactLinkText} numberOfLines={1}>
+                {getDomain(link)}
+              </Text>
+            </View>
+            <Ionicons name="open-outline" size={14} color="#4285F4" />
+          </TouchableOpacity>
+        ))}
       </View>
     );
   }
@@ -98,6 +108,30 @@ const styles = StyleSheet.create({
   },
   compactContainer: {
     marginVertical: 4,
+  },
+  compactLinkItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#E3F2FD",
+    padding: 10,
+    borderRadius: 6,
+    marginBottom: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: "#4285F4",
+  },
+  compactLinkContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 8,
+  },
+  compactLinkText: {
+    fontSize: 13,
+    color: "#4285F4",
+    marginLeft: 8,
+    flex: 1,
+    fontWeight: "500",
   },
   compactHeader: {
     flexDirection: "row",
