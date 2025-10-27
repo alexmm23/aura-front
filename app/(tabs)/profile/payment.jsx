@@ -118,13 +118,9 @@ export default function PaymentWeb() {
 
   useEffect(() => {
     checkSubscriptionStatus();
-  }, []);
-
-  // ✅ Cargar Stripe solo después de verificar que NO hay suscripción activa y estamos en web
-  useEffect(() => {
-    if (!isMobile && !loading && !hasActiveSubscription) {
-      console.log('🌐 Cargando Stripe para web...');
-      
+    
+    // ✅ Cargar Stripe solo en web
+    if (!isMobile) {
       Promise.all([
         import("@stripe/react-stripe-js"),
         import("@stripe/stripe-js")
@@ -145,7 +141,7 @@ export default function PaymentWeb() {
         console.error('Error loading Stripe:', err);
       });
     }
-  }, [isMobile, loading, hasActiveSubscription]);
+  }, []);
 
   // ✅ Listener para deep links
   useEffect(() => {
