@@ -152,24 +152,40 @@ const PostDetail = () => {
       const attachments = [];
       if (selectedFiles.length > 0) {
         for (const file of selectedFiles) {
-          // Leer el archivo como base64
-          const fileObject = new File(
-            [await fetch(file.uri).then((r) => r.blob())],
-            file.name,
-            {
-              type: file.mimeType || "application/octet-stream",
-            }
-          );
-          const arrayBuffer = await fileObject.arrayBuffer();
-          const base64 = btoa(
-            String.fromCharCode(...new Uint8Array(arrayBuffer))
-          );
+          try {
+            let base64Data;
 
-          attachments.push({
-            name: file.name,
-            type: file.mimeType || "application/octet-stream",
-            data: base64,
-          });
+            if (Platform.OS === "web") {
+              // En web, usar fetch y FileReader
+              const blob = await fetch(file.uri).then((r) => r.blob());
+              base64Data = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  const base64 = reader.result.split(",")[1];
+                  resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+            } else {
+              // En móvil (Android/iOS), usar FileSystem
+              base64Data = await FileSystem.readAsStringAsync(file.uri, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+            }
+
+            attachments.push({
+              name: file.name,
+              type: file.mimeType || "application/octet-stream",
+              data: base64Data,
+            });
+          } catch (fileError) {
+            console.error("Error processing file:", file.name, fileError);
+            Alert.alert(
+              "Error",
+              `No se pudo procesar el archivo: ${file.name}`
+            );
+          }
         }
       }
 
