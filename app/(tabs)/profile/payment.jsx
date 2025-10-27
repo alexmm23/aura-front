@@ -38,6 +38,7 @@ export default function PaymentWeb() {
   
   // ✅ Estado para cargar Stripe dinámicamente
   const [StripeComponents, setStripeComponents] = useState(null);
+  const [WebCheckoutForm, setWebCheckoutForm] = useState(null);
 
   const showSuccessAlert = (message) => {
     setErrorMessage('');
@@ -117,9 +118,13 @@ export default function PaymentWeb() {
 
   useEffect(() => {
     checkSubscriptionStatus();
-    
-    // ✅ Cargar Stripe solo en web
-    if (!isMobile) {
+  }, []);
+
+  // ✅ Cargar Stripe solo después de verificar que NO hay suscripción activa y estamos en web
+  useEffect(() => {
+    if (!isMobile && !loading && !hasActiveSubscription) {
+      console.log('🌐 Cargando Stripe para web...');
+      
       Promise.all([
         import("@stripe/react-stripe-js"),
         import("@stripe/stripe-js")
@@ -133,11 +138,14 @@ export default function PaymentWeb() {
           useElements: stripeReact.useElements,
           stripePromise
         });
+
+        // ✅ Crear el componente de formulario web dinámicamente
+        setWebCheckoutForm(() => createCheckoutForm(stripeReact));
       }).catch(err => {
         console.error('Error loading Stripe:', err);
       });
     }
-  }, []);
+  }, [isMobile, loading, hasActiveSubscription]);
 
   // ✅ Listener para deep links
   useEffect(() => {
@@ -360,9 +368,9 @@ export default function PaymentWeb() {
             )}
             
             {/* Solo web usa Stripe Elements */}
-            {!isMobile && StripeComponents && (
+            {!isMobile && StripeComponents && WebCheckoutForm && (
               <StripeComponents.Elements stripe={StripeComponents.stripePromise}>
-                <CheckoutForm 
+                <WebCheckoutForm 
                   router={router} 
                   checkSubscriptionStatus={checkSubscriptionStatus}
                   StripeComponents={StripeComponents}
@@ -571,300 +579,303 @@ const MobileCheckoutButton = ({ router, checkSubscriptionStatus, showSuccessAler
   );
 };
 
-const CheckoutForm = ({ router, checkSubscriptionStatus, StripeComponents }) => {
-  const stripe = StripeComponents.useStripe();
-  const elements = StripeComponents.useElements();
-  const [processing, setProcessing] = useState(false);
-  const [email, setEmail] = useState('');
-  const [country, setCountry] = useState('');
-  const [phone, setPhone] = useState('');
-  
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+// ✅ Función factory que crea el componente CheckoutForm solo en web
+const createCheckoutForm = (stripeReact) => {
+  return ({ router, checkSubscriptionStatus, StripeComponents }) => {
+    const stripe = stripeReact.useStripe();
+    const elements = stripeReact.useElements();
+    const [processing, setProcessing] = useState(false);
+    const [email, setEmail] = useState('');
+    const [country, setCountry] = useState('');
+    const [phone, setPhone] = useState('');
+    
+    const [successMessage, setSuccessMessage] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
 
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [pendingCardElement, setPendingCardElement] = useState(null);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [pendingCardElement, setPendingCardElement] = useState(null);
 
-  const showSuccessAlert = (message) => {
-    setErrorMessage('');
-    setSuccessMessage(message);
-    setTimeout(() => setSuccessMessage(''), 5000); 
-  };
+    const showSuccessAlert = (message) => {
+      setErrorMessage('');
+      setSuccessMessage(message);
+      setTimeout(() => setSuccessMessage(''), 5000); 
+    };
 
-  const showErrorAlert = (message) => {
-    setSuccessMessage('');
-    setErrorMessage(message);
-    setTimeout(() => setErrorMessage(''), 8000); 
-  };
+    const showErrorAlert = (message) => {
+      setSuccessMessage('');
+      setErrorMessage(message);
+      setTimeout(() => setErrorMessage(''), 8000); 
+    };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (!stripe || !elements) return;
+    const handleSubmit = async (event) => {
+      event.preventDefault();
+      if (!stripe || !elements) return;
 
-    if (!email.trim()) {
-      showErrorAlert('Por favor ingresa tu correo electrónico');
-      return;
-    }
+      if (!email.trim()) {
+        showErrorAlert('Por favor ingresa tu correo electrónico');
+        return;
+      }
 
-    if (!country.trim()) {
-      showErrorAlert('Por favor ingresa tu país/región');
-      return;
-    }
+      if (!country.trim()) {
+        showErrorAlert('Por favor ingresa tu país/región');
+        return;
+      }
 
-    if (!phone.trim()) {
-      showErrorAlert('Por favor ingresa tu número de teléfono');
-      return;
-    }
+      if (!phone.trim()) {
+        showErrorAlert('Por favor ingresa tu número de teléfono');
+        return;
+      }
 
-    const cardElement = elements.getElement(StripeComponents.CardElement);
-    if (!cardElement) {
-      showErrorAlert('Por favor ingresa los datos de la tarjeta');
-      return;
-    }
+      const cardElement = elements.getElement(StripeComponents.CardElement);
+      if (!cardElement) {
+        showErrorAlert('Por favor ingresa los datos de la tarjeta');
+        return;
+      }
 
-    setPendingCardElement(cardElement);
-    setShowConfirmModal(true);
-  };
+      setPendingCardElement(cardElement);
+      setShowConfirmModal(true);
+    };
 
-  const handleConfirmPayment = () => {
-    setShowConfirmModal(false);
-    processPayment(pendingCardElement);
-    setPendingCardElement(null);
-  };
+    const handleConfirmPayment = () => {
+      setShowConfirmModal(false);
+      processPayment(pendingCardElement);
+      setPendingCardElement(null);
+    };
 
-  const handleCancelPayment = () => {
-    setShowConfirmModal(false);
-    setPendingCardElement(null);
-  };
+    const handleCancelPayment = () => {
+      setShowConfirmModal(false);
+      setPendingCardElement(null);
+    };
 
-  const processPayment = async (cardElement) => {
-    setProcessing(true);
-    setErrorMessage('');
-    setSuccessMessage('');
+    const processPayment = async (cardElement) => {
+      setProcessing(true);
+      setErrorMessage('');
+      setSuccessMessage('');
 
-    try {
-      const { error, paymentMethod } = await stripe.createPaymentMethod({
-        type: "card",
-        card: cardElement,
-        billing_details: {
-          email: email,
-          phone: phone,
-          address: {
-            country: country,
+      try {
+        const { error, paymentMethod } = await stripe.createPaymentMethod({
+          type: "card",
+          card: cardElement,
+          billing_details: {
+            email: email,
+            phone: phone,
+            address: {
+              country: country,
+            },
           },
-        },
-      });
+        });
 
-      if (error) {
-        showErrorAlert(`Error en la tarjeta: ${error.message}`);
-        setProcessing(false);
-        return;
-      }
-
-      const paymentData = {
-        paymentMethodId: paymentMethod.id, 
-        amount: 9900, 
-        currency: "mxn",
-        billingEmail: email, 
-        phone: phone,
-        country: country,
-        sendConfirmationEmail: true
-      };
-
-      console.log("Request body:", paymentData);
-      console.log("📧 Email del formulario que recibirá la confirmación:", email);
-
-      const response = await apiPost(API.ENDPOINTS.PAYMENT.CONFIRM, paymentData);
-      
-      if (response.status === 401) {
-        showErrorAlert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
-        setTimeout(() => {
-          router.push("/(auth)/login");
-        }, 2000);
-        return;
-      }
-
-      console.log("Response from backend:", response);
-
-      const data = await response.json();
-      
-      if (data.success) {
-        showSuccessAlert(
-          data.message || 
-          `¡Pago realizado con éxito! Bienvenido a AURA Premium 🎉\n📧 Se ha enviado un correo de confirmación a: ${email}`
-        );
-        
-        if (!data.emailSent) {
-          console.log('⚠️ Email not sent automatically, sending manually...');
-          await sendManualConfirmationEmail(data, email);
-        } else {
-          console.log(`✅ Confirmation email sent automatically to: ${email}`);
+        if (error) {
+          showErrorAlert(`Error en la tarjeta: ${error.message}`);
+          setProcessing(false);
+          return;
         }
-        
-        console.log('🔄 Actualizando estado de suscripción después del pago...');
-        
-        setTimeout(async () => {
-          try {
-            await checkSubscriptionStatus();
-            console.log('✅ Estado de suscripción actualizado exitosamente');
-          } catch (error) {
-            console.error('❌ Error actualizando estado de suscripción:', error);
-          }
-        }, 2000);
-        
-      } else {
-        showErrorAlert(`Error en el pago: ${data.error || 'Ocurrió un error inesperado'}`);
-      }
 
-    } catch (error) {
-      console.error('Error during payment:', error);
-      
-      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-        showErrorAlert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
-        setTimeout(() => {
-          router.push("/(auth)/login");
-        }, 2000);
-      } else {
-        showErrorAlert('Error de conexión. Por favor intenta nuevamente.');
-      }
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const sendManualConfirmationEmail = async (paymentData, userEmail) => {
-    try {
-      console.log('📧 Sending manual payment confirmation email to:', userEmail);
-
-      const emailResponse = await apiPost(API.ENDPOINTS.PAYMENT.SEND_CONFIRMATION, {
-        email: email,
-        paymentData: {
-          amount: 99,
-          currency: 'MXN',
-          paymentId: paymentData.paymentId || paymentData.id || 'N/A',
-          date: new Date().toISOString(),
+        const paymentData = {
+          paymentMethodId: paymentMethod.id, 
+          amount: 9900, 
+          currency: "mxn",
+          billingEmail: email, 
           phone: phone,
-          country: country
+          country: country,
+          sendConfirmationEmail: true
+        };
+
+        console.log("Request body:", paymentData);
+        console.log("📧 Email del formulario que recibirá la confirmación:", email);
+
+        const response = await apiPost(API.ENDPOINTS.PAYMENT.CONFIRM, paymentData);
+        
+        if (response.status === 401) {
+          showErrorAlert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
+          setTimeout(() => {
+            router.push("/(auth)/login");
+          }, 2000);
+          return;
         }
-      });
 
-      if (emailResponse.ok) {
-        console.log('✅ Manual payment confirmation email sent successfully');
-      } else {
-        console.error('❌ Failed to send manual payment confirmation email');
+        console.log("Response from backend:", response);
+
+        const data = await response.json();
+        
+        if (data.success) {
+          showSuccessAlert(
+            data.message || 
+            `¡Pago realizado con éxito! Bienvenido a AURA Premium 🎉\n📧 Se ha enviado un correo de confirmación a: ${email}`
+          );
+          
+          if (!data.emailSent) {
+            console.log('⚠️ Email not sent automatically, sending manually...');
+            await sendManualConfirmationEmail(data, email);
+          } else {
+            console.log(`✅ Confirmation email sent automatically to: ${email}`);
+          }
+          
+          console.log('🔄 Actualizando estado de suscripción después del pago...');
+          
+          setTimeout(async () => {
+            try {
+              await checkSubscriptionStatus();
+              console.log('✅ Estado de suscripción actualizado exitosamente');
+            } catch (error) {
+              console.error('❌ Error actualizando estado de suscripción:', error);
+            }
+          }, 2000);
+          
+        } else {
+          showErrorAlert(`Error en el pago: ${data.error || 'Ocurrió un error inesperado'}`);
+        }
+
+      } catch (error) {
+        console.error('Error during payment:', error);
+        
+        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          showErrorAlert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
+          setTimeout(() => {
+            router.push("/(auth)/login");
+          }, 2000);
+        } else {
+          showErrorAlert('Error de conexión. Por favor intenta nuevamente.');
+        }
+      } finally {
+        setProcessing(false);
       }
-    } catch (error) {
-      console.error('❌ Error sending manual payment confirmation email:', error);
-    }
-  };
+    };
 
-  return (
-    <View style={styles.form}>
-      {showConfirmModal && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>💳 Confirmar Pago</Text>
-            <Text style={styles.modalText}>
-              ¿Estás seguro de que deseas proceder con el pago de MXN$99?
-            </Text>
-            <View style={styles.modalDetails}>
-              <Text style={styles.modalDetailText}>📧 Correo: {email}</Text>
-              <Text style={styles.modalDetailText}>📱 Teléfono: {phone}</Text>
-              <Text style={styles.modalDetailText}>🌍 País: {country}</Text>
-            </View>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={styles.cancelButton} 
-                onPress={handleCancelPayment}
-              >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.confirmButton} 
-                onPress={handleConfirmPayment}
-              >
-                <Text style={styles.confirmButtonText}>Confirmar Pago</Text>
-              </TouchableOpacity>
+    const sendManualConfirmationEmail = async (paymentData, userEmail) => {
+      try {
+        console.log('📧 Sending manual payment confirmation email to:', userEmail);
+
+        const emailResponse = await apiPost(API.ENDPOINTS.PAYMENT.SEND_CONFIRMATION, {
+          email: email,
+          paymentData: {
+            amount: 99,
+            currency: 'MXN',
+            paymentId: paymentData.paymentId || paymentData.id || 'N/A',
+            date: new Date().toISOString(),
+            phone: phone,
+            country: country
+          }
+        });
+
+        if (emailResponse.ok) {
+          console.log('✅ Manual payment confirmation email sent successfully');
+        } else {
+          console.error('❌ Failed to send manual payment confirmation email');
+        }
+      } catch (error) {
+        console.error('❌ Error sending manual payment confirmation email:', error);
+      }
+    };
+
+    return (
+      <View style={styles.form}>
+        {showConfirmModal && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>💳 Confirmar Pago</Text>
+              <Text style={styles.modalText}>
+                ¿Estás seguro de que deseas proceder con el pago de MXN$99?
+              </Text>
+              <View style={styles.modalDetails}>
+                <Text style={styles.modalDetailText}>📧 Correo: {email}</Text>
+                <Text style={styles.modalDetailText}>📱 Teléfono: {phone}</Text>
+                <Text style={styles.modalDetailText}>🌍 País: {country}</Text>
+              </View>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={styles.cancelButton} 
+                  onPress={handleCancelPayment}
+                >
+                  <Text style={styles.cancelButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.confirmButton} 
+                  onPress={handleConfirmPayment}
+                >
+                  <Text style={styles.confirmButtonText}>Confirmar Pago</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      )}
+        )}
 
-      {successMessage ? (
-        <View style={styles.successAlert}>
-          <Text style={styles.successText}>{successMessage}</Text>
-        </View>
-      ) : null}
+        {successMessage ? (
+          <View style={styles.successAlert}>
+            <Text style={styles.successText}>{successMessage}</Text>
+          </View>
+        ) : null}
 
-      {errorMessage ? (
-        <View style={styles.errorAlert}>
-          <Text style={styles.errorText}>{errorMessage}</Text>
-        </View>
-      ) : null}
+        {errorMessage ? (
+          <View style={styles.errorAlert}>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        ) : null}
 
-      <Text style={styles.sectionTitle}>Información del contacto</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Correo Electrónico"
-        placeholderTextColor="#999"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-
-      <Text style={styles.sectionTitle}>Información de la tarjeta</Text>
-      
-      <View style={styles.stripeCardContainer}>
-        <StripeComponents.CardElement
-          options={{
-            style: {
-              base: {
-                fontSize: '16px',
-                color: '#666',
-                fontFamily: 'System',
-                '::placeholder': {
-                  color: '#999',
-                },
-                backgroundColor: 'transparent',
-              },
-              invalid: {
-                color: '#fa755a',
-                iconColor: '#fa755a',
-              },
-            },
-            hidePostalCode: false,
-          }}
+        <Text style={styles.sectionTitle}>Información del contacto</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Correo Electrónico"
+          placeholderTextColor="#999"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
         />
+
+        <Text style={styles.sectionTitle}>Información de la tarjeta</Text>
+        
+        <View style={styles.stripeCardContainer}>
+          <StripeComponents.CardElement
+            options={{
+              style: {
+                base: {
+                  fontSize: '16px',
+                  color: '#666',
+                  fontFamily: 'System',
+                  '::placeholder': {
+                    color: '#999',
+                  },
+                  backgroundColor: 'transparent',
+                },
+                invalid: {
+                  color: '#fa755a',
+                  iconColor: '#fa755a',
+                },
+              },
+              hidePostalCode: false,
+            }}
+          />
+        </View>
+
+        <Text style={styles.sectionTitle}>País/Región</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="MX/EU/US"
+          placeholderTextColor="#999"
+          value={country}
+          onChangeText={setCountry}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="Teléfono"
+          placeholderTextColor="#999"
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+        />
+
+        <TouchableOpacity
+          style={[styles.payButton, processing && styles.payButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={processing}
+        >
+          <AuraText style={styles.payButtonText} text={processing ? "Procesando..." : "Pagar MXN$99"} />
+        </TouchableOpacity>
       </View>
-
-      <Text style={styles.sectionTitle}>País/Región</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="MX/EU/US"
-        placeholderTextColor="#999"
-        value={country}
-        onChangeText={setCountry}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Teléfono"
-        placeholderTextColor="#999"
-        value={phone}
-        onChangeText={setPhone}
-        keyboardType="phone-pad"
-      />
-
-      <TouchableOpacity
-        style={[styles.payButton, processing && styles.payButtonDisabled]}
-        onPress={handleSubmit}
-        disabled={processing}
-      >
-        <AuraText style={styles.payButtonText} text={processing ? "Procesando..." : "Pagar MXN$99"} />
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 };
 
 const PortraitHeader = () => (

@@ -6,6 +6,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   TouchableOpacity,
+  Platform,
 } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
 import fetchWithAuth from "@/utils/fetchWithAuth";
@@ -19,6 +20,8 @@ import { useAuth } from "@/contexts/AuthContext"; // Hook para manejar la autent
 import AsyncStorage from "@react-native-async-storage/async-storage"; // Para manejar el almacenamiento local
 import * as Linking from "expo-linking";
 import { apiGet } from "../../utils/fetchWithAuth";
+
+const isMobile = Platform.OS === 'ios' || Platform.OS === 'android';
 
 export default function Profile() {
   const { logout } = useAuth(); // Hook para manejar la autenticación
@@ -76,6 +79,19 @@ export default function Profile() {
       alert(
         "Error al obtener el perfil. Por favor, inténtalo de nuevo más tarde."
       );
+    }
+  };
+
+  // ✅ Función para manejar la navegación a la página de pagos
+  const handleManageSubscription = () => {
+    if (isMobile) {
+      // Redirigir a payment-movil.jsx (móvil)
+      console.log('📱 Navegando a payment-movil.jsx (móvil)');
+      router.push("/(tabs)/profile/payment-movil");
+    } else {
+      // Redirigir a payment.jsx (web)
+      console.log('🌐 Navegando a payment.jsx (web)');
+      router.push("/(tabs)/profile/payment");
     }
   };
 
@@ -138,12 +154,10 @@ export default function Profile() {
             >
               <AuraText style={styles.buttonText} text="Editar Perfil" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.button}
-            onPress={() =>
-                router.push({
-                  pathname: "/profile/payment",
-                })
-              }>
+            <TouchableOpacity 
+              style={styles.button}
+              onPress={handleManageSubscription}
+            >
               <AuraText
                 style={styles.buttonText}
                 text="Administrar Suscripción"
