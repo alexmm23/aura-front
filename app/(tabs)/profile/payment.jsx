@@ -20,11 +20,6 @@ import Svg, { Path } from "react-native-svg";
 import Head from "expo-router/head";
 import { API } from "@/config/api";
 
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
-
-const stripePromise = loadStripe("pk_test_51S2EFIRwhQTBuCWGg60RzjqoaAoZQKUplUNsEu2xzJ64ujbCJGzrrHACoOJ8JBDE6G4OOwLTepRv9F1o2hcRK9nB00gflAM0c9");
-
 import { apiPost, apiGet } from "../../../utils/fetchWithAuth";
 
 const isMobile = Platform.OS === 'ios' || Platform.OS === 'android';
@@ -40,6 +35,9 @@ export default function PaymentWeb() {
   const [processing, setProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  
+  // ✅ Estado para cargar Stripe dinámicamente
+  const [StripeComponents, setStripeComponents] = useState(null);
 
   const showSuccessAlert = (message) => {
     setErrorMessage('');
@@ -119,6 +117,26 @@ export default function PaymentWeb() {
 
   useEffect(() => {
     checkSubscriptionStatus();
+    
+    // ✅ Cargar Stripe solo en web
+    if (!isMobile) {
+      Promise.all([
+        import("@stripe/react-stripe-js"),
+        import("@stripe/stripe-js")
+      ]).then(([stripeReact, stripeJs]) => {
+        const stripePromise = stripeJs.loadStripe("pk_test_51S2EFIRwhQTBuCWGg60RzjqoaAoZQKUplUNsEu2xzJ64ujbCJGzrrHACoOJ8JBDE6G4OOwLTepRv9F1o2hcRK9nB00gflAM0c9");
+        
+        setStripeComponents({
+          Elements: stripeReact.Elements,
+          CardElement: stripeReact.CardElement,
+          useStripe: stripeReact.useStripe,
+          useElements: stripeReact.useElements,
+          stripePromise
+        });
+      }).catch(err => {
+        console.error('Error loading Stripe:', err);
+      });
+    }
   }, []);
 
   // ✅ Listener para deep links
@@ -331,20 +349,25 @@ export default function PaymentWeb() {
             <AuraText style={styles.priceText} text="MXN$99 al mes" />
             <AuraText style={styles.title} text="Realiza tu Pago" />
             
-            {isMobile ? (
+            {/* Solo móvil usa el botón de redirección */}
+            {isMobile && (
               <MobileCheckoutButton 
                 router={router} 
                 checkSubscriptionStatus={checkSubscriptionStatus}
                 showSuccessAlert={showSuccessAlert}
                 showErrorAlert={showErrorAlert}
               />
-            ) : (
-              <Elements stripe={stripePromise}>
+            )}
+            
+            {/* Solo web usa Stripe Elements */}
+            {!isMobile && StripeComponents && (
+              <StripeComponents.Elements stripe={StripeComponents.stripePromise}>
                 <CheckoutForm 
                   router={router} 
-                  checkSubscriptionStatus={checkSubscriptionStatus} 
+                  checkSubscriptionStatus={checkSubscriptionStatus}
+                  StripeComponents={StripeComponents}
                 />
-              </Elements>
+              </StripeComponents.Elements>
             )}
           </View>
         </ScrollView>
@@ -548,9 +571,9 @@ const MobileCheckoutButton = ({ router, checkSubscriptionStatus, showSuccessAler
   );
 };
 
-const CheckoutForm = ({ router, checkSubscriptionStatus }) => {
-  const stripe = useStripe();
-  const elements = useElements();
+const CheckoutForm = ({ router, checkSubscriptionStatus, StripeComponents }) => {
+  const stripe = StripeComponents.useStripe();
+  const elements = StripeComponents.useElements();
   const [processing, setProcessing] = useState(false);
   const [email, setEmail] = useState('');
   const [country, setCountry] = useState('');
@@ -593,7 +616,7 @@ const CheckoutForm = ({ router, checkSubscriptionStatus }) => {
       return;
     }
 
-    const cardElement = elements.getElement(CardElement);
+    const cardElement = elements.getElement(StripeComponents.CardElement);
     if (!cardElement) {
       showErrorAlert('Por favor ingresa los datos de la tarjeta');
       return;
@@ -793,7 +816,7 @@ const CheckoutForm = ({ router, checkSubscriptionStatus }) => {
       <Text style={styles.sectionTitle}>Información de la tarjeta</Text>
       
       <View style={styles.stripeCardContainer}>
-        <CardElement
+        <StripeComponents.CardElement
           options={{
             style: {
               base: {
