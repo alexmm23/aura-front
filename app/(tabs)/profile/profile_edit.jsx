@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   Platform,
   Text,
+  KeyboardAvoidingView,
+  TextInput,
 } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
 import Head from "expo-router/head";
@@ -214,118 +216,118 @@ export default function Profile() {
           />
         </View>
 
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            shouldUseLandscapeLayout && styles.contentLandscape,
-          ]}
+        {/* ✅ KeyboardAvoidingView envuelve solo el ScrollView */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardView}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
         >
-          <View style={styles.card}>
-            <AuraText style={styles.title} text="Mi Perfil" />
-            <AuraText style={styles.email} text={formData.email || ""} />
+          <ScrollView
+            contentContainerStyle={[
+              styles.content,
+              shouldUseLandscapeLayout && styles.contentLandscape,
+            ]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            <View style={styles.card}>
+              <AuraText style={styles.title} text="Mi Perfil" />
+              <AuraText style={styles.email} text={formData.email || ""} />
 
-            {/* Nombre */}
-            <AuraTextInput
-              style={styles.input}
-              placeholder="Nombre"
-              autoCapitalize="none"
-              value={formData.name || ""}
-              onChangeText={(text) => handleChange("name", text)}
-              name="name"
-            />
-
-            {/* Apellidos */}
-            <AuraTextInput
-              style={styles.input}
-              placeholder="Apellidos"
-              autoCapitalize="none"
-              value={formData.lastName || ""}
-              onChangeText={(text) => handleChange("lastName", text)}
-              name="lastName"
-            />
-
-            {/* Contraseña con icono de ojo */}
-            <View style={styles.passwordContainerWrapper}>
+              {/* Nombre */}
               <AuraTextInput
-                placeholder="Nueva Contraseña"
-                value={formData.password || ""}
-                onChangeText={(text) => handleChange("password", text)}
+                style={styles.input}
+                placeholder="Nombre"
                 autoCapitalize="none"
-                autoComplete="password"
-                secureTextEntry={!showPassword}
-                name="password"
+                value={formData.name || ""}
+                onChangeText={(text) => handleChange("name", text)}
+                name="name"
               />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <Ionicons
-                  name={showPassword ? "eye" : "eye-off"}
-                  size={24}
-                  color="#919191"
-                />
-              </TouchableOpacity>
-            </View>
 
-            {/* Progress Bar de fortaleza */}
-            {formData.password.length > 0 && (
-              <View style={styles.passwordStrengthContainer}>
-                <ProgressBar
-                  progress={passwordStrength}
-                  color={passwordStrengthColor(passwordStrength)}
+              {/* Apellidos */}
+              <AuraTextInput
+                style={styles.input}
+                placeholder="Apellidos"
+                autoCapitalize="none"
+                value={formData.lastName || ""}
+                onChangeText={(text) => handleChange("lastName", text)}
+                name="lastName"
+              />
+
+              {/* ✅ Contraseña - TextInput nativo con wrapper */}
+              <View style={styles.passwordContainerWrapper}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Nueva Contraseña"
+                  placeholderTextColor="#919191"
+                  value={formData.password || ""}
+                  onChangeText={(text) => handleChange("password", text)}
+                  autoCapitalize="none"
+                  autoComplete="password"
+                  secureTextEntry={!showPassword}
                 />
-                <Text
-                  style={[
-                    styles.passwordStrengthText,
-                    { color: passwordStrengthColor(passwordStrength) },
-                  ]}
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
                 >
-                  {passwordStrengthText(passwordStrength)}
-                </Text>
+                  <Ionicons
+                    name={showPassword ? "eye" : "eye-off"}
+                    size={24}
+                    color="#919191"
+                  />
+                </TouchableOpacity>
               </View>
-            )}
 
-            {/* Texto de fortaleza */}
-            {formData.password.length > 0 && (
-              <Text
-                style={[
-                  styles.passwordStrengthText,
-                  { color: passwordStrengthColor(passwordStrength) },
-                ]}
-              >
-                {passwordStrengthText(passwordStrength)}
-              </Text>
-            )}
+              {/* Progress Bar de fortaleza */}
+              {formData.password.length > 0 && (
+                <View style={styles.passwordStrengthContainer}>
+                  <ProgressBar
+                    progress={passwordStrength}
+                    color={passwordStrengthColor(passwordStrength)}
+                  />
+                  <Text
+                    style={[
+                      styles.passwordStrengthText,
+                      { color: passwordStrengthColor(passwordStrength) },
+                    ]}
+                  >
+                    {passwordStrengthText(passwordStrength)}
+                  </Text>
+                </View>
+              )}
 
-            {/* Confirmar Contraseña con icono de ojo */}
-            <View style={styles.passwordContainerWrapper}>
-              <AuraTextInput
-                placeholder="Confirmar contraseña"
-                value={formData.confirmPassword || ""}
-                onChangeText={(text) => handleChange("confirmPassword", text)}
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
-                autoComplete="password"
-                name="confirmPassword"
-              />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                <Ionicons
-                  name={showConfirmPassword ? "eye" : "eye-off"}
-                  size={24}
-                  color="#919191"
+              {/* ✅ Confirmar Contraseña - TextInput nativo con wrapper */}
+              <View style={styles.passwordContainerWrapper}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Confirmar contraseña"
+                  placeholderTextColor="#919191"
+                  value={formData.confirmPassword || ""}
+                  onChangeText={(text) => handleChange("confirmPassword", text)}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoComplete="password"
                 />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? "eye" : "eye-off"}
+                    size={24}
+                    color="#919191"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Botón Guardar */}
+              <TouchableOpacity style={styles.button} onPress={saveProfile}>
+                <AuraText style={styles.buttonText} text="Guardar Cambios" />
               </TouchableOpacity>
             </View>
-
-            {/* Botón Guardar */}
-            <TouchableOpacity style={styles.button} onPress={saveProfile}>
-              <AuraText style={styles.buttonText} text="Guardar Cambios" />
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </View>
       <Toast />
     </>
@@ -386,9 +388,14 @@ const styles = StyleSheet.create({
     height: 24,
     tintColor: "#fff",
   },
+  // ✅ Nuevo estilo para KeyboardAvoidingView
+  keyboardView: {
+    flex: 1,
+  },
   content: {
     padding: 20,
     alignItems: "center",
+    paddingBottom: 100,
   },
   input: {
     backgroundColor: "#DDD7C2",
@@ -397,39 +404,35 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     marginTop: 10,
     width: "90%",
-    fontSize: 14,
-    color: "#000000ff",
-  },
-  passwordContainer: {
-    position: "relative",
-    width: "90%",
-    marginVertical: 8,
-    marginTop: 10,
-    color: "#000000ff",
     fontSize: 18,
+    color: "#333",
+    minHeight: 48,
   },
+  // ✅ passwordContainerWrapper corregido - wrapper visual
   passwordContainerWrapper: {
-    position: "relative",
     width: "90%",
-    height: 45,
-    marginVertical: 8,
-    marginTop: 10,
-    padding:10,
     backgroundColor: "#DDD7C2",
     borderRadius: 8,
-    paddingRight: 50,
-    justifyContent: "center",
+    marginVertical: 8,
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    height: 48,
+    paddingHorizontal: 12,
   },
+  // ✅ passwordInput - sin padding adicional
   passwordInput: {
-    paddingRight: 50,
-    width: "100%",
+    flex: 1,
+    fontSize: 18,
+    color: "#333",
+    paddingRight: 10,
+    fontFamily: "fredoka-regular",
   },
+  // ✅ eyeButton más simple
   eyeButton: {
-    position: "absolute",
-    right: 12,
-    top: "50%",
-    transform: [{translateY: -12}],
-    padding: 5,
+    padding: 8,
+    justifyContent: "center",
+    alignItems: "center",
   },
   card: {
     backgroundColor: "#fff",
