@@ -241,7 +241,18 @@ export const useChatMessages=(chatId) => {
     // Scroll to bottom of messages
     const scrollToBottom=() => {
         if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            try {
+                // ✅ SOLO ESTO: Arreglar para móvil y web
+                if (messagesEndRef.current.scrollIntoView) {
+                    // Web
+                    messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+                } else if (messagesEndRef.current.scrollToEnd) {
+                    // Móvil (ScrollView)
+                    messagesEndRef.current.scrollToEnd({ animated: true });
+                }
+            } catch (error) {
+                console.log('Scroll error:', error.message);
+            }
         }
     };
 
