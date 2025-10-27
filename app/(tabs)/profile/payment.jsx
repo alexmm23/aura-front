@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
   View, 
   ScrollView, 
@@ -119,6 +119,46 @@ export default function PaymentWeb() {
 
   useEffect(() => {
     checkSubscriptionStatus();
+  }, []);
+
+  // ✅ Listener para deep links
+  useEffect(() => {
+    const handleDeepLink = (event) => {
+      const url = event.url;
+      console.log('🔗 Deep link recibido:', url);
+
+      // Verificar si es un deep link de pago exitoso
+      if (url.includes('payment/success') || url.includes('session_id')) {
+        console.log('✅ Pago exitoso detectado');
+        showSuccessAlert('¡Pago realizado con éxito! Actualizando suscripción...');
+        
+        // Actualizar el estado después de 1 segundo
+        setTimeout(() => {
+          checkSubscriptionStatus();
+        }, 1000);
+      } 
+      // Verificar si es un pago cancelado
+      else if (url.includes('payment/cancel')) {
+        console.log('❌ Pago cancelado');
+        showErrorAlert('Pago cancelado. Puedes intentarlo nuevamente.');
+      }
+    };
+
+    // Suscribirse a eventos de deep link
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    // Verificar si la app se abrió con un deep link inicial
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        console.log('🔗 App abierta con URL inicial:', url);
+        handleDeepLink({ url });
+      }
+    });
+
+    // Cleanup
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   if (loading) {
@@ -315,6 +355,79 @@ export default function PaymentWeb() {
 
 const MobileCheckoutButton = ({ router, checkSubscriptionStatus, showSuccessAlert, showErrorAlert }) => {
   const [processing, setProcessing] = useState(false);
+  const [pollingActive, setPollingActive] = useState(false);
+
+  // ✅ Función de polling para verificar el estado
+  const startPolling = () => {
+    console.log('🔄 Iniciando polling para verificar estado de pago...');
+    setPollingActive(true);
+
+    let attempts = 0;
+    const maxAttempts = 60; // 5 minutos máximo (60 intentos x 5 segundos)
+
+    const pollInterval = setInterval(async () => {
+      attempts++;
+      console.log(`🔍 Verificando estado del pago... (Intento ${attempts}/${maxAttempts})`);
+
+      try {
+        const response = await apiGet(API.ENDPOINTS.PAYMENT.SUBSCRIPTION_STATUS);
+        
+        if (response.status === 401) {
+          clearInterval(pollInterval);
+          setPollingActive(false);
+          Alert.alert(
+            'Sesión Expirada',
+            'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
+            [{ text: 'OK', onPress: () => router.push("/(auth)/login") }]
+          );
+          return;
+        }
+
+        const data = await response.json();
+        
+        // ✅ Si se detecta una suscripción activa, detener el polling
+        if (data.success && data.hasActiveSubscription) {
+          console.log('✅ ¡Pago detectado! Suscripción activada');
+          clearInterval(pollInterval);
+          setPollingActive(false);
+          
+          showSuccessAlert('¡Pago confirmado exitosamente! 🎉');
+          
+          // Actualizar el estado después de 1 segundo
+          setTimeout(() => {
+            checkSubscriptionStatus();
+          }, 1000);
+        }
+        
+        // Si alcanzamos el máximo de intentos, detenemos
+        if (attempts >= maxAttempts) {
+          console.log('⏱️ Tiempo de espera agotado');
+          clearInterval(pollInterval);
+          setPollingActive(false);
+          
+          Alert.alert(
+            'Verificación Manual',
+            'No se detectó el pago automáticamente. Por favor, verifica tu estado de suscripción manualmente o espera unos minutos.',
+            [
+              {
+                text: 'Verificar Ahora',
+                onPress: () => checkSubscriptionStatus()
+              },
+              {
+                text: 'Cerrar',
+                style: 'cancel'
+              }
+            ]
+          );
+        }
+      } catch (error) {
+        console.error('❌ Error en polling:', error);
+      }
+    }, 5000); // Verificar cada 5 segundos
+
+    // Guardar el intervalo para limpiarlo si es necesario
+    return pollInterval;
+  };
 
   const handleMobileCheckout = async () => {
     try {
@@ -322,8 +435,8 @@ const MobileCheckoutButton = ({ router, checkSubscriptionStatus, showSuccessAler
       console.log('📱 Creando sesión de Stripe Checkout para móvil...');
 
       const response = await apiPost(API.ENDPOINTS.PAYMENT.CREATE_CHECKOUT_SESSION, {
-        successUrl: `exp://192.168.0.128:8081/--/payment/success`, // Cambiar según tu IP
-        cancelUrl: `exp://192.168.0.128:8081/--/payment/cancel`,
+        successUrl: `https://back.aurapp.com.mx/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `https://back.aurapp.com.mx/payment/cancel`,
       });
 
       if (response.status === 401) {
@@ -335,24 +448,35 @@ const MobileCheckoutButton = ({ router, checkSubscriptionStatus, showSuccessAler
         return;
       }
 
+      if (response.status === 409) {
+        const data = await response.json();
+        Alert.alert(
+          'Ya tienes una suscripción',
+          data.message || 'Ya tienes una membresía activa.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
       const data = await response.json();
       console.log('📦 Respuesta del servidor:', data);
 
-      // ✅ CAMBIO: usar 'url' en lugar de 'checkoutUrl'
       if (data.success && data.url) {
         console.log('✅ URL de Stripe Checkout obtenida:', data.url);
         
         const supported = await Linking.canOpenURL(data.url);
         
         if (supported) {
+          // ✅ INICIAR POLLING INMEDIATAMENTE antes de abrir Stripe
+          startPolling();
+          
+          // ✅ Abrir Stripe
           await Linking.openURL(data.url);
           console.log('🌐 Redirigiendo a Stripe Checkout...');
+          console.log('🔄 Polling iniciado automáticamente');
           
-          Alert.alert(
-            '🔗 Redirigiendo a Stripe',
-            'Después de completar el pago, regresa a la app.',
-            [{ text: 'OK' }]
-          );
+          // Opcional: Mostrar un toast o notificación sutil
+          // en lugar de un Alert que requiera confirmación
         } else {
           console.error('❌ No se puede abrir la URL:', data.url);
           Alert.alert(
@@ -372,15 +496,9 @@ const MobileCheckoutButton = ({ router, checkSubscriptionStatus, showSuccessAler
     } catch (error) {
       console.error('❌ Error creando sesión de checkout:', error);
       
-      let errorMessage = 'Error de conexión. Por favor intenta nuevamente.';
-      
-      if (error.message) {
-        errorMessage = error.message;
-      }
-      
       Alert.alert(
         'Error',
-        errorMessage,
+        error.message || 'Error de conexión. Por favor intenta nuevamente.',
         [{ text: 'OK' }]
       );
     } finally {
@@ -394,14 +512,32 @@ const MobileCheckoutButton = ({ router, checkSubscriptionStatus, showSuccessAler
         💳 Serás redirigido a Stripe para completar tu pago de forma segura
       </Text>
 
+      {pollingActive && (
+        <View style={styles.pollingIndicator}>
+          <ActivityIndicator size="small" color="#4CAF50" />
+          <Text style={styles.pollingText}>
+            🔄 Verificando estado del pago...
+          </Text>
+        </View>
+      )}
+
       <TouchableOpacity
-        style={[styles.payButton, processing && styles.payButtonDisabled]}
+        style={[
+          styles.payButton, 
+          (processing || pollingActive) && styles.payButtonDisabled
+        ]}
         onPress={handleMobileCheckout}
-        disabled={processing}
+        disabled={processing || pollingActive}
       >
         <AuraText 
           style={styles.payButtonText} 
-          text={processing ? "Redirigiendo..." : "🔒 Ir a Stripe para Pagar MXN$99"} 
+          text={
+            processing 
+              ? "Redirigiendo..." 
+              : pollingActive 
+                ? "Verificando pago..." 
+                : "🔒 Ir a Stripe para Pagar MXN$99"
+          } 
         />
       </TouchableOpacity>
 
@@ -1058,5 +1194,22 @@ const styles = StyleSheet.create({
     marginBottom: 25,
     paddingHorizontal: 20,
     lineHeight: 24,
+  },
+  pollingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E8F5E9',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  pollingText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#2E7D32',
+    fontWeight: '600',
   },
 });
