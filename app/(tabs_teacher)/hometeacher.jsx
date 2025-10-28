@@ -147,32 +147,32 @@ export default function HomeTeacher() {
           >
             {/* Mis recordatorios */}
             <View style={styles.card}>
-              {/* ✅ CORREGIR: Header clickeable con Text nativo */}
+              {/* ✅ CORREGIR: Usar children en lugar de text */}
               <TouchableOpacity 
                 onPress={navigateToReminders}
                 style={styles.cardHeader}
                 activeOpacity={0.7}
               >
-                <Text style={styles.titleText}>Mis Recordatorios</Text>
-                <Text style={styles.seeAllText}>Ver todos →</Text>
+                <AuraText style={styles.titleText}>Mis Recordatorios</AuraText>
+                <AuraText style={styles.seeAllText}>Ver todos →</AuraText>
               </TouchableOpacity>
 
               {isLoadingReminders ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color="#A64AC9" />
-                  <Text style={styles.loadingTextNative}>
+                  <AuraText style={styles.loadingTextNative}>
                     Cargando recordatorios...
-                  </Text>
+                  </AuraText>
                 </View>
               ) : reminders.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyEmoji}>🎉</Text>
-                  <Text style={styles.emptyTitleNative}>
+                  <AuraText style={styles.emptyEmoji}>🎉</AuraText>
+                  <AuraText style={styles.emptyTitleNative}>
                     ¡Estás libre de pendientes!
-                  </Text>
-                  <Text style={styles.emptyTextNative}>
+                  </AuraText>
+                  <AuraText style={styles.emptyTextNative}>
                     No tienes recordatorios pendientes en este momento.
-                  </Text>
+                  </AuraText>
                 </View>
               ) : (
                 <ScrollView
@@ -188,26 +188,26 @@ export default function HomeTeacher() {
                       activeOpacity={0.8}
                     >
                       <View style={styles.reminderHeader}>
-                        <Text style={styles.noteTitleText} numberOfLines={2}>
+                        <AuraText style={styles.noteTitleText} numberOfLines={2}>
                           {reminder.title}
-                        </Text>
+                        </AuraText>
                         {reminder.frequency !== "once" && (
                           <View style={styles.frequencyBadge}>
-                            <Text style={styles.frequencyText}>
+                            <AuraText style={styles.frequencyText}>
                               {getFrequencyText(reminder.frequency)}
-                            </Text>
+                            </AuraText>
                           </View>
                         )}
                       </View>
                       {reminder.description && (
-                        <Text style={styles.noteTextNative} numberOfLines={2}>
+                        <AuraText style={styles.noteTextNative} numberOfLines={2}>
                           {reminder.description}
-                        </Text>
+                        </AuraText>
                       )}
                       <View style={styles.reminderFooter}>
-                        <Text style={styles.dateText}>
+                        <AuraText style={styles.dateText}>
                           📅 {formatDate(reminder.date_time)}
-                        </Text>
+                        </AuraText>
                       </View>
                     </TouchableOpacity>
                   ))}
@@ -217,6 +217,7 @@ export default function HomeTeacher() {
 
             {/* Mis Cursos */}
             <View style={styles.card}>
+              {/* ✅ MANTENER: Este sí usa text prop correctamente */}
               <AuraText style={styles.title} text="Mis Cursos" />
               {homework.length === 0 && (
                 <View style={styles.emptyContainer}>
@@ -301,12 +302,10 @@ const styles = StyleSheet.create({
     color: "#FF9900",
     marginBottom: 15,
   },
-  // ✅ AGREGAR: Nuevo estilo para título con Text nativo
   titleText: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#FF9900",
-    fontFamily: "Jost_400Regular",
   },
   remindersScrollView: {
     maxHeight: 300,
@@ -327,21 +326,12 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 8,
   },
-  noteTitle: {
-    fontWeight: "bold",
-    color: "#A64AC9",
-    fontSize: 16,
-    flex: 1,
-    marginRight: 10,
-  },
-  // ✅ AGREGAR: Nuevo estilo para título de nota con Text nativo
   noteTitleText: {
     fontWeight: "bold",
     color: "#A64AC9",
     fontSize: 16,
     flex: 1,
     marginRight: 10,
-    fontFamily: "Jost_700Bold",
   },
   frequencyBadge: {
     backgroundColor: "#A64AC9",
@@ -353,19 +343,11 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 10,
     fontWeight: "600",
-    fontFamily: "Jost_600SemiBold",
   },
-  noteText: {
-    fontSize: 14,
-    color: "#555",
-    marginBottom: 8,
-  },
-  // ✅ AGREGAR: Nuevo estilo para texto de nota con Text nativo
   noteTextNative: {
     fontSize: 14,
     color: "#555",
     marginBottom: 8,
-    fontFamily: "Jost_400Regular",
   },
   reminderFooter: {
     borderTopWidth: 1,
@@ -377,24 +359,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
     fontWeight: "500",
-    fontFamily: "Jost_500Medium",
   },
   loadingContainer: {
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 40,
   },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 14,
-    color: "#666",
-  },
-  // ✅ AGREGAR: Nuevo estilo para loading con Text nativo
   loadingTextNative: {
     marginTop: 10,
     fontSize: 14,
     color: "#666",
-    fontFamily: "Jost_400Regular",
   },
   emptyContainer: {
     alignItems: "center",
@@ -405,31 +379,21 @@ const styles = StyleSheet.create({
     fontSize: 48,
     marginBottom: 10,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#A64AC9",
-    marginBottom: 8,
-  },
-  // ✅ AGREGAR: Nuevo estilo para empty title con Text nativo
   emptyTitleNative: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#A64AC9",
     marginBottom: 8,
-    fontFamily: "Jost_700Bold",
   },
   emptyText: {
     fontSize: 14,
     color: "#666",
     textAlign: "center",
   },
-  // ✅ AGREGAR: Nuevo estilo para empty text con Text nativo
   emptyTextNative: {
     fontSize: 14,
     color: "#666",
     textAlign: "center",
-    fontFamily: "Jost_400Regular",
   },
   backgroundContainer: {
     height: 350,
@@ -466,6 +430,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#A64AC9",
     fontWeight: "600",
-    fontFamily: "Jost_600SemiBold",
   },
 });
