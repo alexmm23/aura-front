@@ -42,7 +42,7 @@ export default function LinkMoodle() {
       const response = await apiGet(API.ENDPOINTS.STUDENT.MOODLE_ACCOUNTS);
       if (response.ok) {
         const data = await response.json();
-        setLinkedAccounts(data.accounts || []);
+        setLinkedAccounts(data.data || []);
       }
     } catch (error) {
       console.error("Error fetching linked accounts:", error);
@@ -200,7 +200,7 @@ export default function LinkMoodle() {
                     </View>
                     <AuraText
                       style={styles.accountText}
-                      text="Correo electrónico"
+                      text={account.username + " en " + account.provider_url}
                     />
                   </View>
                 ))}

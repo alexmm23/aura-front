@@ -115,7 +115,7 @@ export const API={
       NOTE_CREATE: '/note/images/upload',
       NOTE_SHOW: '/note/show',
       LINK_MOODLE: '/moodle/login',
-      MOODLE_ACCOUNTS: '/student/moodle-accounts',
+      MOODLE_ACCOUNTS: '/moodle/accounts',
     },
     // Task endpoints
     TASKS: {
