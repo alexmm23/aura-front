@@ -93,11 +93,31 @@ export default function Profile() {
     <View style={styles.iconRow}>
       {platforms.map((platform) => (
         <TouchableOpacity key={platform.name} onPress={platform.onPress}>
-          <Image source={platform.icon} style={platform.style} />
+          <View style={styles.iconContainer}>
+            <Image source={platform.icon} style={platform.style} />
+            {platform.isConnected && (
+              <View style={styles.checkmarkContainer}>
+                <AuraText style={styles.checkmark} text="✓" />
+              </View>
+            )}
+          </View>
         </TouchableOpacity>
       ))}
     </View>
   );
+
+  // Función para verificar si una plataforma está conectada
+  const isPlatformConnected = (platformName) => {
+    if (!profileData?.user?.activePlatforms) return false;
+
+    // Mapear nombres de plataforma a los valores en activePlatforms
+    const platformMap = {
+      classroom: "google",
+      moodle: "moodle",
+    };
+
+    return profileData.user.activePlatforms.includes(platformMap[platformName]);
+  };
 
   const platforms = [
     {
@@ -105,12 +125,14 @@ export default function Profile() {
       icon: imageIcons.classroom,
       style: styles.platformIcon,
       onPress: () => googleLogin(),
+      isConnected: isPlatformConnected("classroom"),
     },
     {
       name: "moodle",
       icon: imageIcons.moodle,
       style: styles.platformIcon,
       onPress: () => moodleLogin(),
+      isConnected: isPlatformConnected("moodle"),
     },
   ];
 
@@ -311,11 +333,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 25,
   },
+  iconContainer: {
+    position: "relative",
+  },
   platformIcon: {
     width: 70,
     height: 70,
     aspectRatio: 1,
     resizeMode: "contain",
+  },
+  checkmarkContainer: {
+    position: "absolute",
+    top: 5,
+    right: 0,
+    backgroundColor: "#4CAF50",
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  checkmark: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
   },
   button: {
     backgroundColor: "#F4A45B",
