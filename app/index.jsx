@@ -7,14 +7,32 @@ import {
   ActivityIndicator,
   StyleSheet,
   useWindowDimensions,
+  Image,
+  TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../contexts/AuthContext";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { AuraText } from "@/components/AuraText";
-import PrimaryButton from "@/components/PrimaryButton";
 import Svg, { Path } from "react-native-svg";
 import Head from "expo-router/head";
+import { Ionicons } from '@expo/vector-icons';
+
+// Componente de botón personalizado
+const AuthButton = ({ title, onPress, iconName }) => {
+  return (
+    <TouchableOpacity 
+      style={styles.authButton} 
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <View style={styles.iconContainer}>
+        <Ionicons name={iconName} size={40} color="#000000ff" />
+      </View>
+      <AuraText style={styles.buttonText} text={title} />
+    </TouchableOpacity>
+  );
+};
 
 export default function Index() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -22,7 +40,6 @@ export default function Index() {
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
 
-  // Simple, centered welcome screen without debug info
   if (isLoading) {
     return (
       <SafeAreaProvider>
@@ -44,7 +61,6 @@ export default function Index() {
       </Head>
       <SafeAreaProvider>
         <SafeAreaView style={styles.container} edges={["right", "left", "top"]}>
-          {/* Header con SVG */}
           {isLandscape ? (
             <LandscapeHeader styles={styles} />
           ) : (
@@ -53,29 +69,33 @@ export default function Index() {
 
           <View style={styles.contentContainer}>
             <View style={styles.welcomeCard}>
-              <AuraText style={styles.appTitle} text="AURA" />
+              <Image 
+                source={require('@/assets/images/LogoSinFondo.png')} 
+                style={styles.logo}
+              />
               <AuraText
                 style={styles.appSubtitle}
-                text="Tu asistente académico"
+                text="Organiza, Estudia y Aprende"
               />
 
               {!isAuthenticated ? (
                 <View style={styles.buttonsContainer}>
-                  <PrimaryButton
+                  <AuthButton
                     title="Iniciar Sesión"
+                    iconName="log-in-outline"
                     onPress={() => router.push("/(auth)/login")}
-                    style={styles.primaryButton}
                   />
-                  <PrimaryButton
+                  <AuthButton
                     title="Registrarse"
+                    iconName="person-add-outline"
                     onPress={() => router.push("/(auth)/register")}
-                    style={styles.secondaryButton}
                   />
                 </View>
               ) : (
-                <View style={styles.buttonsContainer}>
-                  <PrimaryButton
+                <View style={styles.buttonsContainerSingle}>
+                  <AuthButton
                     title="Ir a Home"
+                    iconName="home-outline"
                     onPress={() => {
                       const homeRoute =
                         user?.role_id === 3
@@ -83,7 +103,6 @@ export default function Index() {
                           : "/(tabs)/home";
                       router.push(homeRoute);
                     }}
-                    style={styles.primaryButton}
                   />
                 </View>
               )}
@@ -95,7 +114,6 @@ export default function Index() {
   );
 }
 
-// Componente PortraitHeader
 const PortraitHeader = ({ styles }) => (
   <View style={styles.backgroundContainer}>
     <Svg
@@ -107,7 +125,7 @@ const PortraitHeader = ({ styles }) => (
     >
       <Path
         d="M378.433 23.1915C10.4329 96.1914 276.5 123 113 264C14.4172 264 -55.5672 389.527 -55.5672 296.191C-55.5672 202.855 -287.15 -61.8085 -188.567 -61.8085C-89.9844 -61.8085 378.433 -70.1446 378.433 23.1915Z"
-        fill="#D1A8D2"
+        fill="#7752cb"
       />
     </Svg>
   </View>
@@ -124,7 +142,7 @@ const LandscapeHeader = ({ styles }) => (
     >
       <Path
         d="M378.433 23.1915C10.4329 96.1914 276.5 123 113 264C14.4172 264 -55.5672 389.527 -55.5672 296.191C-55.5672 202.855 -287.15 -61.8085 -188.567 -61.8085C-89.9844 -61.8085 378.433 -70.1446 378.433 23.1915Z"
-        fill="#D1A8D2"
+        fill="#7752cb"
       />
     </Svg>
   </View>
@@ -134,6 +152,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#EDE6DB",
+  },
+  logo: {
+    width: 200,
+    height: 200,
+    marginBottom: 20,
+    resizeMode: 'contain',
   },
   loadingContainer: {
     flex: 1,
@@ -150,7 +174,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 120, // Dar espacio al header SVG
   },
   welcomeCard: {
     backgroundColor: "#fff",
@@ -166,13 +189,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  appTitle: {
-    fontSize: 42,
-    fontWeight: "bold",
-    color: "#D29828",
-    marginBottom: 8,
-    textAlign: "center",
-  },
   appSubtitle: {
     fontSize: 16,
     color: "#666",
@@ -181,15 +197,37 @@ const styles = StyleSheet.create({
   },
   buttonsContainer: {
     width: "100%",
-    gap: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16,
   },
-  primaryButton: {
-    marginBottom: 0,
+  buttonsContainerSingle: {
+    width: "50%",
+    alignItems: 'center',
   },
-  secondaryButton: {
-    marginBottom: 0,
+  authButton: {
+    flex: 1,
+    aspectRatio: 1,
+    backgroundColor: '#f5b764',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  // Estilos para modo vertical
+  iconContainer: {
+    marginBottom: 12,
+  },
+  buttonText: {
+    color: '#000000ff',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   backgroundContainer: {
     height: 350,
     width: "100%",
@@ -199,7 +237,6 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: -1,
   },
-  // Estilos para modo horizontal
   backgroundContainerLandscape: {
     position: "absolute",
     top: 0,
