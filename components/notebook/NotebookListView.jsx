@@ -25,6 +25,8 @@ export const NotebookListView = ({
   onSharePress,
   onAIOptionPress,
   lastPngDataUrl,
+  hasActiveSubscription = false,
+  checkingSubscription = false
 }) => {
   const handleShare = async () => {
     try {
@@ -126,7 +128,12 @@ export const NotebookListView = ({
         <Ionicons name="share-social" size={24} color="#fff" />
       </TouchableOpacity>
 
-      <FloatingAIMenu onAIOptionPress={onAIOptionPress} />
+      
+
+      {/* FloatingAIMenu - Solo mostrar si tiene suscripción activa */}
+      {!checkingSubscription && hasActiveSubscription && onAIOptionPress && (
+        <FloatingAIMenu onAIOptionPress={onAIOptionPress} />
+      )}
     </View>
   );
 };
@@ -256,5 +263,25 @@ const styles = StyleSheet.create({
   },
   shareButton: {
     backgroundColor: "#28a745",
+  },
+  aiButton: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    backgroundColor: "#4A90E2",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    zIndex: 9999,
+  },
+  aiButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
