@@ -9,30 +9,54 @@ export const ClassCard = ({ classItem, width }) => {
     return styles.classCardSmall;
   };
 
+  // Función para obtener el icono de la plataforma
+  const getPlatformIcon = () => {
+    const source = classItem.source || classItem.platform;
+    switch (source) {
+      case "moodle":
+        return require("../../assets/images/moodle.png");
+      case "teams":
+        return require("../../assets/images/teams.png");
+      case "classroom":
+      default:
+        return require("../../assets/images/classroom.png");
+    }
+  };
+
+  // Función para formatear la información de la clase según la plataforma
+  const getClassInfo = () => {
+    if (classItem.source === "moodle") {
+      return {
+        period: classItem.section || "Sin sección",
+        teacher: "Curso Moodle",
+        description: classItem.description || "Sin descripción",
+      };
+    } else {
+      // Formato Google Classroom
+      return {
+        period: classItem.descriptionHeading || "Sin período",
+        teacher: classItem.teacher || classItem.ownerId || "Sin profesor",
+        description: classItem.description || "",
+      };
+    }
+  };
+
+  const classInfo = getClassInfo();
+
   return (
     <View style={[styles.classCard, getCardStyle()]}>
       <View style={styles.classContent}>
-        <Text style={styles.className}>
-          {classItem.name || "Sin nombre"}
-        </Text>
+        <Text style={styles.className}>{classItem.name || "Sin nombre"}</Text>
         <View style={styles.divider} />
         <View style={styles.classInfo}>
-          <Text style={styles.classPeriod}>
-            {classItem.descriptionHeading || "Sin período"}
-          </Text>
-          <Text style={styles.teacherName}>
-            {classItem.teacher || classItem.ownerId || "Sin profesor"}
-          </Text>
+          <Text style={styles.classPeriod}>{classInfo.period}</Text>
+          <Text style={styles.teacherName}>{classInfo.teacher}</Text>
+          {classInfo.description && (
+            <Text style={styles.classDescription}>{classInfo.description}</Text>
+          )}
         </View>
       </View>
-      <Image
-        source={
-          classItem.platform === "teams" || classItem.source === "teams"
-            ? require("../../assets/images/teams.png")
-            : require("../../assets/images/classroom.png")
-        }
-        style={styles.platformIcon}
-      />
+      <Image source={getPlatformIcon()} style={styles.platformIcon} />
     </View>
   );
 };
