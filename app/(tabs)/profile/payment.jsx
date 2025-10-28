@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
   View, 
   ScrollView, 
@@ -8,7 +8,10 @@ import {
   Text, 
   TouchableOpacity, 
   useWindowDimensions,
-  Alert
+  Alert,
+  Platform,
+  Linking,
+  ActivityIndicator
 } from "react-native";
 import { AuraText } from "@/components/AuraText";
 import { useRouter } from "expo-router";
@@ -17,12 +20,10 @@ import Svg, { Path } from "react-native-svg";
 import Head from "expo-router/head";
 import { API } from "@/config/api";
 
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
-
-const stripePromise = loadStripe("pk_test_51S2EFIRwhQTBuCWGg60RzjqoaAoZQKUplUNsEu2xzJ64ujbCJGzrrHACoOJ8JBDE6G4OOwLTepRv9F1o2hcRK9nB00gflAM0c9");
-
 import { apiPost, apiGet } from "../../../utils/fetchWithAuth";
+
+const isWeb = Platform.OS === 'web';
+const isNative = Platform.OS === 'ios' || Platform.OS === 'android';
 
 export default function PaymentWeb() {
   const router = useRouter();
@@ -35,6 +36,9 @@ export default function PaymentWeb() {
   const [processing, setProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  
+  const [StripeComponents, setStripeComponents] = useState(null);
+  const [WebCheckoutForm, setWebCheckoutForm] = useState(null);
 
   const showSuccessAlert = (message) => {
     setErrorMessage('');
@@ -114,6 +118,60 @@ export default function PaymentWeb() {
 
   useEffect(() => {
     checkSubscriptionStatus();
+    
+    if (isWeb) {
+      Promise.all([
+        import("@stripe/react-stripe-js"),
+        import("@stripe/stripe-js")
+      ]).then(([stripeReact, stripeJs]) => {
+        const stripePromise = stripeJs.loadStripe("pk_test_51S2EFIRwhQTBuCWGg60RzjqoaAoZQKUplUNsEu2xzJ64ujbCJGzrrHACoOJ8JBDE6G4OOwLTepRv9F1o2hcRK9nB00gflAM0c9");
+        
+        setStripeComponents({
+          Elements: stripeReact.Elements,
+          CardElement: stripeReact.CardElement,
+          useStripe: stripeReact.useStripe,
+          useElements: stripeReact.useElements,
+          stripePromise
+        });
+
+        setWebCheckoutForm(() => createCheckoutForm(stripeReact));
+      }).catch(err => {
+        console.error('Error loading Stripe:', err);
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleDeepLink = (event) => {
+      const url = event.url;
+      console.log('🔗 Deep link recibido:', url);
+
+      if (url.includes('payment/success') || url.includes('session_id')) {
+        console.log('✅ Pago exitoso detectado');
+        showSuccessAlert('¡Pago realizado con éxito! Actualizando suscripción...');
+        
+        setTimeout(() => {
+          checkSubscriptionStatus();
+        }, 1000);
+      } 
+      else if (url.includes('payment/cancel')) {
+        console.log('❌ Pago cancelado');
+        showErrorAlert('Pago cancelado. Puedes intentarlo nuevamente.');
+      }
+    };
+
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        console.log('🔗 App abierta con URL inicial:', url);
+        handleDeepLink({ url });
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   if (loading) {
@@ -286,9 +344,24 @@ export default function PaymentWeb() {
             <AuraText style={styles.priceText} text="MXN$99 al mes" />
             <AuraText style={styles.title} text="Realiza tu Pago" />
             
-            <Elements stripe={stripePromise}>
-              <CheckoutForm router={router} checkSubscriptionStatus={checkSubscriptionStatus} />
-            </Elements>
+            {isNative && (
+              <MobileCheckoutButton 
+                router={router} 
+                checkSubscriptionStatus={checkSubscriptionStatus}
+                showSuccessAlert={showSuccessAlert}
+                showErrorAlert={showErrorAlert}
+              />
+            )}
+            
+            {isWeb && StripeComponents && WebCheckoutForm && (
+              <StripeComponents.Elements stripe={StripeComponents.stripePromise}>
+                <WebCheckoutForm 
+                  router={router} 
+                  checkSubscriptionStatus={checkSubscriptionStatus}
+                  StripeComponents={StripeComponents}
+                />
+              </StripeComponents.Elements>
+            )}
           </View>
         </ScrollView>
       </View>
@@ -296,303 +369,487 @@ export default function PaymentWeb() {
   );
 }
 
-const CheckoutForm = ({ router, checkSubscriptionStatus }) => {
-  const stripe = useStripe();
-  const elements = useElements();
+const MobileCheckoutButton = ({ router, checkSubscriptionStatus, showSuccessAlert, showErrorAlert }) => {
   const [processing, setProcessing] = useState(false);
-  const [email, setEmail] = useState('');
-  const [country, setCountry] = useState('');
-  const [phone, setPhone] = useState('');
-  
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [pollingActive, setPollingActive] = useState(false);
 
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [pendingCardElement, setPendingCardElement] = useState(null);
+  const startPolling = () => {
+    console.log('🔄 Iniciando polling para verificar estado de pago...');
+    setPollingActive(true);
 
-  const showSuccessAlert = (message) => {
-    setErrorMessage('');
-    setSuccessMessage(message);
-    setTimeout(() => setSuccessMessage(''), 5000); 
-  };
+    let attempts = 0;
+    const maxAttempts = 60;
 
-  const showErrorAlert = (message) => {
-    setSuccessMessage('');
-    setErrorMessage(message);
-    setTimeout(() => setErrorMessage(''), 8000); 
-  };
+    const pollInterval = setInterval(async () => {
+      attempts++;
+      console.log(`🔍 Verificando estado del pago... (Intento ${attempts}/${maxAttempts})`);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (!stripe || !elements) return;
-
-    if (!email.trim()) {
-      showErrorAlert('Por favor ingresa tu correo electrónico');
-      return;
-    }
-
-    if (!country.trim()) {
-      showErrorAlert('Por favor ingresa tu país/región');
-      return;
-    }
-
-    if (!phone.trim()) {
-      showErrorAlert('Por favor ingresa tu número de teléfono');
-      return;
-    }
-
-    const cardElement = elements.getElement(CardElement);
-    if (!cardElement) {
-      showErrorAlert('Por favor ingresa los datos de la tarjeta');
-      return;
-    }
-
-    setPendingCardElement(cardElement);
-    setShowConfirmModal(true);
-  };
-
-  const handleConfirmPayment = () => {
-    setShowConfirmModal(false);
-    processPayment(pendingCardElement);
-    setPendingCardElement(null);
-  };
-
-  const handleCancelPayment = () => {
-    setShowConfirmModal(false);
-    setPendingCardElement(null);
-  };
-
-  const processPayment = async (cardElement) => {
-    setProcessing(true);
-    setErrorMessage('');
-    setSuccessMessage('');
-
-    try {
-      const { error, paymentMethod } = await stripe.createPaymentMethod({
-        type: "card",
-        card: cardElement,
-        billing_details: {
-          email: email,
-          phone: phone,
-          address: {
-            country: country,
-          },
-        },
-      });
-
-      if (error) {
-        showErrorAlert(`Error en la tarjeta: ${error.message}`);
-        setProcessing(false);
-        return;
-      }
-
-      const paymentData = {
-        paymentMethodId: paymentMethod.id, 
-        amount: 9900, 
-        currency: "mxn",
-        billingEmail: email, 
-        phone: phone,
-        country: country,
-        sendConfirmationEmail: true
-      };
-
-      console.log("Request body:", paymentData);
-      console.log("📧 Email del formulario que recibirá la confirmación:", email);
-
-      const response = await apiPost(API.ENDPOINTS.PAYMENT.CONFIRM, paymentData);
-      
-      if (response.status === 401) {
-        showErrorAlert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
-        setTimeout(() => {
-          router.push("/(auth)/login");
-        }, 2000);
-        return;
-      }
-
-      console.log("Response from backend:", response);
-
-      const data = await response.json();
-      
-      if (data.success) {
-        showSuccessAlert(
-          data.message || 
-          `¡Pago realizado con éxito! Bienvenido a AURA Premium 🎉\n📧 Se ha enviado un correo de confirmación a: ${email}`
-        );
+      try {
+        const response = await apiGet(API.ENDPOINTS.PAYMENT.SUBSCRIPTION_STATUS);
         
-        if (!data.emailSent) {
-          console.log('⚠️ Email not sent automatically, sending manually...');
-          await sendManualConfirmationEmail(data, email);
-        } else {
-          console.log(`✅ Confirmation email sent automatically to: ${email}`);
+        if (response.status === 401) {
+          clearInterval(pollInterval);
+          setPollingActive(false);
+          Alert.alert(
+            'Sesión Expirada',
+            'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
+            [{ text: 'OK', onPress: () => router.push("/(auth)/login") }]
+          );
+          return;
+        }
+
+        const data = await response.json();
+        
+        if (data.success && data.hasActiveSubscription) {
+          console.log('✅ ¡Pago detectado! Suscripción activada');
+          clearInterval(pollInterval);
+          setPollingActive(false);
+          
+          showSuccessAlert('¡Pago confirmado exitosamente! 🎉');
+          
+          setTimeout(() => {
+            checkSubscriptionStatus();
+          }, 1000);
         }
         
-        // Actualizar el estado de la suscripción después del pago exitoso
-        console.log('🔄 Actualizando estado de suscripción después del pago...');
-        
-        // Esperar un poco para que el backend procese completamente el pago
-        setTimeout(async () => {
-          try {
-            // Acceder a la función checkSubscriptionStatus del componente padre
-            await checkSubscriptionStatus();
-            console.log('✅ Estado de suscripción actualizado exitosamente');
-          } catch (error) {
-            console.error('❌ Error actualizando estado de suscripción:', error);
-          }
-        }, 2000);
-        
-      } else {
-        showErrorAlert(`Error en el pago: ${data.error || 'Ocurrió un error inesperado'}`);
+        if (attempts >= maxAttempts) {
+          console.log('⏱️ Tiempo de espera agotado');
+          clearInterval(pollInterval);
+          setPollingActive(false);
+          
+          Alert.alert(
+            'Verificación Manual',
+            'No se detectó el pago automáticamente. Por favor, verifica tu estado de suscripción manualmente o espera unos minutos.',
+            [
+              {
+                text: 'Verificar Ahora',
+                onPress: () => checkSubscriptionStatus()
+              },
+              {
+                text: 'Cerrar',
+                style: 'cancel'
+              }
+            ]
+          );
+        }
+      } catch (error) {
+        console.error('❌ Error en polling:', error);
+      }
+    }, 5000);
+
+    return pollInterval;
+  };
+
+  const handleMobileCheckout = async () => {
+    try {
+      setProcessing(true);
+      console.log('📱 Creando sesión de Stripe Checkout para móvil...');
+
+      const response = await apiPost(API.ENDPOINTS.PAYMENT.CREATE_CHECKOUT_SESSION, {
+        successUrl: `https://back.aurapp.com.mx/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `https://back.aurapp.com.mx/payment/cancel`,
+      });
+
+      if (response.status === 401) {
+        Alert.alert(
+          'Sesión Expirada',
+          'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
+          [{ text: 'OK', onPress: () => router.push("/(auth)/login") }]
+        );
+        return;
       }
 
-    } catch (error) {
-      console.error('Error during payment:', error);
-      
-      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-        showErrorAlert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
-        setTimeout(() => {
-          router.push("/(auth)/login");
-        }, 2000);
-      } else {
-        showErrorAlert('Error de conexión. Por favor intenta nuevamente.');
+      if (response.status === 409) {
+        const data = await response.json();
+        Alert.alert(
+          'Ya tienes una suscripción',
+          data.message || 'Ya tienes una membresía activa.',
+          [{ text: 'OK' }]
+        );
+        return;
       }
+
+      const data = await response.json();
+      console.log('📦 Respuesta del servidor:', data);
+
+      if (data.success && data.url) {
+        console.log('✅ URL de Stripe Checkout obtenida:', data.url);
+        
+        const supported = await Linking.canOpenURL(data.url);
+        
+        if (supported) {
+          startPolling();
+          
+          await Linking.openURL(data.url);
+          console.log('🌐 Redirigiendo a Stripe Checkout...');
+          console.log('🔄 Polling iniciado automáticamente');
+        } else {
+          console.error('❌ No se puede abrir la URL:', data.url);
+          Alert.alert(
+            'Error',
+            'No se pudo abrir el navegador. Por favor intenta de nuevo.',
+            [{ text: 'OK' }]
+          );
+        }
+      } else {
+        console.error('❌ Respuesta sin URL:', data);
+        Alert.alert(
+          'Error',
+          data.error || 'No se recibió la URL de pago',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error creando sesión de checkout:', error);
+      
+      Alert.alert(
+        'Error',
+        error.message || 'Error de conexión. Por favor intenta nuevamente.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setProcessing(false);
     }
   };
 
-  const sendManualConfirmationEmail = async (paymentData, userEmail) => {
-    try {
-      console.log('📧 Sending manual payment confirmation email to:', userEmail);
-
-      const emailResponse = await apiPost(API.ENDPOINTS.PAYMENT.SEND_CONFIRMATION, {
-        email: email,
-        paymentData: {
-          amount: 99,
-          currency: 'MXN',
-          paymentId: paymentData.paymentId || paymentData.id || 'N/A',
-          date: new Date().toISOString(),
-          phone: phone,
-          country: country
-        }
-      });
-
-      if (emailResponse.ok) {
-        console.log('✅ Manual payment confirmation email sent successfully');
-      } else {
-        console.error('❌ Failed to send manual payment confirmation email');
-      }
-    } catch (error) {
-      console.error('❌ Error sending manual payment confirmation email:', error);
-    }
-  };
-
   return (
-    <View style={styles.form}>
-      {showConfirmModal && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>💳 Confirmar Pago</Text>
-            <Text style={styles.modalText}>
-              ¿Estás seguro de que deseas proceder con el pago de MXN$99?
-            </Text>
-            <View style={styles.modalDetails}>
-              <Text style={styles.modalDetailText}>📧 Correo: {email}</Text>
-              <Text style={styles.modalDetailText}>📱 Teléfono: {phone}</Text>
-              <Text style={styles.modalDetailText}>🌍 País: {country}</Text>
-            </View>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={styles.cancelButton} 
-                onPress={handleCancelPayment}
-              >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.confirmButton} 
-                onPress={handleConfirmPayment}
-              >
-                <Text style={styles.confirmButtonText}>Confirmar Pago</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+    <View style={styles.mobileCheckoutContainer}>
+      <Text style={styles.mobileInfoText}>
+        💳 Serás redirigido a Stripe para completar tu pago de forma segura
+      </Text>
+
+      {pollingActive && (
+        <View style={styles.pollingIndicator}>
+          <ActivityIndicator size="small" color="#4CAF50" />
+          <Text style={styles.pollingText}>
+            🔄 Verificando estado del pago...
+          </Text>
         </View>
       )}
 
-      {successMessage ? (
-        <View style={styles.successAlert}>
-          <Text style={styles.successText}>{successMessage}</Text>
-        </View>
-      ) : null}
-
-      {errorMessage ? (
-        <View style={styles.errorAlert}>
-          <Text style={styles.errorText}>{errorMessage}</Text>
-        </View>
-      ) : null}
-
-      <Text style={styles.sectionTitle}>Información del contacto</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Correo Electrónico"
-        placeholderTextColor="#999"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-
-      <Text style={styles.sectionTitle}>Información de la tarjeta</Text>
-      
-      <View style={styles.stripeCardContainer}>
-        <CardElement
-          options={{
-            style: {
-              base: {
-                fontSize: '16px',
-                color: '#666',
-                fontFamily: 'System',
-                '::placeholder': {
-                  color: '#999',
-                },
-                backgroundColor: 'transparent',
-              },
-              invalid: {
-                color: '#fa755a',
-                iconColor: '#fa755a',
-              },
-            },
-            hidePostalCode: false,
-          }}
-        />
-      </View>
-
-      <Text style={styles.sectionTitle}>País/Región</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="MX/EU/US"
-        placeholderTextColor="#999"
-        value={country}
-        onChangeText={setCountry}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Teléfono"
-        placeholderTextColor="#999"
-        value={phone}
-        onChangeText={setPhone}
-        keyboardType="phone-pad"
-      />
-
       <TouchableOpacity
-        style={[styles.payButton, processing && styles.payButtonDisabled]}
-        onPress={handleSubmit}
-        disabled={processing}
+        style={[
+          styles.payButton, 
+          (processing || pollingActive) && styles.payButtonDisabled
+        ]}
+        onPress={handleMobileCheckout}
+        disabled={processing || pollingActive}
       >
-        <AuraText style={styles.payButtonText} text={processing ? "Procesando..." : "Pagar MXN$99"} />
+        <AuraText 
+          style={styles.payButtonText} 
+          text={
+            processing 
+              ? "Redirigiendo..." 
+              : pollingActive 
+                ? "Verificando pago..." 
+                : "🔒 Ir a Stripe para Pagar MXN$99"
+          } 
+        />
       </TouchableOpacity>
+
+      {processing && (
+        <ActivityIndicator size="large" color="#F4A45B" style={{ marginTop: 20 }} />
+      )}
     </View>
   );
+};
+
+const createCheckoutForm = (stripeReact) => {
+  return ({ router, checkSubscriptionStatus, StripeComponents }) => {
+    const stripe = stripeReact.useStripe();
+    const elements = stripeReact.useElements();
+    const [processing, setProcessing] = useState(false);
+    const [email, setEmail] = useState('');
+    const [country, setCountry] = useState('');
+    const [phone, setPhone] = useState('');
+    
+    const [successMessage, setSuccessMessage] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
+
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [pendingCardElement, setPendingCardElement] = useState(null);
+
+    const showSuccessAlert = (message) => {
+      setErrorMessage('');
+      setSuccessMessage(message);
+      setTimeout(() => setSuccessMessage(''), 5000); 
+    };
+
+    const showErrorAlert = (message) => {
+      setSuccessMessage('');
+      setErrorMessage(message);
+      setTimeout(() => setErrorMessage(''), 8000); 
+    };
+
+    const handleSubmit = async (event) => {
+      event.preventDefault();
+      if (!stripe || !elements) return;
+
+      if (!email.trim()) {
+        showErrorAlert('Por favor ingresa tu correo electrónico');
+        return;
+      }
+
+      if (!country.trim()) {
+        showErrorAlert('Por favor ingresa tu país/región');
+        return;
+      }
+
+      if (!phone.trim()) {
+        showErrorAlert('Por favor ingresa tu número de teléfono');
+        return;
+      }
+
+      const cardElement = elements.getElement(StripeComponents.CardElement);
+      if (!cardElement) {
+        showErrorAlert('Por favor ingresa los datos de la tarjeta');
+        return;
+      }
+
+      setPendingCardElement(cardElement);
+      setShowConfirmModal(true);
+    };
+
+    const handleConfirmPayment = () => {
+      setShowConfirmModal(false);
+      processPayment(pendingCardElement);
+      setPendingCardElement(null);
+    };
+
+    const handleCancelPayment = () => {
+      setShowConfirmModal(false);
+      setPendingCardElement(null);
+    };
+
+    const processPayment = async (cardElement) => {
+      setProcessing(true);
+      setErrorMessage('');
+      setSuccessMessage('');
+
+      try {
+        const { error, paymentMethod } = await stripe.createPaymentMethod({
+          type: "card",
+          card: cardElement,
+          billing_details: {
+            email: email,
+            phone: phone,
+            address: {
+              country: country,
+            },
+          },
+        });
+
+        if (error) {
+          showErrorAlert(`Error en la tarjeta: ${error.message}`);
+          setProcessing(false);
+          return;
+        }
+
+        const paymentData = {
+          paymentMethodId: paymentMethod.id, 
+          amount: 9900, 
+          currency: "mxn",
+          billingEmail: email, 
+          phone: phone,
+          country: country,
+          sendConfirmationEmail: true
+        };
+
+        console.log("Request body:", paymentData);
+        console.log("📧 Email del formulario que recibirá la confirmación:", email);
+
+        const response = await apiPost(API.ENDPOINTS.PAYMENT.CONFIRM, paymentData);
+        
+        if (response.status === 401) {
+          showErrorAlert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
+          setTimeout(() => {
+            router.push("/(auth)/login");
+          }, 2000);
+          return;
+        }
+
+        console.log("Response from backend:", response);
+
+        const data = await response.json();
+        
+        if (data.success) {
+          showSuccessAlert(
+            data.message || 
+            `¡Pago realizado con éxito! Bienvenido a AURA Premium 🎉\n📧 Se ha enviado un correo de confirmación a: ${email}`
+          );
+          
+          if (!data.emailSent) {
+            console.log('⚠️ Email not sent automatically, sending manually...');
+            await sendManualConfirmationEmail(data, email);
+          } else {
+            console.log(`✅ Confirmation email sent automatically to: ${email}`);
+          }
+          
+          console.log('🔄 Actualizando estado de suscripción después del pago...');
+          
+          setTimeout(async () => {
+            try {
+              await checkSubscriptionStatus();
+              console.log('✅ Estado de suscripción actualizado exitosamente');
+            } catch (error) {
+              console.error('❌ Error actualizando estado de suscripción:', error);
+            }
+          }, 2000);
+          
+        } else {
+          showErrorAlert(`Error en el pago: ${data.error || 'Ocurrió un error inesperado'}`);
+        }
+
+      } catch (error) {
+        console.error('Error during payment:', error);
+        
+        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          showErrorAlert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
+          setTimeout(() => {
+            router.push("/(auth)/login");
+          }, 2000);
+        } else {
+          showErrorAlert('Error de conexión. Por favor intenta nuevamente.');
+        }
+      } finally {
+        setProcessing(false);
+      }
+    };
+
+    const sendManualConfirmationEmail = async (paymentData, userEmail) => {
+      try {
+        console.log('📧 Sending manual payment confirmation email to:', userEmail);
+
+        const emailResponse = await apiPost(API.ENDPOINTS.PAYMENT.SEND_CONFIRMATION, {
+          email: email,
+          paymentData: {
+            amount: 99,
+            currency: 'MXN',
+            paymentId: paymentData.paymentId || paymentData.id || 'N/A',
+            date: new Date().toISOString(),
+            phone: phone,
+            country: country
+          }
+        });
+
+        if (emailResponse.ok) {
+          console.log('✅ Manual payment confirmation email sent successfully');
+        } else {
+          console.error('❌ Failed to send manual payment confirmation email');
+        }
+      } catch (error) {
+        console.error('❌ Error sending manual payment confirmation email:', error);
+      }
+    };
+
+    return (
+      <View style={styles.form}>
+        {showConfirmModal && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>💳 Confirmar Pago</Text>
+              <Text style={styles.modalText}>
+                ¿Estás seguro de que deseas proceder con el pago de MXN$99?
+              </Text>
+              <View style={styles.modalDetails}>
+                <Text style={styles.modalDetailText}>📧 Correo: {email}</Text>
+                <Text style={styles.modalDetailText}>📱 Teléfono: {phone}</Text>
+                <Text style={styles.modalDetailText}>🌍 País: {country}</Text>
+              </View>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={styles.cancelButton} 
+                  onPress={handleCancelPayment}
+                >
+                  <Text style={styles.cancelButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.confirmButton} 
+                  onPress={handleConfirmPayment}
+                >
+                  <Text style={styles.confirmButtonText}>Confirmar Pago</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {successMessage ? (
+          <View style={styles.successAlert}>
+            <Text style={styles.successText}>{successMessage}</Text>
+          </View>
+        ) : null}
+
+        {errorMessage ? (
+          <View style={styles.errorAlert}>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        ) : null}
+
+        <Text style={styles.sectionTitle}>Información del contacto</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Correo Electrónico"
+          placeholderTextColor="#999"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+
+        <Text style={styles.sectionTitle}>Información de la tarjeta</Text>
+        
+        <View style={styles.stripeCardContainer}>
+          <StripeComponents.CardElement
+            options={{
+              style: {
+                base: {
+                  fontSize: '16px',
+                  color: '#666',
+                  fontFamily: 'System',
+                  '::placeholder': {
+                    color: '#999',
+                  },
+                  backgroundColor: 'transparent',
+                },
+                invalid: {
+                  color: '#fa755a',
+                  iconColor: '#fa755a',
+                },
+              },
+              hidePostalCode: false,
+            }}
+          />
+        </View>
+
+        <Text style={styles.sectionTitle}>País/Región</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="MX/EU/US"
+          placeholderTextColor="#999"
+          value={country}
+          onChangeText={setCountry}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="Teléfono"
+          placeholderTextColor="#999"
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+        />
+
+        <TouchableOpacity
+          style={[styles.payButton, processing && styles.payButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={processing}
+        >
+          <AuraText style={styles.payButtonText} text={processing ? "Procesando..." : "Pagar MXN$99"} />
+        </TouchableOpacity>
+      </View>
+    );
+  };
 };
 
 const PortraitHeader = () => (
@@ -932,5 +1189,35 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     left: 0,
+  },
+  mobileCheckoutContainer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  mobileInfoText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 25,
+    paddingHorizontal: 20,
+    lineHeight: 24,
+  },
+  pollingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E8F5E9',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  pollingText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#2E7D32',
+    fontWeight: '600',
   },
 });
