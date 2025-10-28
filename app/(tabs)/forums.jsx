@@ -135,223 +135,220 @@ const ForumsScreen = () => {
 
   return (
     <>
-     <Head>
-            <title>Foros - AURA | Plataforma Educativa</title>
-            <meta
-              name="description"
-              content="Visualiza y gestiona todos los foros de discusión en un solo lugar. Participa en conversaciones relevantes y colabora con otros usuarios."
-            />
-            <meta
-              name="keywords"
-              content="foros, discusión, educación, AURA"
-            />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          </Head>
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <AuraText text="Foros" style={styles.headerTitle} />
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => setShowCreateModal(true)}
-        >
-          <Ionicons name="add" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Search and Filters */}
-      <View style={styles.filtersContainer}>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#666" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar foros..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+      <Head>
+        <title>Foros - AURA | Plataforma Educativa</title>
+        <meta
+          name="description"
+          content="Visualiza y gestiona todos los foros de discusión en un solo lugar. Participa en conversaciones relevantes y colabora con otros usuarios."
+        />
+        <meta name="keywords" content="foros, discusión, educación, AURA" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </Head>
+      <SafeAreaView style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <AuraText text="Foros" style={styles.headerTitle} />
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={() => setShowCreateModal(true)}
+          >
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoriesScroll}
-        >
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category.value}
-              style={[
-                styles.categoryButton,
-                selectedCategory === category.value &&
-                  styles.categoryButtonActive,
-              ]}
-              onPress={() => setSelectedCategory(category.value)}
-            >
-              <Text
+        {/* Search and Filters */}
+        <View style={styles.filtersContainer}>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#666" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar foros..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoriesScroll}
+          >
+            {categories.map((category) => (
+              <TouchableOpacity
+                key={category.value}
                 style={[
-                  styles.categoryButtonText,
+                  styles.categoryButton,
                   selectedCategory === category.value &&
-                    styles.categoryButtonTextActive,
+                    styles.categoryButtonActive,
                 ]}
+                onPress={() => setSelectedCategory(category.value)}
               >
-                {category.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Forums List */}
-      <ScrollView
-        style={styles.forumsList}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {filteredForums.length > 0 ? (
-          filteredForums.map((forum) => (
-            <ForumCard key={forum.id} forum={forum} onPress={openForum} />
-          ))
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="chatbubbles-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>
-              {searchQuery || selectedCategory !== "all"
-                ? "No se encontraron foros con los filtros aplicados"
-                : "No hay foros disponibles"}
-            </Text>
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Create Forum Modal */}
-      <Modal
-        visible={showCreateModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowCreateModal(false)}
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowCreateModal(false)}>
-              <Text style={styles.modalCancelButton}>Cancelar</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Crear Foro</Text>
-            <TouchableOpacity
-              onPress={createForum}
-              disabled={creating || !createData.title.trim()}
-            >
-              <Text
-                style={[
-                  styles.modalSaveButton,
-                  (!createData.title.trim() || creating) &&
-                    styles.modalSaveButtonDisabled,
-                ]}
-              >
-                {creating ? "Creando..." : "Crear"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Título *</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Título del foro"
-                value={createData.title}
-                onChangeText={(text) =>
-                  setCreateData({ ...createData, title: text })
-                }
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Descripción</Text>
-              <TextInput
-                style={[styles.textInput, styles.textArea]}
-                placeholder="Descripción del foro"
-                multiline
-                numberOfLines={4}
-                value={createData.description}
-                onChangeText={(text) =>
-                  setCreateData({ ...createData, description: text })
-                }
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Categoría</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {categories
-                  .filter((cat) => cat.value !== "all")
-                  .map((category) => (
-                    <TouchableOpacity
-                      key={category.value}
-                      style={[
-                        styles.categorySelectButton,
-                        createData.category === category.value &&
-                          styles.categorySelectButtonActive,
-                      ]}
-                      onPress={() =>
-                        setCreateData({
-                          ...createData,
-                          category: category.value,
-                        })
-                      }
-                    >
-                      <Text
-                        style={[
-                          styles.categorySelectText,
-                          createData.category === category.value &&
-                            styles.categorySelectTextActive,
-                        ]}
-                      >
-                        {category.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-              </ScrollView>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Grado</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Ej: 1er año, 2do semestre"
-                value={createData.grade}
-                onChangeText={(text) =>
-                  setCreateData({ ...createData, grade: text })
-                }
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Materia</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Ej: Matemáticas, Física"
-                value={createData.subject}
-                onChangeText={(text) =>
-                  setCreateData({ ...createData, subject: text })
-                }
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Carrera</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Ej: Ingeniería en Sistemas"
-                value={createData.career}
-                onChangeText={(text) =>
-                  setCreateData({ ...createData, career: text })
-                }
-              />
-            </View>
+                <Text
+                  style={[
+                    styles.categoryButtonText,
+                    selectedCategory === category.value &&
+                      styles.categoryButtonTextActive,
+                  ]}
+                >
+                  {category.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
-        </SafeAreaView>
-      </Modal>
-    </SafeAreaView>
+        </View>
+
+        {/* Forums List */}
+        <ScrollView
+          style={styles.forumsList}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          {filteredForums.length > 0 ? (
+            filteredForums.map((forum) => (
+              <ForumCard key={forum.id} forum={forum} onPress={openForum} />
+            ))
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="chatbubbles-outline" size={64} color="#ccc" />
+              <Text style={styles.emptyText}>
+                {searchQuery || selectedCategory !== "all"
+                  ? "No se encontraron foros con los filtros aplicados"
+                  : "No hay foros disponibles"}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Create Forum Modal */}
+        <Modal
+          visible={showCreateModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowCreateModal(false)}
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowCreateModal(false)}>
+                <Text style={styles.modalCancelButton}>Cancelar</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Crear Foro</Text>
+              <TouchableOpacity
+                onPress={createForum}
+                disabled={creating || !createData.title.trim()}
+              >
+                <Text
+                  style={[
+                    styles.modalSaveButton,
+                    (!createData.title.trim() || creating) &&
+                      styles.modalSaveButtonDisabled,
+                  ]}
+                >
+                  {creating ? "Creando..." : "Crear"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Título *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Título del foro"
+                  value={createData.title}
+                  onChangeText={(text) =>
+                    setCreateData({ ...createData, title: text })
+                  }
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Descripción</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  placeholder="Descripción del foro"
+                  multiline
+                  numberOfLines={4}
+                  value={createData.description}
+                  onChangeText={(text) =>
+                    setCreateData({ ...createData, description: text })
+                  }
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Categoría</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {categories
+                    .filter((cat) => cat.value !== "all")
+                    .map((category) => (
+                      <TouchableOpacity
+                        key={category.value}
+                        style={[
+                          styles.categorySelectButton,
+                          createData.category === category.value &&
+                            styles.categorySelectButtonActive,
+                        ]}
+                        onPress={() =>
+                          setCreateData({
+                            ...createData,
+                            category: category.value,
+                          })
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.categorySelectText,
+                            createData.category === category.value &&
+                              styles.categorySelectTextActive,
+                          ]}
+                        >
+                          {category.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                </ScrollView>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Grado</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Ej: 1er año, 2do semestre"
+                  value={createData.grade}
+                  onChangeText={(text) =>
+                    setCreateData({ ...createData, grade: text })
+                  }
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Materia</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Ej: Matemáticas, Física"
+                  value={createData.subject}
+                  onChangeText={(text) =>
+                    setCreateData({ ...createData, subject: text })
+                  }
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Carrera</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Ej: Ingeniería en Sistemas"
+                  value={createData.career}
+                  onChangeText={(text) =>
+                    setCreateData({ ...createData, career: text })
+                  }
+                />
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
+      </SafeAreaView>
     </>
   );
 };
