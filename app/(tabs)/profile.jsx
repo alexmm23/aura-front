@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   View,
   ScrollView,
@@ -11,12 +11,10 @@ import { API, buildApiUrl } from "@/config/api";
 import fetchWithAuth from "@/utils/fetchWithAuth";
 import Head from "expo-router/head";
 import { AuraText } from "@/components/AuraText";
-import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/contexts/AuthContext"; // Hook para manejar la autenticación
-import AsyncStorage from "@react-native-async-storage/async-storage"; // Para manejar el almacenamiento local
 import * as Linking from "expo-linking";
 import { apiGet } from "../../utils/fetchWithAuth";
 
@@ -28,15 +26,20 @@ export default function Profile() {
   const isLandscape = width > height;
   const router = useRouter();
 
+  // Memoizar los iconos para que se carguen solo una vez
+  const imageIcons = useMemo(
+    () => ({
+      classroom: require("@/assets/images/classroom.png"),
+      moodle: require("@/assets/images/moodle.png"),
+    }),
+    []
+  );
+
   const handleLogout = async () => {
     try {
-      console.log('Profile logout button pressed');
       await logout();
-      console.log('Logout completed, ProtectedRoute will handle redirection');
-      // No hacemos redirección manual - el AuthContext y ProtectedRoute se encargan
     } catch (error) {
       console.error("Error durante logout:", error);
-      // En caso de error, aún así el AuthContext debería limpiar el estado
     }
   };
   const googleLogin = async () => {
@@ -59,7 +62,15 @@ export default function Profile() {
       console.error("Error during Google login:", error);
     }
   };
-
+  const moodleLogin = async () => {
+    try {
+      router.push({
+        pathname: "/profile/link_moodle",
+      });
+    } catch (error) {
+      console.error("Error during Moodle login:", error);
+    }
+  };
   const fetchProfile = async () => {
     try {
       const response = await apiGet(API.ENDPOINTS.PROFILE.INFO);
@@ -78,6 +89,52 @@ export default function Profile() {
       );
     }
   };
+  const IconRow = (platforms) => (
+    <View style={styles.iconRow}>
+      {platforms.map((platform) => (
+        <TouchableOpacity key={platform.name} onPress={platform.onPress}>
+          <View style={styles.iconContainer}>
+            <Image source={platform.icon} style={platform.style} />
+            {platform.isConnected && (
+              <View style={styles.checkmarkContainer}>
+                <AuraText style={styles.checkmark} text="✓" />
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
+  // Función para verificar si una plataforma está conectada
+  const isPlatformConnected = (platformName) => {
+    if (!profileData?.user?.activePlatforms) return false;
+
+    // Mapear nombres de plataforma a los valores en activePlatforms
+    const platformMap = {
+      classroom: "google",
+      moodle: "moodle",
+    };
+
+    return profileData.user.activePlatforms.includes(platformMap[platformName]);
+  };
+
+  const platforms = [
+    {
+      name: "classroom",
+      icon: imageIcons.classroom,
+      style: styles.platformIcon,
+      onPress: () => googleLogin(),
+      isConnected: isPlatformConnected("classroom"),
+    },
+    {
+      name: "moodle",
+      icon: imageIcons.moodle,
+      style: styles.platformIcon,
+      onPress: () => moodleLogin(),
+      isConnected: isPlatformConnected("moodle"),
+    },
+  ];
 
   useEffect(() => {
     // Verifica si el usuario ya está vinculado al perfil
@@ -108,25 +165,22 @@ export default function Profile() {
             source={require("@/assets/images/icon.png")}
             style={styles.profileImage}
           />
+          <View style={styles.subtitleContainer}>
+            {profileData && (
+              <AuraText style={styles.subtitle} text={profileData.user.email} />
+            )}
+          </View>
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
           {/* Card principal */}
           <View style={styles.card}>
             <AuraText style={styles.title} text="Mi Perfil" />
-            {profileData && (
-              <AuraText sryle={styles.title} text={profileData.user.email} />
-            )}
             {/* Íconos de plataformas */}
-            <View style={styles.iconRow}>
-              <TouchableOpacity onPress={() => googleLogin()}>
-                <Image
-                  source={require("@/assets/images/classroom.png")}
-                  style={styles.classroomIcon}
-                />
-              </TouchableOpacity>
-
+            <View>
+              <AuraText style={styles.subtitle} text="Vincular cuentas" />
             </View>
+            {IconRow(platforms)}
             {/* /* Botones */}
             <TouchableOpacity
               style={styles.button}
@@ -138,12 +192,14 @@ export default function Profile() {
             >
               <AuraText style={styles.buttonText} text="Editar Perfil" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.button}
-            onPress={() =>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() =>
                 router.push({
                   pathname: "/profile/payment",
                 })
-              }>
+              }
+            >
               <AuraText
                 style={styles.buttonText}
                 text="Administrar Suscripción"
@@ -256,6 +312,20 @@ const styles = StyleSheet.create({
     color: "#D29828",
     marginBottom: 20,
   },
+  subtitleContainer: {
+    marginTop: 10,
+    borderStyle: "solid",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 50,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: "#F5F5F5",
+  },
+  subtitle: {
+    fontSize: 16,
+    fontWeight: "500",
+  },
   iconRow: {
     flexDirection: "row",
     gap: 20,
@@ -263,11 +333,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 25,
   },
-  classroomIcon: {
+  iconContainer: {
+    position: "relative",
+  },
+  platformIcon: {
     width: 70,
     height: 70,
     aspectRatio: 1,
     resizeMode: "contain",
+  },
+  checkmarkContainer: {
+    position: "absolute",
+    top: 5,
+    right: 0,
+    backgroundColor: "#4CAF50",
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  checkmark: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
   },
   button: {
     backgroundColor: "#F4A45B",

@@ -145,32 +145,37 @@ export default function HomeScreen() {
               ) : (
                 homework.map((task, index) => (
                   <TouchableOpacity
-                    key={index}
+                    key={task.id || index}
                     style={styles.taskCard}
-                    onPress={() =>
+                    onPress={() => {
+                      //task.id contiene el id_courseid_courseworkid
+                      const { id } = task;
+                      const [_,courseId, courseWorkId, submissionId] = id.split("_");
                       router.push({
                         pathname: "/taskdetails",
                         params: {
-                          courseId: task.courseId || index,
-                          courseWorkId: task.courseWorkId,
-                          submissionId: task.submissionId,
+                          courseId: courseId,
+                          courseWorkId: courseWorkId,
+                          submissionId: submissionId,
                         },
                       })
-                    }
+                    }}
                   >
                     <View style={{ flex: 1, marginRight: 10 }}>
                       <Text style={styles.taskSubject}>{task.courseName}</Text>
                       <Text style={styles.taskDescription}>{task.title}</Text>
                       <Text style={styles.taskDueDate}>
                         {task.dueDate
-                          ? `${task.dueDate.day || 0}-${task.dueDate.month}-${
-                              task.dueDate.year
-                            }`
+                          ? "Fecha límite: " + new Date(task.dueDate).toLocaleDateString('es-ES', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric'
+                            })
                           : "Sin fecha"}
                       </Text>
                     </View>
                     <Image
-                      source={getPlatformIcon(task.platform)}
+                      source={getPlatformIcon(task.source)}
                       style={styles.platformIcon}
                     />
                   </TouchableOpacity>
