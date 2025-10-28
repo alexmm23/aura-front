@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   ScrollView,
@@ -6,6 +6,8 @@ import {
   StyleSheet,
   useWindowDimensions,
   TouchableOpacity,
+  ActivityIndicator,
+  Platform,
 } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
 import Head from "expo-router/head";
@@ -14,127 +16,206 @@ import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { useAuth } from "@/hooks/useAuth"; // Hook para manejar la autenticación
-import AsyncStorage from "@react-native-async-storage/async-storage"; // Para manejar el almacenamiento local
-import {AuraTextInput} from "@/components/AuraTextInput"
+import { useAuth } from "@/hooks/useAuth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AuraTextInput } from "@/components/AuraTextInput";
+import { apiPost, apiGet } from "@/utils/fetchWithAuth";
+import Toast from "react-native-toast-message";
 
-export default function Profile() {
-  const { logout, isAuthenticated } = useAuth(); // Hook para manejar la autenticación
+export default function LinkMoodle() {
   const { height, width } = useWindowDimensions();
-  const isLandscape = width > height;
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [url, setUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [linkedAccounts, setLinkedAccounts] = useState([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(true);
 
-  const googleLogin = async () => {
-    const token = AsyncStorage.getItem("userToken");
-    if (!token) {
-      console.log("No hay token de usuario disponible");
-      return;
-    }    console.log("Token de usuario:", token);
-    await fetch(buildApiUrl(API.ENDPOINTS.AUTH.GOOGLE), {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("Google login data:", data);
-      })
-      .catch((error) => {
-        console.error("Error during Google login:", error);
+  useEffect(() => {
+    fetchLinkedAccounts();
+  }, []);
+
+  const fetchLinkedAccounts = async () => {
+    try {
+      setLoadingAccounts(true);
+      const response = await apiGet(API.ENDPOINTS.STUDENT.MOODLE_ACCOUNTS);
+      if (response.ok) {
+        const data = await response.json();
+        setLinkedAccounts(data.accounts || []);
+      }
+    } catch (error) {
+      console.error("Error fetching linked accounts:", error);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+
+  const handleLinkAccount = async () => {
+    if (!email.trim() || !password.trim()) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Por favor completa todos los campos",
       });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await apiPost(API.ENDPOINTS.STUDENT.LINK_MOODLE, {
+        username: email.trim(),
+        password: password.trim(),
+        moodle_url: url.trim(),
+      });
+
+      if (response.ok) {
+        Toast.show({
+          type: "success",
+          text1: "¡Éxito!",
+          text2: "Cuenta vinculada correctamente",
+        });
+        setEmail("");
+        setPassword("");
+        fetchLinkedAccounts(); // Recargar cuentas
+      } else {
+        const data = await response.json();
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: data.message || "No se pudo vincular la cuenta",
+        });
+      }
+    } catch (error) {
+      console.error("Error linking account:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Ocurrió un error al vincular la cuenta",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <>
       <Head>
-        <title>Mi Perfil</title>
+        <title>Vincular Cuenta Moodle - AURA</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
       <View style={styles.container}>
-        {/* Fondo con PortraitHeader */}
+        {/* Fondo con degradado SVG */}
         <PortraitHeader />
 
         {/* Header con botón atrás */}
-        <LinearGradient
-          colors={["#B065C4", "#F4A45B"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.cardheader}
-        ><TouchableOpacity style={styles.backButton} onPress={() => router.replace("/(tabs)/profile")}>
-        <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        </LinearGradient>
+        <View style={styles.headerContainer}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
 
-        
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Card de vinculación */}
+          <View style={[styles.card, width >= 768 && styles.cardWeb]}>
+            <AuraText style={styles.title} text="Vincular Cuenta" />
 
-        <ScrollView contentContainerStyle={styles.content}>
-          {/* Card principal */}
-          <View style={styles.card}>
-            <AuraText style={styles.title} text="Mi Perfil" />
-            {/* Íconos de plataformas */}
-            <View style={styles.iconRow}>
-              <TouchableOpacity onPress={() => router.push("/profile/link_classroom")}>
-                  <Image
-                    source={require("@/assets/images/moodle.png")}
-                    style={styles.icon1}
-                  />
-                </TouchableOpacity>
-            </View>
-            <AuraTextInput
-                style={styles.input}
-                placeholder="Correo"
-                autoCapitalize="none"
-            />
-            <AuraTextInput
-                style={styles.input}
-                placeholder="Constraseña"
-                autoCapitalize="none"
+            {/* Logo de Moodle */}
+            <Image
+              source={require("@/assets/images/moodle.png")}
+              style={styles.platformLogo}
             />
 
+            {/* Campos del formulario */}
+            <AuraTextInput
+              style={styles.input}
+              placeholder="Url de la plataforma Moodle"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={url}
+              onChangeText={setUrl}
+              editable={!loading}
+              type="url"
+            />
 
+            {/* Campos del formulario */}
+            <AuraTextInput
+              style={styles.input}
+              placeholder="Correo Electronico"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
+              editable={!loading}
+            />
+            <AuraTextInput
+              style={styles.input}
+              placeholder="Contraseña"
+              autoCapitalize="none"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+              editable={!loading}
+            />
 
-            {/* Botones */}
-            <TouchableOpacity style={styles.button} onPress={() => router.push("/profile/profile_edit")}>
-              <AuraText style={styles.buttonText} text="Agregar Cuenta" />
+            {/* Botón de vincular */}
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleLinkAccount}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <AuraText style={styles.buttonText} text="Agregar Cuenta" />
+              )}
             </TouchableOpacity>
-            
           </View>
-          {/* Card principal */}
-          <View style={styles.card1}>
-            {/* Íconos de plataformas */}
-            <View style={styles.iconColumn}>
-            {[1, 2, 3].map((_, index) => (
-                <TouchableOpacity
-                key={index}
-                onPress={() => router.push("/profile/link_classroom")}
-                style={styles.iconGroup}
-                >
-                <Image
-                    source={require("@/assets/images/moodle.png")}
-                    style={styles.icon}
+
+          {/* Card de cuentas vinculadas */}
+          <View style={[styles.card, width >= 768 && styles.cardWeb]}>
+            <AuraText style={styles.subtitle} text="Mis cuentas" />
+
+            {loadingAccounts ? (
+              <ActivityIndicator
+                color="#D29828"
+                size="large"
+                style={styles.loader}
+              />
+            ) : linkedAccounts.length > 0 ? (
+              <View style={styles.accountsGrid}>
+                {linkedAccounts.map((account, index) => (
+                  <View key={index} style={styles.accountItem}>
+                    <View style={styles.accountIconContainer}>
+                      <Image
+                        source={require("@/assets/images/moodle.png")}
+                        style={styles.accountIcon}
+                      />
+                    </View>
+                    <AuraText
+                      style={styles.accountText}
+                      text="Correo electrónico"
+                    />
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="link-outline" size={48} color="#D0D0D0" />
+                <AuraText
+                  style={styles.emptyText}
+                  text="No hay cuentas vinculadas"
                 />
-                <AuraText style={styles.text} text="Correo Electronico" />
-                </TouchableOpacity>
-            ))}
-            </View>
-
-            
-
-
-            
+              </View>
+            )}
           </View>
         </ScrollView>
-
-        
-          
-      
-
-
-        {/* Navbar persistente */}
-        {/* <Navbar /> */}
       </View>
     </>
   );
@@ -180,223 +261,146 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#EDE6DB",
   },
-  backButton: {
-    backgroundColor: "#00000020",
-    borderRadius: 20,
-    padding: 5,
+  headerContainer: {
+    position: "absolute",
+    top: 40,
+    left: 20,
+    zIndex: 10,
   },
-  iconColumn: {
-    flexDirection: "column",
-    alignItems: "center",
+  backButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 12,
+    padding: 8,
+    width: 40,
+    height: 40,
     justifyContent: "center",
-    gap: 20, // espacio entre ítems
-  },
-  iconGroup: {
     alignItems: "center",
-  },  
-  cardheader: {
-    marginLeft: 20,
-    borderRadius: 30,
-    marginTop: 30,
-    marginRight: 20,
-    height: "30%",
-    backgroundColor: "linear-gradient(90deg, #B065C4 0%, #F4A45B 100%)",
-    backgroundImage: "linear-gradient(90deg, #B065C4, #F4A45B)", // Web fallback
-    justifyContent: "flex-start",
-    alignItems: "flex-start",
-    paddingTop: 40,
+  },
+  scrollContent: {
+    paddingTop: 100,
     paddingHorizontal: 20,
-  },
-  backButton: {
-    backgroundColor: "#00000020",
-    borderRadius: 20,
-    padding: 5,
-  },
-  profileImageContainer: {
-    alignItems: "center",
-    marginTop: -60,
-  },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 4,
-    borderColor: "#fff",
-  },
-  content: {
-    padding: 20,
-    alignItems: "center",
-  },
-  content1: {
-    padding: 20,
+    paddingBottom: 40,
     alignItems: "center",
   },
   card: {
-    marginBottom: "20%",
     backgroundColor: "#fff",
     borderRadius: 20,
     paddingVertical: 30,
-    paddingHorizontal: 20,
+    paddingHorizontal: 25,
     width: "100%",
+    maxWidth: 400,
     alignItems: "center",
     shadowColor: "#000",
     shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 4,
-    marginBottom: "5%"
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+    marginBottom: 20,
   },
-  card1: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-    width: "100%",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 4,
-    marginBottom: "0%"
+  cardWeb: {
+    maxWidth: 500,
   },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "bold",
     color: "#D29828",
     marginBottom: 20,
   },
-  iconRow: {
-    flexDirection: "row",
-    gap: 20,
-    justifyContent: "center",
-    alignItems: "center",
+  subtitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#D29828",
+    marginBottom: 20,
+  },
+  platformLogo: {
+    width: 100,
+    height: 100,
+    resizeMode: "contain",
     marginBottom: 25,
   },
-  icon: {
-    width: 70,
-    height: 70,
-    resizeMode: "contain",
-  },
-  icon1: {
-    width: 130,
-    height: 130,
-    resizeMode: "contain",
+  input: {
+    backgroundColor: "#DDD7C2",
+    borderRadius: 10,
+    padding: 15,
+    marginVertical: 8,
+    width: "100%",
+    fontSize: 16,
+    color: "#666",
   },
   button: {
     backgroundColor: "#F4A45B",
     borderRadius: 10,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 30,
-    width: "90%",
-    marginVertical: 8,
+    width: "100%",
+    marginTop: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 50,
+  },
+  buttonDisabled: {
+    backgroundColor: "#D0D0D0",
   },
   buttonText: {
     fontSize: 16,
+    fontWeight: "600",
     color: "#fff",
     textAlign: "center",
   },
-  text: {
-    fontSize: 16,
-    color: "#919191",
+  loader: {
+    marginVertical: 20,
+  },
+  accountsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 20,
+    width: "100%",
+  },
+  accountItem: {
+    alignItems: "center",
+    width: 90,
+  },
+  accountIconContainer: {
+    backgroundColor: "#4CAF50",
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  accountIcon: {
+    width: 50,
+    height: 50,
+    resizeMode: "contain",
+  },
+  accountText: {
+    fontSize: 12,
+    color: "#666",
     textAlign: "center",
   },
-  logoutButton: {
-    backgroundColor: "#E1A3CE",
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 30,
   },
-  logoutText: {
-    fontSize: 16,
-    color: "#822C7D",
-    textAlign: "center",
+  emptyText: {
+    fontSize: 14,
+    color: "#999",
+    marginTop: 10,
   },
   backgroundContainer: {
     position: "absolute",
     top: 0,
     left: 0,
     width: "100%",
-    height: 220,
-  },
-  svg: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-  },
-  backgroundContainerLandscape: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: "40%",
-    height: "100%",
-  },
-  headerContentLandscape: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 30,
-  },
-  headerImageLandscape: {
-    width: "100%",
-    height: "80%",
-    maxHeight: 500,
-  },
-  input: {
-    backgroundColor: "#DDD7C2",
-    borderRadius: 8,
-    padding: 12,
-    marginVertical: 8,
-    marginTop: 10,
-    width: "90%",
-    fontSize: 18,
-    color: "#919191",
-  },
-  // Estilos para modo horizontal
-  backgroundContainerLandscape: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: "40%", // El header ocupa solo una parte del ancho en modo horizontal
     height: "100%",
   },
   svg: {
     position: "absolute",
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  headerContent: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 350, // igual que el contenedor
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: 40, //mas espacio arriba
-  },
-  headerContentLandscape: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 30, // mas espacio al rededor
-  },
-  headerImage: {
-    width: "90%",
-    height: 250, //altura aumentada
-    marginBottom: 20,
-    marginTop: 15,
-  },
-  headerImageLandscape: {
-    width: "100%", // Ocupa todo el ancho disponible
-    height: "80%", // Ocupa más altura
-    maxHeight: 500, // Límite para pantallas grandes
   },
 });

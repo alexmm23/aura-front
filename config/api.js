@@ -56,7 +56,7 @@ export const API={
       PROFILE: '/users/profile',
       AUTH_CHECK: '/auth/check',
       LOGIN_WEB: '/auth/login/web',
-    },    PAYMENT: {
+    }, PAYMENT: {
       CONFIRM: '/payment/confirm',
       SEND_CONFIRMATION: '/payment/send-confirmation',
       SUBSCRIPTION_STATUS: '/payments/subscription-status',
@@ -110,6 +110,8 @@ export const API={
       NOTEBOOK_PAGES: '/notebook/pages',
       NOTE_CREATE: '/note/images/upload',
       NOTE_SHOW: '/note/show',
+      LINK_MOODLE: '/moodle/login',
+      MOODLE_ACCOUNTS: '/student/moodle-accounts',
     },
     // Task endpoints
     TASKS: {
