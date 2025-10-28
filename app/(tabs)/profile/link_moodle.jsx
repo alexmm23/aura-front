@@ -43,26 +43,78 @@ export default function LinkMoodle() {
       if (response.ok) {
         const data = await response.json();
         setLinkedAccounts(data.data || []);
+
+        // Toast informativo solo si hay cuentas
+        if (data.data && data.data.length > 0) {
+          Toast.show({
+            type: "info",
+            text1: `${data.data.length} cuenta${
+              data.data.length > 1 ? "s" : ""
+            } vinculada${data.data.length > 1 ? "s" : ""}`,
+            text2: "Tus cuentas de Moodle están sincronizadas",
+            visibilityTime: 2000,
+            topOffset: 60,
+          });
+        }
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Error al cargar cuentas",
+          text2: "No se pudieron obtener las cuentas vinculadas",
+          visibilityTime: 3000,
+          topOffset: 60,
+        });
       }
     } catch (error) {
       console.error("Error fetching linked accounts:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error de conexión",
+        text2: "No se pudieron cargar las cuentas vinculadas",
+        visibilityTime: 4000,
+        topOffset: 60,
+      });
     } finally {
       setLoadingAccounts(false);
     }
   };
 
   const handleLinkAccount = async () => {
-    if (!email.trim() || !password.trim()) {
+    if (!email.trim() || !password.trim() || !url.trim()) {
       Toast.show({
         type: "error",
-        text1: "Error",
-        text2: "Por favor completa todos los campos",
+        text1: "Campos incompletos",
+        text2: "Por favor completa todos los campos requeridos",
+        visibilityTime: 3000,
+        topOffset: 60,
+      });
+      return;
+    }
+
+    // Validar formato de URL básico
+    if (!url.includes("http") && !url.includes("www.")) {
+      Toast.show({
+        type: "error",
+        text1: "URL inválida",
+        text2:
+          "Por favor ingresa una URL válida (ej: https://moodle.ejemplo.com)",
+        visibilityTime: 4000,
+        topOffset: 60,
       });
       return;
     }
 
     try {
       setLoading(true);
+
+      Toast.show({
+        type: "info",
+        text1: "Conectando...",
+        text2: "Verificando credenciales de Moodle",
+        visibilityTime: 2000,
+        topOffset: 60,
+      });
+
       const response = await apiPost(API.ENDPOINTS.STUDENT.LINK_MOODLE, {
         username: email.trim(),
         password: password.trim(),
@@ -72,26 +124,55 @@ export default function LinkMoodle() {
       if (response.ok) {
         Toast.show({
           type: "success",
-          text1: "¡Éxito!",
-          text2: "Cuenta vinculada correctamente",
+          text1: "¡Cuenta vinculada exitosamente!",
+          text2: "Tu cuenta de Moodle se ha conectado correctamente",
+          visibilityTime: 4000,
+          topOffset: 60,
         });
         setEmail("");
         setPassword("");
-        fetchLinkedAccounts(); // Recargar cuentas
+        setUrl("");
+        fetchLinkedAccounts();
       } else {
         const data = await response.json();
+        let errorMessage = "No se pudo vincular la cuenta";
+
+        if (response.status === 401) {
+          errorMessage =
+            "Credenciales incorrectas. Verifica tu usuario y contraseña";
+        } else if (response.status === 404) {
+          errorMessage = "URL de Moodle no encontrada. Verifica la dirección";
+        } else if (response.status === 409) {
+          errorMessage = "Esta cuenta ya está vinculada";
+        } else if (data.error) {
+          errorMessage = data.error;
+        }
+
         Toast.show({
           type: "error",
-          text1: "Error",
-          text2: data.message || "No se pudo vincular la cuenta",
+          text1: "Error al vincular cuenta",
+          text2: errorMessage,
+          visibilityTime: 5000,
+          topOffset: 60,
         });
       }
     } catch (error) {
       console.error("Error linking account:", error);
+
+      let errorMessage =
+        "Error de conexión. Verifica tu internet e inténtalo de nuevo";
+      if (error.message.includes("network")) {
+        errorMessage = "Sin conexión a internet. Verifica tu conexión";
+      } else if (error.message.includes("timeout")) {
+        errorMessage = "La conexión tardó demasiado. Inténtalo de nuevo";
+      }
+
       Toast.show({
         type: "error",
-        text1: "Error",
-        text2: "Ocurrió un error al vincular la cuenta",
+        text1: "Error de conexión",
+        text2: errorMessage,
+        visibilityTime: 5000,
+        topOffset: 60,
       });
     } finally {
       setLoading(false);
@@ -216,6 +297,9 @@ export default function LinkMoodle() {
             )}
           </View>
         </ScrollView>
+
+        {/* Toast Component */}
+        <Toast />
       </View>
     </>
   );
