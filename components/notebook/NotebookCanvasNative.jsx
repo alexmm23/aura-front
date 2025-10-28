@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Canvas,
   Path,
@@ -24,6 +24,7 @@ import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { API } from "@/config/api";
 import { apiGet, apiPost } from "../../utils/fetchWithAuth";
 import Toast from "react-native-toast-message";
+import { captureRef } from "react-native-view-shot";
 
 // Constantes de herramientas
 const TOOL_PENCIL = "pen";
@@ -38,12 +39,7 @@ const textSizes = [12, 16, 20, 24, 32, 40];
 
 const NotebookCanvasNative = ({ onSave, onBack }) => {
   const canvasRef = useCanvasRef();
-
-  // Debug: Verificar que onBack se está pasando correctamente
-  React.useEffect(() => {
-    console.log("NotebookCanvasNative mounted");
-    console.log("onBack prop:", typeof onBack, onBack);
-  }, []);
+  const canvasContainerRef = useRef(null); // Nueva ref para el contenedor
 
   // Estados principales
   const [tool, setTool] = useState(TOOL_PENCIL);
@@ -121,8 +117,6 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
   // Manejo de eventos táctiles directos (en lugar de PanResponder)
 
   const handleDrawStart = (x, y) => {
-    console.log("handleDrawStart called with:", x, y, "tool:", tool);
-
     if (tool === TOOL_TEXT) {
       setTextInputModal({
         visible: true,
@@ -135,13 +129,11 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
     }
 
     if (tool === TOOL_SELECT) {
-      // Buscar capa en la posición clickeada
       const hitLayer = findLayerAtPoint(x, y);
       const hitText = findTextAtPoint(x, y);
 
       if (hitText) {
         setSelectedLayerId(hitText.id);
-        // Editar texto si se hace doble tap
         setTimeout(() => {
           setTextInputModal({
             visible: true,
@@ -158,7 +150,6 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
     }
 
     if (isDrawing) {
-      console.log("Already drawing, ignoring start");
       return;
     }
 
@@ -187,8 +178,6 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
   };
 
   const handleDrawEnd = () => {
-    console.log("handleDrawEnd called, isDrawing:", isDrawing);
-
     if (!isDrawing) return;
 
     try {
@@ -213,7 +202,6 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
         const width = Math.abs(endX - startX);
         const height = Math.abs(endY - startY);
 
-        // Solo crear el rectángulo si tiene un tamaño mínimo
         if (width > 5 && height > 5) {
           addLayer({
             type: "rect",
@@ -229,7 +217,6 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
     } catch (error) {
       console.error("Error in handleDrawEnd:", error);
     } finally {
-      // Siempre limpiar el estado
       setIsDrawing(false);
       setCurrentPath("");
       setCurrentRect(null);
@@ -274,7 +261,7 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
           y <= layer.y + layer.height
         );
       case "drawing":
-        return false; // Simplificado
+        return false;
       default:
         return false;
     }
@@ -306,7 +293,38 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
     });
   };
 
-  // Funciones de canvas
+  // Función para capturar el canvas como imagen - VERSIÓN CORREGIDA
+  const captureCanvas = async () => {
+    try {
+      console.log("Iniciando captura del canvas...");
+
+      if (!canvasContainerRef.current) {
+        throw new Error("Canvas container ref no está disponible");
+      }
+
+      console.log("Capturando vista...");
+
+      const uri = await captureRef(canvasContainerRef, {
+        format: "png",
+        quality: 1.0,
+        result: "data-uri",
+      });
+
+      console.log("Captura exitosa, URI length:", uri?.length);
+
+      if (!uri) {
+        throw new Error("La captura devolvió null o undefined");
+      }
+
+      return uri;
+    } catch (error) {
+      console.error("Error detallado en captureCanvas:", error);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+      throw new Error("No se pudo capturar el canvas: " + error.message);
+    }
+  };
+
   const clearCanvas = () => {
     Alert.alert("Limpiar Canvas", "¿Estás seguro de que quieres borrar todo?", [
       { text: "Cancelar", style: "cancel" },
@@ -320,127 +338,8 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
     ]);
   };
 
-  // Función para obtener los cuadernos del usuario
-  const fetchUserNotebooks = async () => {
-    setLoadingNotebooks(true);
-    try {
-      const response = await apiGet(API.ENDPOINTS.STUDENT.NOTEBOOKS);
-
-      if (!response.ok) {
-        throw new Error("Error al obtener cuadernos");
-      }
-
-      const data = await response.json();
-      setNotebooks(data.notebooks || []);
-    } catch (error) {
-      console.error("Error fetching notebooks:", error);
-      Toast.show({
-        type: "error",
-        text1: "Error al cargar cuadernos",
-        text2: "No se pudieron cargar tus cuadernos",
-      });
-    } finally {
-      setLoadingNotebooks(false);
-    }
-  };
-
-  // Función para capturar el canvas como imagen
-  const captureCanvas = async () => {
-    try {
-      // Usar makeImageSnapshot del canvas ref
-      const snapshot = canvasRef.current?.makeImageSnapshot();
-      
-      if (!snapshot) {
-        throw new Error("No se pudo capturar el canvas");
-      }
-
-      // Convertir a base64
-      const base64 = snapshot.encodeToBase64();
-      
-      // Liberar memoria del snapshot
-      snapshot.dispose?.();
-      
-      return `data:image/png;base64,${base64}`;
-    } catch (error) {
-      console.error("Error capturing canvas:", error);
-      
-      // Fallback: crear una imagen vacía o usar un método alternativo
-      Toast.show({
-        type: "error",
-        text1: "Error al capturar",
-        text2: "No se pudo capturar el contenido del canvas",
-      });
-      throw error;
-    }
-  };
-
-  // Función para guardar la nota en un cuaderno específico
-  const saveNoteToNotebook = async (notebookId) => {
-    setSavingNote(true);
-    try {
-      // Capturar el canvas
-      const imageDataURL = await captureCanvas();
-
-      // Convertir data URL a Blob para React Native
-      const formData = new FormData();
-      formData.append("notebook_id", notebookId.toString());
-      formData.append("title", `Nota ${new Date().toLocaleDateString()}`);
-      
-      // En React Native, el formato de imagen para FormData es diferente
-      formData.append("images", {
-        uri: imageDataURL,
-        type: "image/png",
-        name: `note-${Date.now()}.png`,
-      });
-
-      // Enviar al backend usando el endpoint correcto
-      const saveResponse = await apiPost(
-        API.ENDPOINTS.STUDENT.NOTE_CREATE,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      if (!saveResponse.ok) {
-        const errorData = await saveResponse.json();
-        throw new Error(errorData.message || "Error al guardar la nota");
-      }
-
-      Toast.show({
-        type: "success",
-        text1: "Nota guardada",
-        text2: "Tu nota se guardó correctamente en el cuaderno",
-      });
-
-      // Cerrar modal y regresar después de un delay
-      setShowNotebookModal(false);
-      setTimeout(() => {
-        onSave?.();
-      }, 1500);
-    } catch (error) {
-      console.error("Error saving note:", error);
-      Toast.show({
-        type: "error",
-        text1: "Error al guardar",
-        text2: error.message || "No se pudo guardar la nota",
-      });
-    } finally {
-      setSavingNote(false);
-    }
-  };
-
-  // Función para abrir el modal de selección de cuadernos
-  const openNotebookSelector = () => {
-    setShowNotebookModal(true);
-    fetchUserNotebooks();
-  };
-
   const saveCanvas = async () => {
     try {
-      // En lugar de solo mostrar un alert, abrir el selector de cuadernos
       openNotebookSelector();
     } catch (error) {
       Toast.show({
@@ -451,7 +350,140 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
     }
   };
 
-  // Renderizado de capas con manejo de errores
+  const openNotebookSelector = () => {
+    setShowNotebookModal(true);
+    fetchUserNotebooks();
+  };
+
+  const fetchUserNotebooks = async () => {
+    setLoadingNotebooks(true);
+    try {
+      const response = await apiGet(API.ENDPOINTS.STUDENT.NOTEBOOKS);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Error al obtener cuadernos");
+      }
+
+      const data = await response.json();
+      const notebooksArray = data.notebooks || data.data || data || [];
+      setNotebooks(Array.isArray(notebooksArray) ? notebooksArray : []);
+    } catch (error) {
+      Toast.show({
+        type: "error",
+        text1: "Error al cargar cuadernos",
+        text2: error.message || "No se pudieron cargar tus cuadernos",
+      });
+      setNotebooks([]);
+    } finally {
+      setLoadingNotebooks(false);
+    }
+  };
+
+  const saveNoteToNotebook = async (notebookId) => {
+    setSavingNote(true);
+    try {
+      console.log("=== INICIANDO GUARDADO DE NOTA ===");
+      console.log("Notebook ID:", notebookId);
+
+      // Verificar que tenemos capas o elementos para guardar
+      if (layers.length === 0 && textElements.length === 0) {
+        Toast.show({
+          type: "info",
+          text1: "Canvas vacío",
+          text2: "Dibuja algo antes de guardar",
+        });
+        setSavingNote(false);
+        return;
+      }
+
+      // Capturar el canvas
+      let imageDataURL;
+      try {
+        imageDataURL = await captureCanvas();
+        console.log("✓ Canvas capturado");
+        console.log("Tipo de imagen:", imageDataURL.substring(0, 30));
+      } catch (captureError) {
+        console.error("Error al capturar canvas:", captureError);
+        throw new Error("No se pudo capturar el contenido del canvas");
+      }
+
+      // Preparar los datos EXACTAMENTE como Web
+      const noteData = {
+        image: imageDataURL,
+        notebook_id: notebookId,
+        title: `Nota del ${new Date().toLocaleDateString()}`,
+      };
+
+      console.log("Enviando al endpoint:", API.ENDPOINTS.STUDENT.NOTE_CREATE);
+      console.log("Datos:", {
+        notebook_id: noteData.notebook_id,
+        title: noteData.title,
+        imagePrefix: noteData.image.substring(0, 50),
+        imageLength: noteData.image.length
+      });
+
+      // Enviar EXACTAMENTE como Web (sin headers extra)
+      const response = await apiPost(
+        API.ENDPOINTS.STUDENT.NOTE_CREATE,
+        noteData
+      );
+
+      console.log("Response status:", response.status);
+      console.log("Response ok:", response.ok);
+
+      // Intentar leer el body para debug
+      let responseText;
+      try {
+        responseText = await response.text();
+        console.log("Response body:", responseText);
+      } catch (e) {
+        console.log("No se pudo leer response body");
+      }
+
+      if (response.ok) {
+        console.log("✓ Nota guardada exitosamente");
+        
+        setShowNotebookModal(false);
+
+        Toast.show({
+          type: "success",
+          text1: "¡Nota guardada!",
+          text2: "Tu nota se guardó exitosamente",
+          visibilityTime: 3000,
+        });
+
+        setTimeout(() => {
+          if (onSave) {
+            onSave(imageDataURL);
+          }
+        }, 2000);
+      } else {
+        console.error("Error del servidor:", response.status);
+        console.error("Response text:", responseText);
+        
+        Toast.show({
+          type: "error",
+          text1: "Error al guardar",
+          text2: `Error del servidor (${response.status})`,
+        });
+      }
+    } catch (error) {
+      console.error("=== ERROR AL GUARDAR NOTA ===");
+      console.error("Error completo:", error);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+      
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error.message || "No se pudo guardar la nota",
+      });
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
   const renderLayers = () => {
     try {
       return layers
@@ -499,7 +531,6 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
     }
   };
 
-  // Renderizado de elementos en progreso con manejo de errores
   const renderCurrentDrawing = () => {
     try {
       const elements = [];
@@ -556,7 +587,6 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
           {/* Toolbar */}
           <View style={styles.toolbar}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {/* Herramientas */}
               <TouchableOpacity
                 style={[
                   styles.toolButton,
@@ -627,7 +657,6 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
                 />
               </TouchableOpacity>
 
-              {/* Controles */}
               <TouchableOpacity
                 style={styles.toolButton}
                 onPress={() => setShowColorPicker(!showColorPicker)}
@@ -653,7 +682,6 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
                 </TouchableOpacity>
               )}
 
-              {/* Acciones */}
               <TouchableOpacity style={styles.toolButton} onPress={clearCanvas}>
                 <Ionicons name="trash" size={20} color="#333" />
               </TouchableOpacity>
@@ -662,15 +690,11 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
                 <Ionicons name="save" size={20} color="#333" />
               </TouchableOpacity>
 
-              {/* Botón de regresar - siempre visible */}
               <TouchableOpacity
                 style={[styles.toolButton, styles.backButton]}
                 onPress={() => {
-                  console.log("Back button pressed, onBack:", typeof onBack);
                   if (onBack) {
                     onBack();
-                  } else {
-                    console.log("onBack function not provided");
                   }
                 }}
               >
@@ -680,7 +704,6 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
             </ScrollView>
           </View>
 
-          {/* Controles expandidos */}
           {showColorPicker && (
             <View style={styles.colorPicker}>
               <ScrollView horizontal>
@@ -748,10 +771,13 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
             </View>
           )}
 
-          {/* Canvas Container */}
-          <View style={styles.canvasContainer}>
-            {/* Canvas de Skia con eventos táctiles nativos */}
+          <View
+            ref={canvasContainerRef}
+            style={styles.canvasContainer}
+            collapsable={false}
+          >
             <Canvas
+              ref={canvasRef}
               style={[StyleSheet.absoluteFillObject, styles.canvas]}
               onTouchStart={(event) => {
                 try {
@@ -795,7 +821,6 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
               </Group>
             </Canvas>
 
-            {/* Overlay de texto con React Native */}
             {textElements.map((textEl) => (
               <View
                 key={textEl.id}
@@ -822,14 +847,12 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
             ))}
           </View>
 
-          {/* Panel de capas */}
           {tool === TOOL_SELECT && (
             <View style={styles.layersPanel}>
               <Text style={styles.layersPanelTitle}>
                 Elementos ({layers.length + textElements.length})
               </Text>
               <ScrollView>
-                {/* Elementos de texto */}
                 {textElements
                   .sort((a, b) => b.zIndex - a.zIndex)
                   .map((textEl) => (
@@ -859,7 +882,6 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
                     </View>
                   ))}
 
-                {/* Capas de Skia */}
                 {layers
                   .sort((a, b) => b.zIndex - a.zIndex)
                   .map((layer) => (
@@ -895,7 +917,6 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
             </View>
           )}
 
-          {/* Modal de texto */}
           <Modal
             visible={textInputModal.visible}
             transparent
@@ -953,7 +974,6 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
             </View>
           </Modal>
 
-          {/* Modal para seleccionar cuaderno */}
           <Modal
             visible={showNotebookModal}
             transparent={true}
@@ -1027,7 +1047,6 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
             </View>
           </Modal>
 
-          {/* Toast para notificaciones */}
           <Toast />
         </View>
       </SafeAreaView>
@@ -1229,7 +1248,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
-  // Estilos para el modal de cuadernos
   notebookModalContainer: {
     backgroundColor: "#fff",
     borderRadius: 16,
