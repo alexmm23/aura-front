@@ -22,6 +22,92 @@ export default function NotebookSelectorModal({
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 768;
 
+  // Debug logs
+  React.useEffect(() => {
+    if (visible) {
+      console.log('📖 NotebookSelectorModal abierto');
+      console.log('📚 Notebooks:', notebooks);
+      console.log('📊 Cantidad:', notebooks?.length || 0);
+      console.log('🎨 Es array:', Array.isArray(notebooks));
+      console.log('🎨 Loading:', loading);
+    }
+  }, [visible, notebooks, loading]);
+
+  // Renderizar directamente sin condiciones complejas
+  const renderContent = () => {
+    console.log('🔄 renderContent ejecutándose');
+    console.log('🔄 Loading:', loading);
+    console.log('🔄 Notebooks length:', notebooks?.length);
+
+    if (loading) {
+      console.log('⏳ Mostrando loading...');
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007bff" />
+          <AuraText
+            text="Cargando cuadernos..."
+            style={styles.loadingText}
+          />
+        </View>
+      );
+    }
+
+    if (!notebooks || notebooks.length === 0) {
+      console.log('❌ Mostrando mensaje de vacío...');
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="book-outline" size={64} color="#ccc" />
+          <AuraText
+            text="No tienes cuadernos creados"
+            style={styles.emptyText}
+          />
+          <AuraText
+            text="Crea un cuaderno primero para usar las funciones de IA"
+            style={styles.emptySubtext}
+          />
+        </View>
+      );
+    }
+
+    console.log('✅ Mostrando lista de cuadernos...');
+    return (
+      <View style={styles.notebooksContainer}>
+        {notebooks.map((notebook, index) => {
+          console.log(`🎯 Renderizando card ${index + 1}:`, notebook.title);
+          return (
+            <TouchableOpacity
+              key={`notebook-${notebook.id}-${index}`}
+              style={styles.notebookCard}
+              onPress={() => {
+                console.log('✅ Notebook seleccionado:', notebook.id, notebook.title);
+                onSelectNotebook(notebook.id);
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.notebookIcon}>
+                <Ionicons name="book" size={32} color="#007bff" />
+              </View>
+              <View style={styles.notebookInfo}>
+                <AuraText
+                  text={notebook.title || 'Sin título'}
+                  style={styles.notebookTitle}
+                  numberOfLines={2}
+                />
+                <AuraText
+                  text={notebook.created_at ? new Date(notebook.created_at).toLocaleDateString('es-ES') : 'Sin fecha'}
+                  style={styles.notebookDate}
+                />
+              </View>
+              <View style={styles.selectButtonContainer}>
+                <Ionicons name="chevron-forward" size={24} color="#007bff" />
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
+
   return (
     <Modal
       visible={visible}
@@ -50,65 +136,7 @@ export default function NotebookSelectorModal({
             style={styles.scrollContent}
             contentContainerStyle={styles.scrollContentContainer}
           >
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#007bff" />
-                <AuraText
-                  text="Cargando cuadernos..."
-                  style={styles.loadingText}
-                />
-              </View>
-            ) : notebooks.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="book-outline" size={64} color="#ccc" />
-                <AuraText
-                  text="No tienes cuadernos creados"
-                  style={styles.emptyText}
-                />
-                <AuraText
-                  text="Crea un cuaderno primero para usar las funciones de IA"
-                  style={styles.emptySubtext}
-                />
-              </View>
-            ) : (
-              <View style={styles.notebooksGrid}>
-                {notebooks.map((notebook) => (
-                  <TouchableOpacity
-                    key={notebook.id}
-                    style={[
-                      styles.notebookCard,
-                      isLargeScreen ? styles.notebookCardLarge : styles.notebookCardSmall
-                    ]}
-                    onPress={() => onSelectNotebook(notebook.id)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.notebookIcon}>
-                      <Ionicons name="book" size={32} color="#007bff" />
-                    </View>
-                    <AuraText
-                      text={notebook.title}
-                      style={styles.notebookTitle}
-                      numberOfLines={2}
-                    />
-                    <AuraText
-                      text={new Date(notebook.created_at).toLocaleDateString()}
-                      style={styles.notebookDate}
-                    />
-                    <View style={styles.selectButton}>
-                      <AuraText
-                        text="Seleccionar"
-                        style={styles.selectButtonText}
-                      />
-                      <Ionicons
-                        name="arrow-forward"
-                        size={16}
-                        color="#007bff"
-                      />
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+            {renderContent()}
           </ScrollView>
 
           {/* Footer */}
@@ -136,6 +164,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     width: "100%",
     maxWidth: 500,
+    minHeight: 400, // ✅ AGREGADO - Altura mínima
     maxHeight: "85%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -146,6 +175,7 @@ const styles = StyleSheet.create({
   modalContentLarge: {
     maxWidth: 700,
     maxHeight: "80%",
+    minHeight: 500, // ✅ AGREGADO
   },
   header: {
     flexDirection: "row",
@@ -154,6 +184,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#e9ecef",
+    backgroundColor: "#fff",
   },
   headerLeft: {
     flexDirection: "row",
@@ -171,15 +202,18 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   scrollContent: {
-    flex: 1,
+    flex: 1, // ✅ IMPORTANTE - Ocupa el espacio disponible
+    backgroundColor: "#f8f9fa",
   },
   scrollContentContainer: {
     padding: 16,
-    flexGrow: 1,
+    paddingBottom: 24, // ✅ AGREGADO - Espacio al final
   },
   loadingContainer: {
     alignItems: "center",
+    justifyContent: "center",
     padding: 60,
+    minHeight: 200, // ✅ AGREGADO
   },
   loadingText: {
     marginTop: 16,
@@ -188,7 +222,9 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     alignItems: "center",
+    justifyContent: "center",
     padding: 60,
+    minHeight: 200, // ✅ AGREGADO
   },
   emptyText: {
     marginTop: 16,
@@ -204,73 +240,56 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: 20,
   },
-  notebooksGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
+  notebooksContainer: {
     gap: 12,
+    paddingBottom: 16, // ✅ AGREGADO - Espacio entre cards y footer
   },
   notebookCard: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     borderWidth: 2,
     borderColor: "#e9ecef",
-    alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
-  },
-  notebookCardSmall: {
-    width: "100%",
-    marginBottom: 8,
-  },
-  notebookCardLarge: {
-    width: "48%",
+    minHeight: 80,
   },
   notebookIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: "#e7f3ff",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 12,
+    marginRight: 12,
+  },
+  notebookInfo: {
+    flex: 1,
+    justifyContent: "center",
   },
   notebookTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     color: "#333",
-    textAlign: "center",
-    marginBottom: 6,
-    minHeight: 36,
+    marginBottom: 4,
   },
   notebookDate: {
-    fontSize: 11,
+    fontSize: 12,
     color: "#999",
-    marginBottom: 12,
   },
-  selectButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: "#e7f3ff",
-    borderRadius: 6,
-    marginTop: 4,
-  },
-  selectButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#007bff",
+  selectButtonContainer: {
+    padding: 8,
   },
   footer: {
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: "#e9ecef",
+    backgroundColor: "#fff",
   },
   cancelButton: {
     backgroundColor: "#6c757d",
