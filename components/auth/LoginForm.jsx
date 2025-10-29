@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react"; // ✅ Agregar useRef
 import { View, Text, TouchableOpacity, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -11,6 +11,8 @@ export const LoginForm = ({
   errors,
   showPassword,
   isSubmitting,
+  isBlocked,
+  remainingTime,
   onChangeText,
   onSubmit,
   onTogglePassword,
@@ -23,6 +25,20 @@ export const LoginForm = ({
       onSubmit();
     }
   };
+
+  // Determinar el texto del botón
+  const getButtonText = () => {
+    if (isBlocked && remainingTime > 0) {
+      return `Bloqueado (${remainingTime}s)`;
+    }
+    if (isSubmitting) {
+      return "Ingresando...";
+    }
+    return "Ingresar";
+  };
+
+  // Determinar si el botón está deshabilitado
+  const isButtonDisabled = isSubmitting || isBlocked;
 
   return (
     <View style={styles.card}>
@@ -40,7 +56,7 @@ export const LoginForm = ({
         onChangeText={(text) => onChangeText("email", text)}
         keyboardType="email-address"
         autoCapitalize="none"
-        editable={!isSubmitting}
+        editable={!isButtonDisabled}
         onKeyPress={handleKeyPress}
       />
       {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
@@ -52,13 +68,13 @@ export const LoginForm = ({
           value={formData.password}
           onChangeText={(text) => onChangeText("password", text)}
           secureTextEntry={!showPassword}
-          editable={!isSubmitting}
+          editable={!isButtonDisabled}
           onKeyPress={handleKeyPress}
         />
         <TouchableOpacity
           style={styles.eyeButton}
           onPress={onTogglePassword}
-          disabled={isSubmitting}
+          disabled={isButtonDisabled}
         >
           <Ionicons
             name={showPassword ? "eye" : "eye-off"}
@@ -74,7 +90,7 @@ export const LoginForm = ({
       <TouchableOpacity
         style={styles.linkContainer}
         onPress={() => router.replace("/(auth)/forgotpassword")}
-        disabled={isSubmitting}
+        disabled={isButtonDisabled}
       >
         <AuraText
           style={styles.linkTextContraseña}
@@ -83,16 +99,16 @@ export const LoginForm = ({
       </TouchableOpacity>
 
       <PrimaryButton
-        title={isSubmitting ? "Ingresando..." : "Ingresar"}
+        title={getButtonText()}
         onPress={onSubmit}
-        disabled={isSubmitting}
+        disabled={isButtonDisabled}
         style={styles}
       />
 
       <TouchableOpacity
         style={styles.linkContainer}
         onPress={() => router.push("/register")}
-        disabled={isSubmitting}
+        disabled={isButtonDisabled}
       >
         <AuraText
           style={styles.linkText}

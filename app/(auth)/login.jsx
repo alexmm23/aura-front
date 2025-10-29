@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -26,6 +26,8 @@ export default function Login() {
     errors,
     showPassword,
     isSubmitting,
+    isBlocked,
+    remainingTime,
     handleChange,
     handleSubmit,
     togglePasswordVisibility,
@@ -37,6 +39,8 @@ export default function Login() {
       errors={errors}
       showPassword={showPassword}
       isSubmitting={isSubmitting}
+      isBlocked={isBlocked}
+      remainingTime={remainingTime}
       onChangeText={handleChange}
       onSubmit={handleSubmit}
       onTogglePassword={togglePasswordVisibility}
