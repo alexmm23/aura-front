@@ -8,15 +8,16 @@ import {
   TouchableOpacity,
   Animated,
 } from "react-native";
-import  { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { AuraText } from "@/components/AuraText";
-import {  apiGet } from "../../utils/fetchWithAuth";
+import { apiGet } from "../../utils/fetchWithAuth";
 import { API } from "../../config/api";
 import Head from "expo-router/head";
 import Svg, { Path } from "react-native-svg";
 import { Colors } from "@/constants/Colors";
 import { useRouter } from "expo-router";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function HomeScreen() {
   const [homework, setHomework] = useState([]);
@@ -27,7 +28,7 @@ export default function HomeScreen() {
   const colors = Colors.light;
   const isLandscape = width > height;
   const router = useRouter();
-  
+
   const fetchHomework = async () => {
     try {
       setIsLoadingHomework(true);
@@ -46,7 +47,7 @@ export default function HomeScreen() {
       setIsLoadingHomework(false);
     }
   };
-  
+
   const fetchNotes = async () => {
     try {
       setIsLoadingNotes(true);
@@ -65,11 +66,21 @@ export default function HomeScreen() {
       setIsLoadingNotes(false);
     }
   };
-  
+
+  // Cargar datos al montar el componente
   useEffect(() => {
     fetchHomework();
     fetchNotes();
   }, []);
+
+  // Refrescar notas y tareas cada vez que la pantalla obtiene el foco
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log("🔄 HomeScreen obtuvo el foco - Refrescando datos...");
+      fetchNotes();
+      fetchHomework();
+    }, [])
+  );
 
   return (
     <>
@@ -150,7 +161,7 @@ export default function HomeScreen() {
                     onPress={() => {
                       //task.id contiene el id_courseid_courseworkid
                       const { id } = task;
-                      const [_,courseId, courseWorkId, submissionId] = id.split("_");
+                      const [_, courseId, courseWorkId, submissionId] = id.split("_");
                       router.push({
                         pathname: "/taskdetails",
                         params: {
@@ -158,7 +169,7 @@ export default function HomeScreen() {
                           courseWorkId: courseWorkId,
                           submissionId: submissionId,
                         },
-                      })
+                      });
                     }}
                   >
                     <View style={{ flex: 1, marginRight: 10 }}>
@@ -166,10 +177,11 @@ export default function HomeScreen() {
                       <Text style={styles.taskDescription}>{task.title}</Text>
                       <Text style={styles.taskDueDate}>
                         {task.dueDate
-                          ? "Fecha límite: " + new Date(task.dueDate).toLocaleDateString('es-ES', {
-                              day: 'numeric',
-                              month: 'long',
-                              year: 'numeric'
+                          ? "Fecha límite: " +
+                            new Date(task.dueDate).toLocaleDateString("es-ES", {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
                             })
                           : "Sin fecha"}
                       </Text>
