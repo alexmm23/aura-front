@@ -34,20 +34,25 @@ const NotebookView = () => {
   useEffect(() => {
     const fetchPage = async () => {
       try {
-        // Usar el endpoint de notes con el pageId como parámetro
+        console.log("Fetching page with ID:", pageId); // Para debug
+        console.log("Full endpoint:", `${API.ENDPOINTS.STUDENT.NOTE_SHOW}/${pageId}`);
+        
         const response = await apiGet(
-          `${API.ENDPOINTS.STUDENT.NOTE_SHOW}/${pageId + 1}`
+          `${API.ENDPOINTS.STUDENT.NOTE_SHOW}/${pageId}`
         );
+        
+        console.log("Response status:", response.status);
+        
         if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Error response:", errorText);
           throw new Error(response.statusText || "Error fetching page");
         }
 
         const result = await response.json();
         console.log("Page response:", result);
 
-        // Verificar si la respuesta es exitosa y tiene datos
         if (result.success && result.data) {
-          // Si data es un array, tomar el primer elemento, sino usar data directamente
           const pageData = Array.isArray(result.data)
             ? result.data[0]
             : result.data;
@@ -57,7 +62,12 @@ const NotebookView = () => {
         }
       } catch (error) {
         console.error("Error fetching page:", error);
-        Alert.alert("Error", "No se pudo cargar la página");
+        console.error("Error details:", {
+          message: error.message,
+          pageId,
+          endpoint: `${API.ENDPOINTS.STUDENT.NOTE_SHOW}/${pageId}`
+        });
+        Alert.alert("Error", `No se pudo cargar la página: ${error.message}`);
       } finally {
         setLoading(false);
       }
