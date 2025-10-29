@@ -19,6 +19,7 @@ import { CreateAssignment } from "@/components/teacher/CreateAssignment";
 import { Ionicons } from "@expo/vector-icons";
 import { apiGet, apiPost } from "../../utils/fetchWithAuth";
 import Svg, { Path } from "react-native-svg";
+import TeacherClassModal from "@/components/teacher/TeacherClassModal";
 
 export default function TeacherClasses() {
   const [classes, setClasses] = useState([]);
@@ -28,6 +29,9 @@ export default function TeacherClasses() {
   const [selectedClass, setSelectedClass] = useState(null);
   const { width } = useWindowDimensions();
   const colors = Colors.light;
+
+  const [showClassModal, setShowClassModal] = useState(false);
+  const [selectedClassForModal, setSelectedClassForModal] = useState(null);
 
   const fetchClasses = async () => {
     try {
@@ -178,9 +182,15 @@ export default function TeacherClasses() {
   };
 
   const handleClassSelect = (classData) => {
-    setSelectedClass(classData);
-    fetchCourseDetails(classData.id);
+    setSelectedClassForModal(classData);
+    setShowClassModal(true);
   };
+
+  const handleCloseModal = () => {
+    setShowClassModal(false);
+    setSelectedClassForModal(null);
+  };
+
 
   const handlePostCreated = (newPost) => {
     // Actualizar la lista de posts en la clase seleccionada
@@ -346,6 +356,13 @@ export default function TeacherClasses() {
       >
         {selectedClass ? renderClassDetail() : renderClassList()}
       </ScrollView>
+
+      {/* Modal para opciones de clase */}
+      <TeacherClassModal
+        visible={showClassModal}
+        onClose={handleCloseModal}
+        classData={selectedClassForModal}
+      />
     </SafeAreaView>
   );
 }
@@ -357,7 +374,7 @@ const styles = StyleSheet.create({
   },
   classHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: 16,
   },
   backButton: {
@@ -438,14 +455,14 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingVertical: 30,
-    alignItems: "center",
+    alignItems: "flex-start",
     backgroundColor: "transparent",
   },
   title: {
     fontSize: 36,
     fontWeight: "bold",
     color: "#CB8D27",
-    textAlign: "center",
+    textAlign: "left",
     marginTop: 20,
     marginBottom: 10,
   },
