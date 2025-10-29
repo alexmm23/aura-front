@@ -23,7 +23,8 @@ import { apiGet, apiPost } from "../../utils/fetchWithAuth";
 
 const TaskDetails = () => {
   const router = useRouter();
-  const { courseId, courseWorkId, submissionId } = useLocalSearchParams();
+  const { courseId, courseWorkId, submissionId, platform } =
+    useLocalSearchParams();
 
   // Función helper para codificar IDs en base64
   const encodeBase64 = (str) => {
@@ -78,9 +79,16 @@ const TaskDetails = () => {
   useEffect(() => {
     const fetchTaskDetails = async () => {
       try {
-        const response = await apiGet(
-          `${API.ENDPOINTS.STUDENT.HOMEWORK}/${courseId}/${courseWorkId}`
-        );
+        let response;
+        if (platform === "moodle") {
+          response = await apiGet(
+            `${API.ENDPOINTS.STUDENT.HOMEWORK_MOODLE}/${courseId}/${courseWorkId}`
+          );
+        } else {
+          response = await apiGet(
+            `${API.ENDPOINTS.STUDENT.HOMEWORK}/${courseId}/${courseWorkId}`
+          );
+        }
 
         if (response.ok) {
           const data = await response.json();
@@ -182,13 +190,22 @@ const TaskDetails = () => {
         },
       };
 
-      // Construir la URL del endpoint con parámetros
-      const endpoint = API.ENDPOINTS.STUDENT.HOMEWORK_SUBMIT_FILE.replace(
-        ":courseId",
-        courseId
-      ).replace(":courseWorkId", courseWorkId);
+      // Construir la URL del endpoint con parámetros según la plataforma
+      let endpoint;
+      if (platform === "moodle") {
+        endpoint = API.ENDPOINTS.STUDENT.HOMEWORK_MOODLE_SUBMIT.replace(
+          ":courseId",
+          courseId
+        ).replace(":assignmentId", courseWorkId);
+      } else {
+        endpoint = API.ENDPOINTS.STUDENT.HOMEWORK_SUBMIT_FILE.replace(
+          ":courseId",
+          courseId
+        ).replace(":courseWorkId", courseWorkId);
+      }
 
       console.log("Submitting assignment:", {
+        platform,
         endpoint,
         courseId,
         courseWorkId,
