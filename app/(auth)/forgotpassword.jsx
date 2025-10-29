@@ -6,6 +6,10 @@ import {
   ScrollView,
   useWindowDimensions,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
 import { useRouter } from "expo-router";
@@ -113,7 +117,6 @@ export default function ForgotPassword() {
           router.replace("/(auth)/login");
         }, 3000);
       } else {
-        // Aunque es improbable que entre aquí por tu lógica de backend
         setErrors({ form: "Error al procesar la solicitud" });
       }
     } catch (error) {
@@ -190,36 +193,65 @@ export default function ForgotPassword() {
   );
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-      {isLandscape || isLargeScreen ? (
-        <LandscapeHeader colors={colors} styles={styles}>
-          {formularioCompleto}
-        </LandscapeHeader>
-      ) : (
-        <>
-          <PortraitHeader colors={colors} styles={styles} />
-          {formularioCompleto}
-        </>
-      )}
-    </View>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.innerContainer}>
+          <StatusBar style="light" />
+          {isLandscape || isLargeScreen ? (
+            <LandscapeHeader colors={colors} styles={styles}>
+              <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                {formularioCompleto}
+              </ScrollView>
+            </LandscapeHeader>
+          ) : (
+            <>
+              <PortraitHeader colors={colors} styles={styles} />
+              <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                {formularioCompleto}
+              </ScrollView>
+            </>
+          )}
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
+    flex: 1,
     backgroundColor: "#e4d7c2",
+  },
+  innerContainer: {
+    flex: 1,
     position: "relative",
     justifyContent: "center",
     alignItems: "center",
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingBottom: 40,
   },
   card: {
     backgroundColor: "white",
     borderRadius: 20,
     padding: 20,
     width: "90%",
-    marginTop: "50%",
+    marginTop: Platform.OS === "ios" ? "30%" : "50%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
