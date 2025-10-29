@@ -52,7 +52,7 @@ export const PostCard = ({ post, onPress, showForumInfo = false }) => {
         <View style={styles.authorInfo}>
           <Ionicons name="person-circle-outline" size={16} color="#666" />
           <Text style={styles.authorName}>
-            {post.author?.name || "Usuario"}
+            {post.user?.name}
           </Text>
         </View>
         <Text style={styles.date}>
