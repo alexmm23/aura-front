@@ -2,7 +2,6 @@ import React from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AuraText } from "@/components/AuraText";
-import { LinearGradient } from "expo-linear-gradient";
 
 export const NotebookHeader = ({
   title = "Mis Cuadernos",
@@ -22,37 +21,43 @@ export const NotebookHeader = ({
       <View
         style={[
           styles.headerButtons,
-          !isLargeScreen && styles.headerButtonsVertical,
+          !isLargeScreen && styles.headerButtonsMobile,
         ]}
       >
         <TouchableOpacity
-          style={styles.createNotebookButton}
+          style={[
+            styles.createNotebookButton,
+            !isLargeScreen && styles.buttonMobile
+          ]}
           onPress={onCreatePress}
           activeOpacity={0.8}
         >
           <Ionicons
             name="add-circle"
-            size={isLargeScreen ? 20 : 18}
+            size={isLargeScreen ? 20 : 16}
             color="#fff"
           />
           <AuraText
             text={isLargeScreen ? "Crear Cuaderno" : "Crear"}
-            style={styles.createButtonText}
+            style={[styles.createButtonText, !isLargeScreen && styles.buttonTextMobile]}
           />
         </TouchableOpacity>
         <TouchableOpacity 
-          style={styles.newNoteButton} 
+          style={[
+            styles.newNoteButton,
+            !isLargeScreen && styles.buttonMobile
+          ]} 
           onPress={onNewNotePress}
           activeOpacity={0.8}
         >
           <Ionicons
             name="create"
-            size={isLargeScreen ? 20 : 18}
+            size={isLargeScreen ? 20 : 16}
             color="#fff"
           />
           <AuraText
             text={isLargeScreen ? "Nueva Nota" : "Nota"}
-            style={styles.newNoteText}
+            style={[styles.newNoteText, !isLargeScreen && styles.buttonTextMobile]}
           />
         </TouchableOpacity>
       </View>
@@ -87,11 +92,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
   },
   title: {
     fontSize: 32,
     fontWeight: "bold",
     color: "#CB8D27",
+    flexShrink: 1,
   },
   titleLarge: {
     fontSize: 42,
@@ -100,10 +107,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
   },
-  headerButtonsVertical: {
+  headerButtonsMobile: {
     flexDirection: "column",
     gap: 8,
     alignItems: "flex-end",
+    marginLeft: 8,
   },
   createNotebookButton: {
     paddingHorizontal: 16,
@@ -121,10 +129,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
   },
+  buttonMobile: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 85,
+    gap: 4,
+  },
   createButtonText: {
     color: "#fff",
     fontWeight: "700",
     fontSize: 14,
+  },
+  buttonTextMobile: {
+    fontSize: 13,
   },
   newNoteButton: {
     paddingHorizontal: 16,

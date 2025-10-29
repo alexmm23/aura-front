@@ -6,7 +6,6 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Platform,
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,7 +18,7 @@ export default function NotebookSelectorModal({
   onSelectNotebook,
   loading = false,
 }) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isLargeScreen = width >= 768;
 
   // Debug logs
@@ -114,11 +113,13 @@ export default function NotebookSelectorModal({
       transparent={true}
       animationType="slide"
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
       <View style={styles.modalOverlay}>
         <View style={[
           styles.modalContent,
-          isLargeScreen && styles.modalContentLarge
+          isLargeScreen && styles.modalContentLarge,
+          !isLargeScreen && { maxHeight: height * 0.75, minHeight: height * 0.6 }
         ]}>
           {/* Header */}
           <View style={styles.header}>
@@ -135,6 +136,7 @@ export default function NotebookSelectorModal({
           <ScrollView 
             style={styles.scrollContent}
             contentContainerStyle={styles.scrollContentContainer}
+            showsVerticalScrollIndicator={true}
           >
             {renderContent()}
           </ScrollView>
@@ -154,34 +156,36 @@ export default function NotebookSelectorModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 16,
+    padding: 20,
   },
   modalContent: {
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 20,
     width: "100%",
     maxWidth: 500,
-    minHeight: 400, // ✅ AGREGADO - Altura mínima
+    minHeight: 450,
     maxHeight: "85%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 8,
+    overflow: "hidden",
   },
   modalContentLarge: {
     maxWidth: 700,
     maxHeight: "80%",
-    minHeight: 500, // ✅ AGREGADO
+    minHeight: 500,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
+    padding: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#e9ecef",
     backgroundColor: "#fff",
@@ -199,21 +203,23 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   closeButton: {
-    padding: 4,
+    padding: 8,
+    borderRadius: 8,
   },
   scrollContent: {
-    flex: 1, // ✅ IMPORTANTE - Ocupa el espacio disponible
+    flex: 1,
     backgroundColor: "#f8f9fa",
   },
   scrollContentContainer: {
-    padding: 16,
-    paddingBottom: 24, // ✅ AGREGADO - Espacio al final
+    padding: 20,
+    paddingBottom: 24,
+    minHeight: 300,
   },
   loadingContainer: {
     alignItems: "center",
     justifyContent: "center",
     padding: 60,
-    minHeight: 200, // ✅ AGREGADO
+    minHeight: 250,
   },
   loadingText: {
     marginTop: 16,
@@ -223,8 +229,8 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
-    padding: 60,
-    minHeight: 200, // ✅ AGREGADO
+    padding: 40,
+    minHeight: 250,
   },
   emptyText: {
     marginTop: 16,
@@ -239,10 +245,11 @@ const styles = StyleSheet.create({
     color: "#999",
     textAlign: "center",
     paddingHorizontal: 20,
+    lineHeight: 20,
   },
   notebooksContainer: {
     gap: 12,
-    paddingBottom: 16, // ✅ AGREGADO - Espacio entre cards y footer
+    paddingBottom: 16,
   },
   notebookCard: {
     flexDirection: "row",
@@ -257,7 +264,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
-    minHeight: 80,
+    minHeight: 85,
   },
   notebookIcon: {
     width: 56,
@@ -266,17 +273,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#e7f3ff",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 16,
   },
   notebookInfo: {
     flex: 1,
     justifyContent: "center",
+    paddingRight: 8,
   },
   notebookTitle: {
     fontSize: 16,
     fontWeight: "600",
     color: "#333",
     marginBottom: 4,
+    lineHeight: 20,
   },
   notebookDate: {
     fontSize: 12,
@@ -286,16 +295,22 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   footer: {
-    padding: 16,
+    padding: 20,
+    paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: "#e9ecef",
     backgroundColor: "#fff",
   },
   cancelButton: {
     backgroundColor: "#6c757d",
-    paddingVertical: 14,
-    borderRadius: 8,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: "center",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   cancelButtonText: {
     color: "#fff",

@@ -7,7 +7,7 @@ import {
   StyleSheet,
   TextInput,
   ActivityIndicator,
-  Platform,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AuraText } from "./AuraText";
@@ -17,6 +17,9 @@ import { API } from "../config/api";
 import Toast from "react-native-toast-message";
 
 export default function AIOptionsModal({ visible, onClose, notebookId }) {
+  const { width, height } = useWindowDimensions();
+  const isLargeScreen = width >= 768;
+  
   const [pages, setPages] = useState([]);
   const [selectedPages, setSelectedPages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -61,7 +64,6 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
       );
       console.log("📘 notebookId recibido:", notebookId);
 
-      // Obtener el array de páginas
       let allPages = data.data?.pages || [];
       let filteredPages = allPages;
 
@@ -140,7 +142,6 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
             : `${result.questions?.length || 0} preguntas generadas`,
       });
 
-      // Resetear y cerrar
       setSelectedPages([]);
       setSelectedOption(null);
       setNumQuestions("10");
@@ -170,18 +171,34 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
       transparent={true}
       animationType="slide"
       onRequestClose={handleClose}
+      statusBarTranslucent={true}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <View style={[
+          styles.modalContent,
+          isLargeScreen && styles.modalContentLarge,
+          !isLargeScreen && { 
+            maxHeight: height * 0.85, 
+            minHeight: height * 0.70,
+            width: width * 0.92 
+          }
+        ]}>
           {/* Header */}
           <View style={styles.header}>
-            <AuraText text="Procesamiento con IA" style={styles.title} />
+            <View style={styles.headerLeft}>
+              <Ionicons name="sparkles" size={24} color="#007bff" />
+              <AuraText text="Procesamiento con IA" style={styles.title} />
+            </View>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="#666" />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.scrollContent}>
+          <ScrollView 
+            style={styles.scrollContent}
+            contentContainerStyle={styles.scrollContentContainer}
+            showsVerticalScrollIndicator={true}
+          >
             {/* Opciones de IA */}
             <View style={styles.section}>
               <AuraText
@@ -196,34 +213,41 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
                     selectedOption === option.id && styles.optionCardSelected,
                   ]}
                   onPress={() => setSelectedOption(option.id)}
+                  activeOpacity={0.7}
                 >
                   <View style={styles.optionHeader}>
-                    <Ionicons
-                      name={option.icon}
-                      size={24}
-                      color={selectedOption === option.id ? "#007bff" : "#666"}
-                    />
-                    <AuraText
-                      text={option.title}
-                      style={[
-                        styles.optionTitle,
-                        selectedOption === option.id &&
-                          styles.optionTitleSelected,
-                      ]}
-                    />
+                    <View style={[
+                      styles.optionIconContainer,
+                      selectedOption === option.id && styles.optionIconContainerSelected
+                    ]}>
+                      <Ionicons
+                        name={option.icon}
+                        size={24}
+                        color={selectedOption === option.id ? "#007bff" : "#666"}
+                      />
+                    </View>
+                    <View style={styles.optionTextContainer}>
+                      <AuraText
+                        text={option.title}
+                        style={[
+                          styles.optionTitle,
+                          selectedOption === option.id &&
+                            styles.optionTitleSelected,
+                        ]}
+                      />
+                      <AuraText
+                        text={option.description}
+                        style={styles.optionDescription}
+                      />
+                    </View>
                     {selectedOption === option.id && (
                       <Ionicons
                         name="checkmark-circle"
-                        size={24}
+                        size={28}
                         color="#007bff"
-                        style={styles.checkmark}
                       />
                     )}
                   </View>
-                  <AuraText
-                    text={option.description}
-                    style={styles.optionDescription}
-                  />
                 </TouchableOpacity>
               ))}
 
@@ -240,6 +264,7 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
                     onChangeText={setNumQuestions}
                     keyboardType="numeric"
                     placeholder="10"
+                    placeholderTextColor="#999"
                   />
                 </View>
               )}
@@ -264,7 +289,7 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
                 <View style={styles.emptyContainer}>
                   <Ionicons
                     name="document-text-outline"
-                    size={48}
+                    size={64}
                     color="#ccc"
                   />
                   <AuraText
@@ -283,6 +308,7 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
                           styles.pageCardSelected,
                       ]}
                       onPress={() => togglePageSelection(page.id)}
+                      activeOpacity={0.7}
                     >
                       {page.contents &&
                       page.contents.length > 0 &&
@@ -295,7 +321,7 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
                         />
                       ) : (
                         <View style={styles.pageImagePlaceholder}>
-                          <Ionicons name="document" size={32} color="#ccc" />
+                          <Ionicons name="document" size={40} color="#ccc" />
                         </View>
                       )}
                       <AuraText
@@ -306,7 +332,7 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
                         <View style={styles.selectedBadge}>
                           <Ionicons
                             name="checkmark-circle"
-                            size={24}
+                            size={28}
                             color="#fff"
                           />
                         </View>
@@ -324,6 +350,7 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
               style={[styles.button, styles.cancelButton]}
               onPress={handleClose}
               disabled={processing}
+              activeOpacity={0.8}
             >
               <AuraText text="Cancelar" style={styles.cancelButtonText} />
             </TouchableOpacity>
@@ -339,6 +366,7 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
               disabled={
                 processing || selectedPages.length === 0 || !selectedOption
               }
+              activeOpacity={0.8}
             >
               {processing ? (
                 <ActivityIndicator size="small" color="#fff" />
@@ -356,14 +384,14 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: 16,
   },
   modalContent: {
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 20,
     width: "100%",
     maxWidth: 600,
     maxHeight: "90%",
@@ -372,6 +400,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 8,
+    overflow: "hidden",
+  },
+  modalContentLarge: {
+    maxWidth: 700,
   },
   header: {
     flexDirection: "row",
@@ -380,28 +412,41 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#e9ecef",
+    backgroundColor: "#fff",
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#333",
+    flexShrink: 1,
   },
   closeButton: {
-    padding: 4,
+    padding: 8,
+    borderRadius: 8,
   },
   scrollContent: {
     flex: 1,
+    backgroundColor: "#f8f9fa",
+  },
+  scrollContentContainer: {
+    paddingBottom: 20,
   },
   section: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: "#e9ecef",
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
     color: "#333",
-    marginBottom: 12,
+    marginBottom: 16,
   },
   optionCard: {
     padding: 16,
@@ -410,6 +455,7 @@ const styles = StyleSheet.create({
     borderColor: "#e9ecef",
     marginBottom: 12,
     backgroundColor: "#fff",
+    minHeight: 80,
   },
   optionCardSelected: {
     borderColor: "#007bff",
@@ -418,31 +464,41 @@ const styles = StyleSheet.create({
   optionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    gap: 12,
+  },
+  optionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#f8f9fa",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  optionIconContainerSelected: {
+    backgroundColor: "#e7f3ff",
+  },
+  optionTextContainer: {
+    flex: 1,
   },
   optionTitle: {
     fontSize: 16,
     fontWeight: "600",
     color: "#333",
-    marginLeft: 12,
-    flex: 1,
+    marginBottom: 4,
   },
   optionTitleSelected: {
     color: "#007bff",
   },
-  checkmark: {
-    marginLeft: "auto",
-  },
   optionDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#666",
-    marginLeft: 36,
+    lineHeight: 18,
   },
   questionOptions: {
     marginTop: 12,
     padding: 16,
     backgroundColor: "#f8f9fa",
-    borderRadius: 8,
+    borderRadius: 12,
   },
   questionLabel: {
     fontSize: 14,
@@ -454,37 +510,37 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 8,
-    padding: 12,
+    padding: 14,
     fontSize: 16,
     backgroundColor: "#fff",
   },
   loadingContainer: {
     alignItems: "center",
-    padding: 40,
+    padding: 50,
   },
   loadingText: {
-    marginTop: 12,
+    marginTop: 16,
     fontSize: 14,
     color: "#666",
   },
   emptyContainer: {
     alignItems: "center",
-    padding: 40,
+    padding: 50,
   },
   emptyText: {
-    marginTop: 12,
+    marginTop: 16,
     fontSize: 14,
     color: "#999",
+    textAlign: "center",
   },
   pagesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginHorizontal: -6,
+    gap: 12,
   },
   pageCard: {
-    width: "31%",
-    margin: "1%",
-    borderRadius: 8,
+    width: "30%",
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: "#e9ecef",
     overflow: "hidden",
@@ -496,12 +552,12 @@ const styles = StyleSheet.create({
   },
   pageImage: {
     width: "100%",
-    height: 120,
+    height: 130,
     backgroundColor: "#f8f9fa",
   },
   pageImagePlaceholder: {
     width: "100%",
-    height: 120,
+    height: 130,
     backgroundColor: "#f8f9fa",
     justifyContent: "center",
     alignItems: "center",
@@ -510,15 +566,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
     textAlign: "center",
-    padding: 8,
+    padding: 10,
   },
   selectedBadge: {
     position: "absolute",
     top: 8,
     right: 8,
     backgroundColor: "#007bff",
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 3,
   },
   footer: {
     flexDirection: "row",
@@ -526,13 +587,19 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#e9ecef",
     gap: 12,
+    backgroundColor: "#fff",
   },
   button: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   cancelButton: {
     backgroundColor: "#6c757d",
