@@ -27,11 +27,13 @@ export default function TeacherClasses() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedClass, setSelectedClass] = useState(null);
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const colors = Colors.light;
 
   const [showClassModal, setShowClassModal] = useState(false);
   const [selectedClassForModal, setSelectedClassForModal] = useState(null);
+
+  const isLandscape = width > height;
 
   const fetchClasses = async () => {
     try {
@@ -50,7 +52,6 @@ export default function TeacherClasses() {
       if (result.success && result.data?.courses) {
         console.log(`✅ Found ${result.data.courses.length} courses`);
 
-        // Para cada clase, obtener las tareas próximas de forma paralela
         const classesWithAssignments = await Promise.all(
           result.data.courses.map(async (classData) => {
             try {
@@ -66,7 +67,6 @@ export default function TeacherClasses() {
                     ? assignmentsResult.data.courseWork
                     : [];
 
-                // Filtrar tareas próximas (próximos 7 días) y con fecha de vencimiento
                 const today = new Date();
                 const nextWeek = new Date(
                   today.getTime() + 7 * 24 * 60 * 60 * 1000
@@ -76,16 +76,15 @@ export default function TeacherClasses() {
                   .filter((assignment) => {
                     if (!assignment.dueDate) return false;
 
-                    // Construir fecha de vencimiento desde el objeto de Google Classroom
                     const dueDate = new Date(
                       assignment.dueDate.year,
-                      assignment.dueDate.month - 1, // Los meses en JS son 0-indexados
+                      assignment.dueDate.month - 1,
                       assignment.dueDate.day
                     );
 
                     return dueDate >= today && dueDate <= nextWeek;
                   })
-                  .slice(0, 3) // Solo las primeras 3
+                  .slice(0, 3)
                   .map((assignment) => ({
                     id: assignment.id,
                     title: assignment.title,
@@ -191,9 +190,7 @@ export default function TeacherClasses() {
     setSelectedClassForModal(null);
   };
 
-
   const handlePostCreated = (newPost) => {
-    // Actualizar la lista de posts en la clase seleccionada
     if (selectedClass) {
       setClasses(
         classes.map((c) =>
@@ -206,7 +203,6 @@ export default function TeacherClasses() {
   };
 
   const handleAssignmentCreated = (newAssignment) => {
-    // Actualizar la lista de tareas en la clase seleccionada
     if (selectedClass) {
       setClasses(
         classes.map((c) =>
@@ -281,7 +277,6 @@ export default function TeacherClasses() {
           <AuraText style={styles.title}>Mis Clases</AuraText>
         </View>
 
-        {/* Estado de carga */}
         {loading && !refreshing && (
           <View style={styles.loadingState}>
             <View style={styles.loadingSpinner}>
@@ -293,7 +288,6 @@ export default function TeacherClasses() {
           </View>
         )}
 
-        {/* Estado de error */}
         {error && !loading && (
           <View style={styles.errorState}>
             <AuraText style={styles.errorTitle}>⚠️ Error al cargar</AuraText>
@@ -306,7 +300,6 @@ export default function TeacherClasses() {
           </View>
         )}
 
-        {/* Lista de clases */}
         {!loading && !error && (
           <View style={styles.classesGrid}>
             {classes.length === 0 ? (
@@ -348,6 +341,41 @@ export default function TeacherClasses() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* SVG de fondo - Responsive */}
+      {isLandscape ? (
+        <View style={styles.backgroundContainerLandscape}>
+          <Svg
+            width="100%"
+            height="100%"
+            preserveAspectRatio="xMidYMid slice"
+            viewBox="0 0 544 566"
+            style={styles.svg}
+          >
+            <Path
+              d="M290.802 352.301C290.802 415.877 773.741 99.5868 436.203 392.457C335.003 480.265 0 612.909 0 549.333C0 485.758 344.864 0 477.746 0C610.628 0 290.802 288.726 290.802 352.301Z"
+              fill="#CDAEC4"
+              fillOpacity={0.67}
+            />
+          </Svg>
+        </View>
+      ) : (
+        <View style={styles.backgroundContainer}>
+          <Svg
+            width="100%"
+            height="100%"
+            preserveAspectRatio="xMidYMid slice"
+            viewBox="0 0 544 566"
+            style={styles.svg}
+          >
+            <Path
+              d="M290.802 352.301C290.802 415.877 773.741 99.5868 436.203 392.457C335.003 480.265 0 612.909 0 549.333C0 485.758 344.864 0 477.746 0C610.628 0 290.802 288.726 290.802 352.301Z"
+              fill="#CDAEC4"
+              fillOpacity={0.67}
+            />
+          </Svg>
+        </View>
+      )}
+
       <ScrollView
         style={styles.scrollView}
         refreshControl={
@@ -357,7 +385,6 @@ export default function TeacherClasses() {
         {selectedClass ? renderClassDetail() : renderClassList()}
       </ScrollView>
 
-      {/* Modal para opciones de clase */}
       <TeacherClassModal
         visible={showClassModal}
         onClose={handleCloseModal}
@@ -417,15 +444,15 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F0",
+    backgroundColor: "#E6E2D2",
   },
   scrollView: {
     flex: 1,
-    marginTop: 10, // Añadir algo de margen para separar del header
+    marginTop: 10,
   },
   contentContainer: {
     padding: 300,
-    paddingTop: 50, // Reducido de 120 para ajustar al nuevo tamaño del header
+    paddingTop: 50,
   },
   card: {
     width: "100%",
@@ -453,13 +480,13 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
     paddingVertical: 30,
     alignItems: "flex-start",
     backgroundColor: "transparent",
   },
   title: {
-    fontSize: 36,
+    fontSize: 48,
     fontWeight: "bold",
     color: "#CB8D27",
     textAlign: "left",
@@ -542,25 +569,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  // Estilos para modo vertical
+  // ✅ Estilos actualizados para el nuevo SVG - modo vertical (móvil)
   backgroundContainer: {
-    height: 250, // Más pequeño que antes (era 350)
+    height: "100%",
     width: "100%",
     position: "absolute",
-    top: 0,
+    top: 80,
     left: 0,
     right: 0,
     zIndex: 0,
-    overflow: "hidden", // Importante para que no se desborde
+    overflow: "hidden",
   },
-  // Estilos para modo horizontal
+  // ✅ Estilos actualizados para el nuevo SVG - modo horizontal (web/tablet)
   backgroundContainerLandscape: {
     position: "absolute",
-    //marginRight:250,
     top: 0,
-    right: 0, // Cambiado de left a right
-    width: "80%", // Ancho relativo
-    height: "90%", // Alto relativo
+    right: 0,
+    width: "60%",
+    height: "100%",
     zIndex: 0,
     overflow: "hidden",
   },
@@ -576,10 +602,10 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 350, // igual que el contenedor
+    height: 350,
     justifyContent: "center",
     alignItems: "center",
-    paddingTop: 40, //mas espacio arriba
+    paddingTop: 40,
   },
   headerContentLandscape: {
     position: "absolute",
@@ -589,7 +615,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: "center",
     alignItems: "center",
-    padding: 30, // mas espacio al rededor
+    padding: 30,
   },
   platformIcon: {
     width: 50,
@@ -601,7 +627,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#CB8D27",
     textAlign: "left",
-    marginLeft: 200, // Más margen en modo landscape
+    marginLeft: 200,
   },
   classCard: {
     backgroundColor: "#fff",
@@ -613,14 +639,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-
-    flexDirection: "row", // pone los elementos en fila
-    justifyContent: "space-between", // separa texto e imagen
-    alignItems: "center", // alinea verticalmente
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   classContent: {
-    flex: 1, // ocupa el espacio restante
-    paddingRight: 10, // espacio entre texto e imagen (opcional)
+    flex: 1,
+    paddingRight: 10,
   },
   className: {
     fontSize: 18,
@@ -644,17 +669,11 @@ const styles = StyleSheet.create({
     color: "#1E1E1E",
     fontStyle: "italic",
   },
-  platformIcon: {
-    width: 60,
-    height: 60,
-    resizeMode: "contain",
-  },
   divider: {
     height: 1,
-    backgroundColor: "#ccc", // gris claro
-    marginVertical: 3, // espacio arriba y abajo de la línea
+    backgroundColor: "#ccc",
+    marginVertical: 3,
   },
-  // Nuevos estilos para estados de carga y error
   loadingState: {
     padding: 40,
     alignItems: "center",
