@@ -215,29 +215,73 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
           });
         }
       }
-
-      // ✅ VALIDAR: Verificar contenido según el tipo de procesamiento
       if (selectedOption === "ocr") {
-        const hasText = result.text || 
-                       result.extracted_text || 
-                       (result.data?.results && 
-                        result.data.results.some(r => r.success && r.data?.text));
-        
+        const hasTopLevelText =
+          !!result.text ||
+          !!result.extracted_text ||
+          !!result.texto_extraido ||
+          !!result.texto_corregido;
+
+        const resultsArray = result.data?.results || result.results || [];
+        const hasResultsText =
+          Array.isArray(resultsArray) &&
+          resultsArray.some((r) => {
+        return (
+          r.success &&
+          (
+            !!r.texto_extraido ||
+            !!r.texto_corregido ||
+            (r.estadisticas && (r.estadisticas.palabras_extraidas || 0) > 0)
+          )
+        );
+          });
+
+        const hasText = hasTopLevelText || hasResultsText;
+
         if (!hasText) {
           console.log("❌ No se extrajo texto");
           setProcessing(false);
-          showAIErrorAlert("La IA no pudo extraer texto"); // ✅ Mensaje genérico
+          showAIErrorAlert("La IA no pudo extraer texto");
           return;
         }
 
-        console.log("✅ OCR exitoso");
+        let extractedWordCount = 0;
+
+        if (Array.isArray(resultsArray) && resultsArray.length > 0) {
+          extractedWordCount = resultsArray.reduce((sum, r) => {
+        if (r.estadisticas && typeof r.estadisticas.palabras_extraidas === "number") {
+          return sum + r.estadisticas.palabras_extraidas;
+        }
+        if (r.texto_extraido) {
+          return sum + (String(r.texto_extraido).split(/\s+/).filter(Boolean).length || 0);
+        }
+        if (r.texto_corregido) {
+          return sum + (String(r.texto_corregido).split(/\s+/).filter(Boolean).length || 0);
+        }
+        return sum;
+          }, 0);
+        } else {
+          // Fallback a campos top-level
+          if (result.texto_extraido) {
+        extractedWordCount = String(result.texto_extraido).split(/\s+/).filter(Boolean).length;
+          } else if (result.texto_corregido) {
+        extractedWordCount = String(result.texto_corregido).split(/\s+/).filter(Boolean).length;
+          } else if (result.text || result.extracted_text) {
+        const txt = result.text || result.extracted_text;
+        extractedWordCount = String(txt).split(/\s+/).filter(Boolean).length;
+          }
+        }
+
+        console.log("✅ OCR exitoso - palabras aproximadas extraídas:", extractedWordCount);
         Toast.show({
           type: "success",
           text1: "✅ Texto extraído",
-          text2: "El texto se procesó correctamente",
+          text2:
+        extractedWordCount > 0
+          ? `${extractedWordCount} palabras extraídas`
+          : "El texto se procesó correctamente",
           visibilityTime: 3000,
         });
-
       } else if (selectedOption === "study") {
         const hasQuestions = result.questions || 
                             (result.data?.results && 
