@@ -64,6 +64,7 @@ const TaskDetails = () => {
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [taskSubmitted, setTaskSubmitted] = useState(false);
 
   // Estados para el formulario de entrega
   const [submissionText, setSubmissionText] = useState("");
@@ -221,6 +222,10 @@ const TaskDetails = () => {
         const result = await response.json();
         console.log("Submission successful:", result);
 
+        // Marcar tarea como entregada exitosamente
+        setTaskSubmitted(true);
+        setHasSubmission(true);
+
         // Si la respuesta indica que se necesita entrega manual
         if (
           result.message?.includes("manual submission required") ||
@@ -231,7 +236,7 @@ const TaskDetails = () => {
           setShowManualSubmissionModal(true);
         } else {
           // Entrega exitosa normal
-          let message = "Tarea entregada correctamente";
+          let message = "¡Tarea entregada correctamente!";
 
           // Mostrar mensaje específico basado en la respuesta
           if (result.fileLink) {
@@ -243,8 +248,15 @@ const TaskDetails = () => {
             message += `\n\n${result.instructions}`;
           }
 
-          Alert.alert("Éxito", message, [
-            { text: "OK", onPress: () => router.back() },
+          Alert.alert("¡Éxito!", message, [
+            {
+              text: "Volver al inicio",
+              onPress: () => router.replace("/(tabs)/home"),
+            },
+            {
+              text: "Quedarse aquí",
+              style: "cancel",
+            },
           ]);
         }
       } else {
@@ -569,18 +581,49 @@ const TaskDetails = () => {
             <TouchableOpacity
               style={[
                 styles.submitButton,
-                (submitting || (!submissionText.trim() && !selectedFile)) &&
+                (submitting ||
+                  taskSubmitted ||
+                  (!submissionText.trim() && !selectedFile)) &&
                   styles.submitButtonDisabled,
               ]}
               onPress={submitTask}
-              disabled={submitting || (!submissionText.trim() && !selectedFile)}
+              disabled={
+                submitting ||
+                taskSubmitted ||
+                (!submissionText.trim() && !selectedFile)
+              }
             >
               {submitting ? (
                 <ActivityIndicator size="small" color="#fff" />
+              ) : taskSubmitted ? (
+                <Text style={styles.submitButtonText}>✓ Tarea Entregada</Text>
               ) : (
                 <Text style={styles.submitButtonText}>Entregar Tarea</Text>
               )}
             </TouchableOpacity>
+
+            {/* Mensaje de éxito */}
+            {taskSubmitted && (
+              <View style={styles.successMessage}>
+                <View style={styles.successHeader}>
+                  <Ionicons name="checkmark-circle" size={24} color="#28a745" />
+                  <Text style={styles.successTitle}>
+                    ¡Tarea entregada exitosamente!
+                  </Text>
+                </View>
+                <Text style={styles.successDescription}>
+                  Tu tarea ha sido enviada correctamente. Puedes volver al
+                  inicio para ver más tareas.
+                </Text>
+                <TouchableOpacity
+                  style={styles.homeButton}
+                  onPress={() => router.replace("/(tabs)/home")}
+                >
+                  <Ionicons name="home-outline" size={20} color="#fff" />
+                  <Text style={styles.homeButtonText}>Volver al inicio</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         ) : (
           <View style={styles.submittedSection}>
@@ -1071,6 +1114,46 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: "#fff",
     fontSize: 18,
+    fontWeight: "600",
+  },
+  successMessage: {
+    backgroundColor: "#D4EDDA",
+    borderRadius: 12,
+    padding: 20,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: "#C3E6CB",
+  },
+  successHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  successTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#155724",
+    marginLeft: 8,
+  },
+  successDescription: {
+    fontSize: 16,
+    color: "#155724",
+    marginBottom: 15,
+    lineHeight: 22,
+  },
+  homeButton: {
+    backgroundColor: "#28a745",
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  homeButtonText: {
+    color: "#fff",
+    fontSize: 16,
     fontWeight: "600",
   },
   submittedSection: {
