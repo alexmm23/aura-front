@@ -69,10 +69,10 @@ const TeacherClassModal = ({ visible, onClose, classData }) => {
 
     if (type === "announcement") {
       // URL para la vista de tablón (stream) donde se crean anuncios
-      classroomUrl = `https://classroom.google.com/u/4/c/${encodedCourseId}`;
+      classroomUrl = `https://classroom.google.com/c/${encodedCourseId}`;
     } else if (type === "assignment") {
       // URL para la vista de trabajo de clase (classwork) donde se crean tareas
-      classroomUrl = `https://classroom.google.com/u/4/c/${encodedCourseId}/t/all`;
+      classroomUrl = `https://classroom.google.com/w/${encodedCourseId}/t/all`;
     }
 
     Linking.openURL(classroomUrl).catch(() => {
@@ -87,9 +87,9 @@ const TeacherClassModal = ({ visible, onClose, classData }) => {
     let classroomUrl;
 
     if (type === "announcement") {
-      classroomUrl = `https://classroom.google.com/u/4/c/${encodedCourseId}`;
+      classroomUrl = `https://classroom.google.com/c/${encodedCourseId}`;
     } else if (type === "assignment") {
-      classroomUrl = `https://classroom.google.com/u/4/c/${encodedCourseId}/t/all`;
+      classroomUrl = `https://classroom.google.com/w/${encodedCourseId}/t/all`;
     }
 
     await copyToClipboard(classroomUrl);
@@ -146,7 +146,7 @@ const TeacherClassModal = ({ visible, onClose, classData }) => {
                 <View style={styles.optionUrlContainer}>
                   <Text style={styles.optionUrlLabel}>Enlace directo:</Text>
                   <Text style={styles.optionUrl} numberOfLines={2}>
-                    https://classroom.google.com/u/4/c/
+                    https://classroom.google.com/c/
                     {encodeBase64(classData.id)}
                   </Text>
                 </View>
@@ -190,7 +190,7 @@ const TeacherClassModal = ({ visible, onClose, classData }) => {
                 <View style={styles.optionUrlContainer}>
                   <Text style={styles.optionUrlLabel}>Enlace directo:</Text>
                   <Text style={styles.optionUrl} numberOfLines={2}>
-                    https://classroom.google.com/u/4/c/
+                    https://classroom.google.com/w/
                     {encodeBase64(classData.id)}/t/all
                   </Text>
                 </View>
