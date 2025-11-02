@@ -111,9 +111,10 @@ export const API={
       NOTEBOOK_UPDATE: '/notebook/edit',
       NOTEBOOK_DELETE: '/notebook/delete',
       NOTES: '/note/list',
-      NOTEBOOK_PAGES: '/notebook/pages',
+      NOTEBOOK_PAGES: '/note/list', // ✅ Cambiar esto - usa el mismo endpoint que NOTES
       NOTE_CREATE: '/note/images/upload',
       NOTE_SHOW: '/note/show',
+      NOTE_DELETE: '/note/delete', 
       LINK_MOODLE: '/moodle/login',
       MOODLE_ACCOUNTS: '/moodle/accounts',
     },

@@ -12,6 +12,7 @@ import {
   Modal,
   Dimensions,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -20,21 +21,30 @@ import * as Sharing from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
 import { API } from "@/config/api";
 import { AuraText } from "../../components/AuraText";
-import { apiGet } from "../../utils/fetchWithAuth";
+import { apiGet, apiDelete } from "../../utils/fetchWithAuth";
 
 const NotebookView = () => {
   const router = useRouter();
-  const { pageId } = useLocalSearchParams();
+  const { pageId, notebookId } = useLocalSearchParams();
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // ✅ Nuevo estado
   const [downloading, setDownloading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
+
+  useEffect(() => {
+    setShowMenu(false);
+    setDownloading(false);
+    setDeleting(false);
+  }, [pageId]);
 
   useEffect(() => {
     const fetchPage = async () => {
       try {
-        console.log("Fetching page with ID:", pageId); // Para debug
+        setLoading(true);
+        console.log("Fetching page with ID:", pageId);
         console.log("Full endpoint:", `${API.ENDPOINTS.STUDENT.NOTE_SHOW}/${pageId}`);
         
         const response = await apiGet(
@@ -178,6 +188,109 @@ const NotebookView = () => {
     }
   };
 
+  const handleDelete = async () => {
+    setShowMenu(false);
+    
+    // ✅ Para web, usar modal personalizado en lugar de Alert
+    if (Platform.OS === "web") {
+      setShowDeleteConfirm(true);
+      return;
+    }
+
+    // Para móvil, usar Alert nativo
+    Alert.alert(
+      "Eliminar Nota",
+      "¿Estás seguro de que deseas eliminar esta nota? Esta acción no se puede deshacer.",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: () => executeDelete(),
+        },
+      ]
+    );
+  };
+
+  // ✅ Función separada para ejecutar la eliminación
+  const executeDelete = async () => {
+    try {
+      setDeleting(true);
+      setShowDeleteConfirm(false);
+
+      console.log('🗑️ Eliminando nota con ID:', pageId);
+      console.log('🔗 Endpoint completo:', `${API.ENDPOINTS.STUDENT.NOTE_DELETE}/${pageId}`);
+
+      const response = await apiDelete(
+        `${API.ENDPOINTS.STUDENT.NOTE_DELETE}/${pageId}`
+      );
+
+      console.log('📊 Response status:', response.status);
+
+      if (response.ok) {
+        try {
+          const result = await response.json();
+          console.log('✅ Nota eliminada:', result);
+        } catch (parseError) {
+          console.log('✅ Nota eliminada (sin respuesta JSON)');
+        }
+
+        // ✅ Mostrar mensaje de éxito según plataforma
+        if (Platform.OS === "web") {
+          // Para web, navegar directamente
+          router.replace({
+            pathname: "/(tabs)/notebookpages",
+            params: { 
+              notebookId,
+              refresh: Date.now().toString()
+            },
+          });
+        } else {
+          // Para móvil, mostrar Alert
+          Alert.alert("Éxito", "Nota eliminada correctamente", [
+            {
+              text: "OK",
+              onPress: () => {
+                router.replace({
+                  pathname: "/(tabs)/notebookpages",
+                  params: { 
+                    notebookId,
+                    refresh: Date.now().toString()
+                  },
+                });
+              }
+            }
+          ]);
+        }
+
+      } else {
+        let errorMessage = "Error al eliminar la nota";
+        try {
+          const errorData = await response.json();
+          console.error('❌ Error response:', errorData);
+          errorMessage = errorData.message || errorMessage;
+        } catch (parseError) {
+          console.error('❌ Error status:', response.status);
+          errorMessage = `Error ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+    } catch (error) {
+      console.error("❌ Error deleting note:", error);
+      
+      // ✅ Mostrar error según plataforma
+      if (Platform.OS === "web") {
+        alert(`Error: ${error.message || "No se pudo eliminar la nota"}`);
+      } else {
+        Alert.alert("Error", error.message || "No se pudo eliminar la nota");
+      }
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView
@@ -244,15 +357,15 @@ const NotebookView = () => {
 
         <View style={styles.headerContent}>
           <AuraText
-            text={`Página ${page.page_id || page.id || ""}`}
+            text={`Página ${page?.page_id || page?.id || ""}`}
             style={styles.headerTitle}
           />
-          {page.created_at && (
+          {page?.created_at && (
             <Text style={styles.headerDate}>
               {new Date(page.created_at).toLocaleDateString("es-ES")}
             </Text>
           )}
-          {page.type && (
+          {page?.type && (
             <Text style={styles.headerType}>Tipo: {page.type}</Text>
           )}
         </View>
@@ -260,6 +373,7 @@ const NotebookView = () => {
         <TouchableOpacity
           style={styles.headerButton}
           onPress={() => setShowMenu(true)}
+          disabled={deleting}
         >
           <Ionicons name="ellipsis-vertical" size={24} color="#CB8D27" />
         </TouchableOpacity>
@@ -267,7 +381,7 @@ const NotebookView = () => {
 
       {/* Content */}
       <View style={styles.content}>
-        {page.data ? (
+        {page?.data ? (
           <View style={styles.imageContainer}>
             <Image
               source={{ uri: page.data }}
@@ -328,8 +442,61 @@ const NotebookView = () => {
                 <Text style={styles.menuItemText}>Compartir</Text>
               </TouchableOpacity>
             )}
+
+            {/* Opción de eliminar */}
+            <TouchableOpacity
+              style={[styles.menuItem, styles.deleteMenuItem]}
+              onPress={handleDelete}
+              disabled={deleting}
+            >
+              <Ionicons name="trash-outline" size={24} color="#DC3545" />
+              <Text style={[styles.menuItemText, styles.deleteText]}>
+                {deleting ? "Eliminando..." : "Eliminar Nota"}
+              </Text>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* ✅ Modal de confirmación de eliminación para web */}
+      <Modal
+        visible={showDeleteConfirm}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteConfirm(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmContainer}>
+            <View style={styles.confirmHeader}>
+              <Ionicons name="warning-outline" size={48} color="#DC3545" />
+              <Text style={styles.confirmTitle}>Eliminar Nota</Text>
+            </View>
+            
+            <Text style={styles.confirmMessage}>
+              ¿Estás seguro de que deseas eliminar esta nota? Esta acción no se puede deshacer.
+            </Text>
+
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity
+                style={[styles.confirmButton, styles.cancelButton]}
+                onPress={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.confirmButton, styles.deleteButton]}
+                onPress={executeDelete}
+                disabled={deleting}
+              >
+                <Text style={styles.deleteButtonText}>
+                  {deleting ? "Eliminando..." : "Eliminar"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -488,6 +655,71 @@ const styles = StyleSheet.create({
     color: "#333",
     marginLeft: 12,
     flex: 1,
+  },
+  deleteMenuItem: {
+    borderBottomWidth: 0,
+  },
+  deleteText: {
+    color: "#DC3545",
+    fontWeight: "600",
+  },
+  // ✅ Nuevos estilos para el modal de confirmación
+  confirmContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 24,
+    minWidth: 320,
+    maxWidth: 400,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  confirmHeader: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  confirmTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+    marginTop: 12,
+  },
+  confirmMessage: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  confirmButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  confirmButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#E5E5E5",
+  },
+  cancelButtonText: {
+    color: "#333",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  deleteButton: {
+    backgroundColor: "#DC3545",
+  },
+  deleteButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
 
