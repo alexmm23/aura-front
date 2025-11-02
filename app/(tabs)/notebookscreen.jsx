@@ -9,6 +9,7 @@ import {
   CreateNotebookModal,
   NotebookAIModals,
 } from "@/components/notebook";
+import NotebookDownloadModal from "@/components/notebook/NotebookDownloadModal";
 import { useNotebooks, useNotebookAI } from "@/hooks";
 import { API } from "@/config/api";
 import { apiGet } from "@/utils/fetchWithAuth";
@@ -21,6 +22,10 @@ const NotebookScreen = () => {
   // Estado para verificar suscripción
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [checkingSubscription, setCheckingSubscription] = useState(true);
+
+  // Estado para el modal de descarga
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [selectedNotebookForDownload, setSelectedNotebookForDownload] = useState(null);
 
   // Custom hooks para separar la lógica
   const {
@@ -121,6 +126,18 @@ const NotebookScreen = () => {
     });
   };
 
+  // Nueva función para manejar la descarga
+  const handleDownloadPress = (notebook) => {
+    console.log('📥 Seleccionado para descarga:', notebook);
+    setSelectedNotebookForDownload(notebook);
+    setShowDownloadModal(true);
+  };
+
+  const handleDownloadModalClose = () => {
+    setShowDownloadModal(false);
+    setSelectedNotebookForDownload(null);
+  };
+
   if (showCanvas) {
     return (
       <NotebookCanvas
@@ -140,6 +157,7 @@ const NotebookScreen = () => {
         onCreatePress={() => setShowCreateDialog(true)}
         onNewNotePress={() => setShowCanvas(true)}
         onAIOptionPress={hasActiveSubscription ? () => handleAIOptionPressWithCheck(noteBooks) : undefined}
+        onDownloadPress={handleDownloadPress}
         lastPngDataUrl={lastPngDataUrl}
         hasActiveSubscription={hasActiveSubscription}
         checkingSubscription={checkingSubscription}
@@ -151,6 +169,13 @@ const NotebookScreen = () => {
         onTitleChange={setNotebookTitle}
         onCreate={handleCreateNotebook}
         onCancel={handleCancelCreate}
+      />
+
+      {/* Modal de descarga */}
+      <NotebookDownloadModal
+        visible={showDownloadModal}
+        onClose={handleDownloadModalClose}
+        notebook={selectedNotebookForDownload}
       />
 
       {/* Solo mostrar modales de IA si tiene suscripción activa */}

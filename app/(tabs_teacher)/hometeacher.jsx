@@ -6,7 +6,7 @@ import {
   useWindowDimensions,
   ActivityIndicator,
   RefreshControl,
-  TouchableOpacity, // ✅ AGREGAR
+  TouchableOpacity,
 } from "react-native";
 import { useEffect, useState, useCallback } from "react";
 import { AuraText } from "@/components/AuraText";
@@ -16,28 +16,43 @@ import Svg, { Path } from "react-native-svg";
 import { Colors } from "@/constants/Colors";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { apiGet } from "@/utils/fetchWithAuth";
-import { useRouter } from "expo-router"; // ✅ AGREGAR
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native"; // ✅ Agregado
 
 export default function HomeTeacher() {
-  const [homework, setHomework] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [reminders, setReminders] = useState([]);
   const [isLoadingReminders, setIsLoadingReminders] = useState(true);
+  const [isLoadingClasses, setIsLoadingClasses] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { height, width } = useWindowDimensions();
   const colors = Colors.light;
   const isLandscape = width > height;
-  const router = useRouter(); // ✅ AGREGAR
+  const router = useRouter();
 
-  const fetchHomework = async () => {
+  const fetchClasses = async () => {
     try {
-      const response = await apiGet(API.ENDPOINTS.TEACHER.COURSES);
+      setIsLoadingClasses(true);
+      const response = await apiGet(API.ENDPOINTS.GOOGLE_CLASSROOM.COURSES);
+      
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
-      const data = await response.json();
-      setHomework(data);
+      
+      const result = await response.json();
+      console.log("Classes response:", result);
+      
+      if (result.success && result.data?.courses) {
+        setClasses(result.data.courses);
+      } else {
+        setClasses([]);
+      }
     } catch (error) {
-      console.error("Error fetching homework:", error);
+      console.error("Error fetching classes:", error);
+      setClasses([]);
+    } finally {
+      setIsLoadingClasses(false);
     }
   };
 
@@ -65,23 +80,31 @@ export default function HomeTeacher() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchHomework(), fetchReminders()]);
+    await Promise.all([fetchClasses(), fetchReminders()]);
     setRefreshing(false);
   }, []);
 
-  useEffect(() => {
-    fetchHomework();
-    fetchReminders();
-  }, []);
+  // ✅ Reemplazar useEffect con useFocusEffect
+  useFocusEffect(
+    useCallback(() => {
+      console.log("📍 Pantalla HomeTeacher enfocada - Recargando datos...");
+      fetchClasses();
+      fetchReminders();
+      
+      // Cleanup function (opcional)
+      return () => {
+        console.log("📍 Pantalla HomeTeacher desenfocada");
+      };
+    }, [])
+  );
 
-  const formatDate = (dateString) => { // ✅ Sin tipo
+  const formatDate = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffTime = date.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
 
-    // Formatear fecha legible
     const dateFormat = new Intl.DateTimeFormat("es-MX", {
       day: "numeric",
       month: "short",
@@ -89,7 +112,6 @@ export default function HomeTeacher() {
       minute: "2-digit",
     }).format(date);
 
-    // Agregar información de tiempo relativo
     if (diffHours < 1) {
       const diffMinutes = Math.ceil(diffTime / (1000 * 60));
       return `${dateFormat} (en ${diffMinutes} min)`;
@@ -104,8 +126,8 @@ export default function HomeTeacher() {
     return dateFormat;
   };
 
-  const getFrequencyText = (frequency) => { // ✅ Sin tipo
-    const freqMap = { // ✅ Sin tipo Record
+  const getFrequencyText = (frequency) => {
+    const freqMap = {
       once: "Una vez",
       daily: "Diario",
       weekly: "Semanal",
@@ -114,12 +136,15 @@ export default function HomeTeacher() {
     return freqMap[frequency] || frequency;
   };
 
-  // ✅ AGREGAR: Función para navegar a reminders
   const navigateToReminders = () => {
     router.push({
       pathname: "/(tabs_teacher)/reminders",
-      params: { filterStatus: "pending" } // Pasar filtro de pendientes
+      params: { filterStatus: "pending" }
     });
+  };
+
+  const navigateToClasses = () => {
+    router.push("/(tabs_teacher)/classes");
   };
 
   return (
@@ -147,7 +172,6 @@ export default function HomeTeacher() {
           >
             {/* Mis recordatorios */}
             <View style={styles.card}>
-              {/* ✅ CORREGIR: Usar children en lugar de text */}
               <TouchableOpacity 
                 onPress={navigateToReminders}
                 style={styles.cardHeader}
@@ -215,17 +239,80 @@ export default function HomeTeacher() {
               )}
             </View>
 
-            {/* Mis Cursos */}
+            {/* Mis Clases */}
             <View style={styles.card}>
-              {/* ✅ MANTENER: Este sí usa text prop correctamente */}
-              <AuraText style={styles.title} text="Mis Cursos" />
-              {homework.length === 0 && (
-                <View style={styles.emptyContainer}>
-                  <AuraText
-                    style={styles.emptyText}
-                    text="No hay cursos disponibles"
-                  />
+              <TouchableOpacity 
+                onPress={navigateToClasses}
+                style={styles.cardHeader}
+                activeOpacity={0.7}
+              >
+                <AuraText style={styles.titleText}>Mis Clases</AuraText>
+                <AuraText style={styles.seeAllText}>Ver todas →</AuraText>
+              </TouchableOpacity>
+
+              {isLoadingClasses ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#CB8D27" />
+                  <AuraText style={styles.loadingTextNative}>
+                    Cargando clases...
+                  </AuraText>
                 </View>
+              ) : classes.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <AuraText style={styles.emptyEmoji}>📚</AuraText>
+                  <AuraText style={styles.emptyTitleNative}>
+                    No hay clases disponibles
+                  </AuraText>
+                  <AuraText style={styles.emptyTextNative}>
+                    No se encontraron clases en tu cuenta de Google Classroom.
+                  </AuraText>
+                </View>
+              ) : (
+                <ScrollView
+                  style={styles.classesScrollView}
+                  nestedScrollEnabled={true}
+                  showsVerticalScrollIndicator={true}
+                >
+                  {classes.slice(0, 3).map((classItem) => (
+                    <TouchableOpacity
+                      key={classItem.id}
+                      style={styles.classCard}
+                      onPress={navigateToClasses}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.classIconContainer}>
+                        <Ionicons name="school" size={24} color="#CB8D27" />
+                      </View>
+                      <View style={styles.classInfo}>
+                        <AuraText style={styles.classNameText} numberOfLines={2}>
+                          {classItem.name}
+                        </AuraText>
+                        {classItem.section && (
+                          <AuraText style={styles.classSectionText}>
+                            Sección: {classItem.section}
+                          </AuraText>
+                        )}
+                        {classItem.descriptionHeading && (
+                          <AuraText style={styles.classDescriptionText} numberOfLines={1}>
+                            {classItem.descriptionHeading}
+                          </AuraText>
+                        )}
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color="#999" />
+                    </TouchableOpacity>
+                  ))}
+                  {classes.length > 3 && (
+                    <TouchableOpacity
+                      style={styles.viewMoreButton}
+                      onPress={navigateToClasses}
+                      activeOpacity={0.7}
+                    >
+                      <AuraText style={styles.viewMoreText}>
+                        Ver {classes.length - 3} clases más
+                      </AuraText>
+                    </TouchableOpacity>
+                  )}
+                </ScrollView>
               )}
             </View>
           </ScrollView>
@@ -235,7 +322,6 @@ export default function HomeTeacher() {
   );
 }
 
-// ✅ Sin tipos en las props
 const LandscapeHeader = ({ colors, styles }) => (
   <View style={styles.backgroundContainerLandscape}>
     <Svg
@@ -253,7 +339,6 @@ const LandscapeHeader = ({ colors, styles }) => (
   </View>
 );
 
-// ✅ Sin tipos en las props
 const PortraitHeader = ({ colors, styles }) => (
   <View style={styles.backgroundContainer}>
     <Svg
@@ -296,18 +381,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FF9900",
-    marginBottom: 15,
-  },
   titleText: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#FF9900",
   },
   remindersScrollView: {
+    maxHeight: 300,
+  },
+  classesScrollView: {
     maxHeight: 300,
   },
   noteCard: {
@@ -319,6 +401,60 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 5,
     elevation: 3,
+  },
+  classCard: {
+    backgroundColor: "#FFF3CD",
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: "#CB8D27",
+  },
+  classIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  classInfo: {
+    flex: 1,
+  },
+  classNameText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 4,
+  },
+  classSectionText: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 2,
+  },
+  classDescriptionText: {
+    fontSize: 12,
+    color: "#888",
+    fontStyle: "italic",
+  },
+  viewMoreButton: {
+    paddingVertical: 12,
+    alignItems: "center",
+    backgroundColor: "#F8F9FA",
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  viewMoreText: {
+    fontSize: 14,
+    color: "#CB8D27",
+    fontWeight: "600",
   },
   reminderHeader: {
     flexDirection: "row",
@@ -384,11 +520,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#A64AC9",
     marginBottom: 8,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
   },
   emptyTextNative: {
     fontSize: 14,

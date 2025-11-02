@@ -161,13 +161,15 @@ export default function HomeScreen() {
                     onPress={() => {
                       //task.id contiene el id_courseid_courseworkid
                       const { id } = task;
-                      const [_, courseId, courseWorkId, submissionId] = id.split("_");
+                      const [platform, courseId, courseWorkId, submissionId] =
+                        id.split("_");
                       router.push({
                         pathname: "/taskdetails",
                         params: {
                           courseId: courseId,
                           courseWorkId: courseWorkId,
                           submissionId: submissionId,
+                          platform: platform,
                         },
                       });
                     }}

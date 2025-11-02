@@ -8,6 +8,7 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import React, { useState } from "react";
 import { AuraText } from "@/components/AuraText";
@@ -17,11 +18,15 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useChats } from "../../hooks/useChats";
 import { useChatMessages } from "../../hooks/useChatMessages";
 import { UserSelectionModal } from "../../components/UserSelectionModal";
+import Svg, { Path } from "react-native-svg";
 
 export default function Chats() {
   const [selectedChat, setSelectedChat] = useState(null);
   const [newMessage, setNewMessage] = useState("");
   const [showUserSelection, setShowUserSelection] = useState(false);
+
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
 
   const {
     chats,
@@ -112,7 +117,7 @@ export default function Chats() {
               </AuraText>
             </View>
             
-            {/* ✅ Indicador de conexión */}
+            {/* Indicador de conexión */}
             <View
               style={[
                 styles.connectionStatusInline,
@@ -250,9 +255,44 @@ export default function Chats() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* SVG de fondo - Responsive */}
+      {isLandscape ? (
+        <View style={styles.backgroundContainerLandscape}>
+          <Svg
+            width="100%"
+            height="100%"
+            preserveAspectRatio="xMidYMid slice"
+            viewBox="0 0 542 640"
+            style={styles.svg}
+          >
+            <Path
+              d="M424.529 145.818C386.48 370.539 702.514 680.743 429.554 634.526C156.594 588.309 -179.866 653.43 193.572 501.837C462.28 456.032 -207.64 -81.496 67.8973 10.589C246.764 166.997 462.579 -78.9031 424.529 145.818Z"
+              fill="#CDAEC4"
+              fillOpacity={0.67}
+            />
+          </Svg>
+        </View>
+      ) : (
+        <View style={styles.backgroundContainer}>
+          <Svg
+            width="100%"
+            height="100%"
+            preserveAspectRatio="xMidYMid slice"
+            viewBox="0 0 542 640"
+            style={styles.svg}
+          >
+            <Path
+              d="M424.529 145.818C386.48 370.539 702.514 680.743 429.554 634.526C156.594 588.309 -179.866 653.43 193.572 501.837C462.28 456.032 -207.64 -81.496 67.8973 10.589C246.764 166.997 462.579 -78.9031 424.529 145.818Z"
+              fill="#CDAEC4"
+              fillOpacity={0.67}
+            />
+          </Svg>
+        </View>
+      )}
+
       {/* Header */}
       <View style={styles.header}>
-        <AuraText style={styles.title}>Chats</AuraText>
+        <AuraText style={styles.title}>Mis Chats</AuraText>
       </View>
 
       {/* Chat List */}
@@ -313,21 +353,24 @@ export default function Chats() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F0",
+    backgroundColor: "#E6E2D2",
   },
   header: {
-    padding: 20,
+    paddingHorizontal: 30,
+    paddingVertical: 30,
+    marginTop: 42,
     backgroundColor: "transparent",
-    alignItems: "center",
+    alignItems: "flex-start",
   },
   title: {
-    fontSize: 36,
+    fontSize: 48,
     fontWeight: "bold",
     color: "#CB8D27",
+    textAlign: "left",
   },
   chatList: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
   },
   chatItem: {
     flexDirection: "row",
@@ -542,8 +585,6 @@ const styles = StyleSheet.create({
     color: "#666",
     fontStyle: "italic",
   },
-  
-  // ✅ SOLO ESTOS DOS estilos de conexión
   connectionStatusInline: {
     flexDirection: "row",
     alignItems: "center",
@@ -558,9 +599,32 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
-  
-  // ❌ ASEGÚRATE QUE NO EXISTAN ESTOS:
-  // connectionStatus: { ... }
-  // connectionText: { ... }
-  // moreButton: { ... }
+  // ✅ Estilos del SVG de fondo - modo vertical (móvil)
+  backgroundContainer: {
+    height: "100%",
+    width: "100%",
+    position: "absolute",
+    top: 80,
+    left: 0,
+    right: 0,
+    zIndex: 0,
+    overflow: "hidden",
+  },
+  // ✅ Estilos del SVG de fondo - modo horizontal (web/tablet)
+  backgroundContainerLandscape: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: "60%",
+    height: "100%",
+    zIndex: 0,
+    overflow: "hidden",
+  },
+  svg: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
 });

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Image,
@@ -6,14 +6,13 @@ import {
   TouchableOpacity,
   Text,
   StyleSheet,
+  Modal,
   ScrollView,
 } from "react-native";
 import { NotebookItem } from "./NotebookItem";
 import { NotebookHeader } from "./NotebookHeader";
 import FloatingAIMenu from "@/components/FloatingAIMenu";
 import { Ionicons } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system";
-import * as Sharing from "expo-sharing";
 
 export const NotebookListView = ({
   notebooks,
@@ -22,40 +21,27 @@ export const NotebookListView = ({
   onNotebookLongPress,
   onCreatePress,
   onNewNotePress,
-  onSharePress,
+  onDownloadPress, // ✅ Nueva prop para descarga
   onAIOptionPress,
   lastPngDataUrl,
   hasActiveSubscription = false,
   checkingSubscription = false
 }) => {
-  const handleShare = async () => {
-    try {
-      const dataUrl = lastPngDataUrl;
-      if (!dataUrl) {
-        alert("No hay notas para compartir.");
-        return;
-      }
+  const [showNotebookSelector, setShowNotebookSelector] = useState(false);
 
-      const filename = `nota-${Date.now()}.png`;
-      const path = `${FileSystem.documentDirectory}${filename}`;
-      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
-
-      await FileSystem.writeAsStringAsync(path, base64Data, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(path, {
-          mimeType: "image/png",
-          dialogTitle: "Compartir nota",
-        });
-      } else {
-        alert("La función de compartir no está disponible en este dispositivo");
-      }
-    } catch (error) {
-      console.error("Error al compartir:", error);
-      alert("Error al compartir nota: " + error.message);
+  // Función para abrir el selector de cuaderno
+  const handleDownloadPress = () => {
+    if (notebooks.length === 0) {
+      alert("No tienes cuadernos para descargar.");
+      return;
     }
+    setShowNotebookSelector(true);
+  };
+
+  // Función para seleccionar un cuaderno y abrir el modal de descarga
+  const handleNotebookSelect = (notebook) => {
+    setShowNotebookSelector(false);
+    onDownloadPress(notebook);
   };
 
   const containerStyle = isLargeScreen
@@ -119,21 +105,56 @@ export const NotebookListView = ({
         />
       </View>
 
-      {/* Botones flotantes con diseño mejorado */}
+      {/* Botón de descarga flotante */}
       <TouchableOpacity 
-        style={[styles.floatingButton, styles.shareButton]} 
-        onPress={handleShare}
+        style={[styles.floatingButton, styles.downloadButton]} 
+        onPress={handleDownloadPress}
         activeOpacity={0.8}
       >
-        <Ionicons name="share-social" size={24} color="#fff" />
+        <Ionicons name="download" size={24} color="#fff" />
       </TouchableOpacity>
-
-      
 
       {/* FloatingAIMenu - Solo mostrar si tiene suscripción activa */}
       {!checkingSubscription && hasActiveSubscription && onAIOptionPress && (
         <FloatingAIMenu onAIOptionPress={onAIOptionPress} />
       )}
+
+      {/* Modal selector de cuaderno */}
+      <Modal
+        visible={showNotebookSelector}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowNotebookSelector(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecciona un Cuaderno</Text>
+              <TouchableOpacity 
+                onPress={() => setShowNotebookSelector(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.notebookList}>
+              {notebooks.map((notebook) => (
+                <TouchableOpacity
+                  key={notebook.id}
+                  style={styles.notebookOption}
+                  onPress={() => handleNotebookSelect(notebook)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="book" size={24} color="#4A90E2" />
+                  <Text style={styles.notebookOptionText}>{notebook.title}</Text>
+                  <Ionicons name="chevron-forward" size={20} color="#999" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -261,27 +282,57 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     zIndex: 9998,
   },
-  shareButton: {
+  downloadButton: {
     backgroundColor: "#28a745",
   },
-  aiButton: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
-    backgroundColor: "#4A90E2",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    zIndex: 9999,
+  // Estilos del modal selector
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
-  aiButtonText: {
-    color: "#fff",
-    fontSize: 16,
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "70%",
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  modalTitle: {
+    fontSize: 20,
     fontWeight: "bold",
+    color: "#333",
+  },
+  closeButton: {
+    padding: 5,
+  },
+  notebookList: {
+    padding: 10,
+  },
+  notebookOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    marginHorizontal: 10,
+    marginVertical: 5,
+    backgroundColor: "#f8f9fa",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  notebookOptionText: {
+    flex: 1,
+    fontSize: 16,
+    color: "#333",
+    marginLeft: 12,
+    fontWeight: "500",
   },
 });

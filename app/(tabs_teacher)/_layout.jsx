@@ -126,6 +126,13 @@ function TabsContent() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="profile/link_moodle"
+        options={{
+          href: null,
+        }}
+      />
+
     </Tabs>
   );
 }
