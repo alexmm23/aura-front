@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   ScrollView,
@@ -27,6 +27,15 @@ export default function Profile() {
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
   const router = useRouter();
+
+  // Memoizar los iconos para que se carguen solo una vez
+  const imageIcons = useMemo(
+    () => ({
+      classroom: require("@/assets/images/classroom.png"),
+      moodle: require("@/assets/images/moodle.png"),
+    }),
+    []
+  );
 
   const handleLogout = async () => {
     try {
@@ -60,6 +69,16 @@ export default function Profile() {
     }
   };
 
+  const moodleLogin = async () => {
+    try {
+      router.push({
+        pathname: "/profile/link_moodle",
+      });
+    } catch (error) {
+      console.error("Error during Moodle login:", error);
+    }
+  };
+
   const fetchProfile = async () => {
     try {
       const response = await apiGet(API.ENDPOINTS.PROFILE.INFO);
@@ -78,6 +97,53 @@ export default function Profile() {
       );
     }
   };
+
+  const IconRow = (platforms) => (
+    <View style={styles.iconRow}>
+      {platforms.map((platform) => (
+        <TouchableOpacity key={platform.name} onPress={platform.onPress}>
+          <View style={styles.iconContainer}>
+            <Image source={platform.icon} style={platform.style} />
+            {platform.isConnected && (
+              <View style={styles.checkmarkContainer}>
+                <AuraText style={styles.checkmark} text="✓" />
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
+  // Función para verificar si una plataforma está conectada
+  const isPlatformConnected = (platformName) => {
+    if (!profileData?.user?.activePlatforms) return false;
+
+    // Mapear nombres de plataforma a los valores en activePlatforms
+    const platformMap = {
+      classroom: "google",
+      moodle: "moodle",
+    };
+
+    return profileData.user.activePlatforms.includes(platformMap[platformName]);
+  };
+
+  const platforms = [
+    {
+      name: "classroom",
+      icon: imageIcons.classroom,
+      style: styles.classroomIcon,
+      onPress: () => googleLogin(),
+      isConnected: isPlatformConnected("classroom"),
+    },
+    {
+      name: "moodle",
+      icon: imageIcons.moodle,
+      style: styles.classroomIcon,
+      onPress: () => moodleLogin(),
+      isConnected: isPlatformConnected("moodle"),
+    },
+  ];
 
 
   useEffect(() => {
@@ -109,25 +175,22 @@ export default function Profile() {
             source={require("@/assets/images/icon.png")}
             style={styles.profileImage}
           />
+          <View style={styles.subtitleContainer}>
+            {profileData && (
+              <AuraText style={styles.subtitle} text={profileData.user.email} />
+            )}
+          </View>
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
           {/* Card principal */}
           <View style={styles.card}>
             <AuraText style={styles.title} text="Mi Perfil" />
-            {profileData && (
-              <AuraText sryle={styles.title} text={profileData.user.email} />
-            )}
             {/* Íconos de plataformas */}
-            <View style={styles.iconRow}>
-              <TouchableOpacity onPress={() => googleLogin()}>
-                <Image
-                  source={require("@/assets/images/classroom.png")}
-                  style={styles.classroomIcon}
-                />
-              </TouchableOpacity>
-              
+            <View>
+              <AuraText style={styles.subtitle} text="Vincular cuentas" />
             </View>
+            {IconRow(platforms)}
             {/* /* Botones */}
             <TouchableOpacity
               style={styles.button}
@@ -247,6 +310,20 @@ const styles = StyleSheet.create({
     color: "#D29828",
     marginBottom: 20,
   },
+  subtitleContainer: {
+    marginTop: 10,
+    borderStyle: "solid",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 50,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: "#F5F5F5",
+  },
+  subtitle: {
+    fontSize: 16,
+    fontWeight: "500",
+  },
   iconRow: {
     flexDirection: "row",
     gap: 20,
@@ -254,11 +331,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 25,
   },
+  iconContainer: {
+    position: "relative",
+  },
   classroomIcon: {
     width: 70,
     height: 70,
     aspectRatio: 1,
     resizeMode: "contain",
+  },
+  checkmarkContainer: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    backgroundColor: "#4CAF50",
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  checkmark: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
   },
   button: {
     backgroundColor: "#F4A45B",

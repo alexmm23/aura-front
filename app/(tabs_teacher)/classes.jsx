@@ -20,8 +20,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { apiGet, apiPost } from "../../utils/fetchWithAuth";
 import Svg, { Path } from "react-native-svg";
 import TeacherClassModal from "@/components/teacher/TeacherClassModal";
+import { useRouter } from "expo-router";
 
 export default function TeacherClasses() {
+  const router = useRouter();
   const [classes, setClasses] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -43,6 +45,13 @@ export default function TeacherClasses() {
       const response = await apiGet(API.ENDPOINTS.GOOGLE_CLASSROOM.COURSES);
 
       if (!response.ok) {
+        const errorResponse = await response.json();
+        console.log("❌ Classes fetch error response:", errorResponse);
+        if (errorResponse.details && errorResponse.details.includes("Invalid")) {
+          setError("Credenciales inválidas. Por favor, verifica tu sesión.");
+          return;
+          // Mostrar botón que mande al perfil a conectar classroom y/o moodle
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -292,11 +301,24 @@ export default function TeacherClasses() {
           <View style={styles.errorState}>
             <AuraText style={styles.errorTitle}>⚠️ Error al cargar</AuraText>
             <AuraText style={styles.errorText}>{error}</AuraText>
-            <Pressable style={styles.retryButton} onPress={fetchClasses}>
-              <AuraText style={styles.retryButtonText}>
-                Intentar de nuevo
-              </AuraText>
-            </Pressable>
+            <View style={styles.errorButtons}>
+              <Pressable style={styles.retryButton} onPress={fetchClasses}>
+                <AuraText style={styles.retryButtonText}>
+                  Intentar de nuevo
+                </AuraText>
+              </Pressable>
+              {error.includes("Credenciales") && (
+                <Pressable
+                  style={styles.profileButton}
+                  onPress={() => router.push("/profile")}
+                >
+                  <Ionicons name="settings-outline" size={18} color="#FFF" />
+                  <AuraText style={styles.profileButtonText}>
+                    Ir a Perfil
+                  </AuraText>
+                </Pressable>
+              )}
+            </View>
           </View>
         )}
 
@@ -710,6 +732,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 16,
   },
+  errorButtons: {
+    flexDirection: "row",
+    gap: 12,
+    flexWrap: "wrap",
+    justifyContent: "center",
+  },
   retryButton: {
     backgroundColor: "#E53E3E",
     paddingHorizontal: 20,
@@ -717,6 +745,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryButtonText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  profileButton: {
+    backgroundColor: "#D29828",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  profileButtonText: {
     color: "#FFF",
     fontWeight: "bold",
     fontSize: 14,

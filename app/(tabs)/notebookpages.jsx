@@ -21,7 +21,7 @@ import { apiGet } from "../../utils/fetchWithAuth";
 
 const NotebookPages = () => {
   const router = useRouter();
-  const { notebookId } = useLocalSearchParams();
+  const { notebookId, refresh } = useLocalSearchParams(); // ✅ Agregar refresh
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -30,24 +30,49 @@ const NotebookPages = () => {
     try {
       if (showLoader) {
         setLoading(true);
-      } else {
-        setRefreshing(true);
       }
-
-      const response = await apiGet(
-        `${API.ENDPOINTS.STUDENT.NOTES}/${notebookId}`
-      );
       
+      console.log('📖 Fetching pages for notebook:', notebookId);
+      console.log('🔗 Full endpoint:', `${API.ENDPOINTS.STUDENT.NOTEBOOK_PAGES}/${notebookId}`);
+      
+      const response = await apiGet(
+        `${API.ENDPOINTS.STUDENT.NOTEBOOK_PAGES}/${notebookId}`
+      );
+
+      console.log('📊 Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error(response.statusText || "Error fetching pages");
+        let errorMessage = 'Error fetching pages';
+        try {
+          const errorData = await response.json();
+          console.error('❌ Error data:', errorData);
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (parseError) {
+          console.error('❌ Could not parse error response');
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
-      console.log("Pages fetched:", data.data?.length || 0);
-      setPages(data.data || []);
+      const result = await response.json();
+      console.log('✅ Response:', result);
+      
+      // El backend devuelve { success: true, data: [array de notas] }
+      if (result.success && result.data) {
+        console.log('✅ Notes found:', result.data.length);
+        setPages(result.data);
+      } else if (Array.isArray(result.data)) {
+        console.log('✅ Notes found (array):', result.data.length);
+        setPages(result.data);
+      } else {
+        console.log('⚠️ No notes found');
+        setPages([]);
+      }
     } catch (error) {
-      console.error("Error fetching pages:", error);
-      Alert.alert("Error", "No se pudieron cargar las páginas");
+      console.error('❌ Error fetching pages:', error);
+      console.error('❌ Error message:', error.message);
+      Alert.alert('Error', `No se pudieron cargar las páginas: ${error.message}`);
+      setPages([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -57,16 +82,24 @@ const NotebookPages = () => {
   // Cargar al montar
   useEffect(() => {
     if (notebookId) {
-      fetchPages(true);
+      fetchPages();
     }
   }, [notebookId, fetchPages]);
+
+  // ✅ Recargar cuando cambia el parámetro refresh
+  useEffect(() => {
+    if (refresh && notebookId) {
+      console.log('🔄 Refresh triggered, reloading pages...');
+      fetchPages(false);
+    }
+  }, [refresh, notebookId, fetchPages]);
 
   // Refrescar cuando vuelve a la pantalla
   useFocusEffect(
     useCallback(() => {
+      console.log('Screen focused, refreshing pages...');
       if (notebookId) {
-        console.log("Screen focused, refreshing pages...");
-        fetchPages(false); // Sin mostrar el loader completo
+        fetchPages(false);
       }
     }, [notebookId, fetchPages])
   );
@@ -76,9 +109,8 @@ const NotebookPages = () => {
   };
 
   const renderPage = ({ item }) => {
-    // El backend espera el ID del registro, no el page_id
-    const noteId = item.id; // Este es el ID de la base de datos
-    const pageNumber = item.page_id; // Este es solo el número de página
+    const noteId = item.id;
+    const pageNumber = item.page_id;
     
     console.log("Page item:", { noteId, pageNumber, item });
     
@@ -96,8 +128,9 @@ const NotebookPages = () => {
           router.push({
             pathname: "/(tabs)/notebookview",
             params: { 
-              pageId: String(noteId), // Usamos el ID del registro
-              notebookId: String(notebookId)
+              pageId: String(noteId),
+              notebookId: String(notebookId),
+              timestamp: Date.now().toString() // ✅ Agregar timestamp para forzar re-render
             },
           });
         }}
