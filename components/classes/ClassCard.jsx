@@ -1,7 +1,10 @@
 import React from "react";
-import { View, Text, Image, StyleSheet } from "react-native";
+import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
 
 export const ClassCard = ({ classItem, width }) => {
+  const router = useRouter();
+
   // Determinar el estilo según el ancho de la pantalla
   const getCardStyle = () => {
     if (width >= 1200) return styles.classCardLarge;
@@ -41,10 +44,33 @@ export const ClassCard = ({ classItem, width }) => {
     }
   };
 
+  // ✅ Manejar clic en la card - ACTUALIZADO
+  const handlePress = () => {
+    console.log("📚 Navegando a clase:", {
+      name: classItem.name,
+      id: classItem.id,
+      source: classItem.source,
+    });
+
+    router.push({
+      pathname: "/(tabs)/class-content",
+      params: {
+        classId: classItem.id, // Ya tiene el formato correcto (con o sin prefijo)
+        className: classItem.name,
+        classColor: classItem.color || "#A44076",
+        platform: classItem.source || "classroom",
+      },
+    });
+  };
+
   const classInfo = getClassInfo();
 
   return (
-    <View style={[styles.classCard, getCardStyle()]}>
+    <TouchableOpacity
+      style={[styles.classCard, getCardStyle()]}
+      onPress={handlePress}
+      activeOpacity={0.7}
+    >
       <View style={styles.classContent}>
         <Text style={styles.className}>{classItem.name || "Sin nombre"}</Text>
         <View style={styles.divider} />
@@ -52,12 +78,14 @@ export const ClassCard = ({ classItem, width }) => {
           <Text style={styles.classPeriod}>{classInfo.period}</Text>
           <Text style={styles.teacherName}>{classInfo.teacher}</Text>
           {classInfo.description && (
-            <Text style={styles.classDescription}>{classInfo.description}</Text>
+            <Text style={styles.classDescription} numberOfLines={2}>
+              {classInfo.description}
+            </Text>
           )}
         </View>
       </View>
       <Image source={getPlatformIcon()} style={styles.platformIcon} />
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -114,6 +142,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#1E1E1E",
     fontStyle: "italic",
+  },
+  classDescription: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 4,
   },
   platformIcon: {
     width: 60,

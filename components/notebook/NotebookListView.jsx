@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
+  Platform,
 } from "react-native";
 import { NotebookItem } from "./NotebookItem";
 import { NotebookHeader } from "./NotebookHeader";
@@ -21,11 +22,12 @@ export const NotebookListView = ({
   onNotebookLongPress,
   onCreatePress,
   onNewNotePress,
-  onDownloadPress, // ✅ Nueva prop para descarga
+  onDownloadPress, // Puede ser undefined
   onAIOptionPress,
   lastPngDataUrl,
   hasActiveSubscription = false,
-  checkingSubscription = false
+  checkingSubscription = false,
+  isWeb = Platform.OS === 'web', // ✅ Agregar prop con default
 }) => {
   const [showNotebookSelector, setShowNotebookSelector] = useState(false);
 
@@ -41,7 +43,10 @@ export const NotebookListView = ({
   // Función para seleccionar un cuaderno y abrir el modal de descarga
   const handleNotebookSelect = (notebook) => {
     setShowNotebookSelector(false);
-    onDownloadPress(notebook);
+    // ✅ Verificar que onDownloadPress existe antes de llamarla
+    if (onDownloadPress) {
+      onDownloadPress(notebook);
+    }
   };
 
   const containerStyle = isLargeScreen
@@ -105,56 +110,60 @@ export const NotebookListView = ({
         />
       </View>
 
-      {/* Botón de descarga flotante */}
-      <TouchableOpacity 
-        style={[styles.floatingButton, styles.downloadButton]} 
-        onPress={handleDownloadPress}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="download" size={24} color="#fff" />
-      </TouchableOpacity>
+      {/* ✅ Botón de descarga flotante - SOLO EN WEB */}
+      {isWeb && onDownloadPress && (
+        <TouchableOpacity 
+          style={[styles.floatingButton, styles.downloadButton]} 
+          onPress={handleDownloadPress}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="download" size={24} color="#fff" />
+        </TouchableOpacity>
+      )}
 
       {/* FloatingAIMenu - Solo mostrar si tiene suscripción activa */}
       {!checkingSubscription && hasActiveSubscription && onAIOptionPress && (
         <FloatingAIMenu onAIOptionPress={onAIOptionPress} />
       )}
 
-      {/* Modal selector de cuaderno */}
-      <Modal
-        visible={showNotebookSelector}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowNotebookSelector(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Selecciona un Cuaderno</Text>
-              <TouchableOpacity 
-                onPress={() => setShowNotebookSelector(false)}
-                style={styles.closeButton}
-              >
-                <Ionicons name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView style={styles.notebookList}>
-              {notebooks.map((notebook) => (
-                <TouchableOpacity
-                  key={notebook.id}
-                  style={styles.notebookOption}
-                  onPress={() => handleNotebookSelect(notebook)}
-                  activeOpacity={0.7}
+      {/* ✅ Modal selector de cuaderno - SOLO EN WEB */}
+      {isWeb && (
+        <Modal
+          visible={showNotebookSelector}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowNotebookSelector(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Selecciona un Cuaderno</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowNotebookSelector(false)}
+                  style={styles.closeButton}
                 >
-                  <Ionicons name="book" size={24} color="#4A90E2" />
-                  <Text style={styles.notebookOptionText}>{notebook.title}</Text>
-                  <Ionicons name="chevron-forward" size={20} color="#999" />
+                  <Ionicons name="close" size={24} color="#666" />
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+              </View>
+              
+              <ScrollView style={styles.notebookList}>
+                {notebooks.map((notebook) => (
+                  <TouchableOpacity
+                    key={notebook.id}
+                    style={styles.notebookOption}
+                    onPress={() => handleNotebookSelect(notebook)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="book" size={24} color="#4A90E2" />
+                    <Text style={styles.notebookOptionText}>{notebook.title}</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#999" />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
     </View>
   );
 };

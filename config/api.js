@@ -37,7 +37,7 @@ export const CONFIG={
 
 // API endpoints
 
-export const API={
+export const API = {
   BASE_URL: CONFIG.API_URL,
   ENDPOINTS: {
     // Auth endpoints
@@ -69,6 +69,14 @@ export const API={
       COURSEWORK: (courseId) => `/auth/google/courses/${courseId}/coursework`,
       DELETE_COURSEWORK: (courseId, courseWorkId) => `/auth/google/courses/${courseId}/coursework/${courseWorkId}`,
       ANNOUNCEMENTS: (courseId) => `/auth/google/courses/${courseId}/announcements`,
+    },
+    
+    // ✅ Moodle endpoints - ACTUALIZADO
+    MOODLE: {
+      COURSES: "/moodle/courses",
+      COURSE_DETAILS: (courseId) => `/moodle/courses/${courseId}`,
+      COURSE_ASSIGNMENTS: (courseId) => `/moodle/courses/${courseId}/assignments`,
+      COURSE_ANNOUNCEMENTS: (courseId) => `/moodle/courses/${courseId}/announcements`, // ✅ NUEVO
     },
     LOGOUT: '/auth/logout',
 
