@@ -166,6 +166,12 @@ function TabsContent() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="class-content"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

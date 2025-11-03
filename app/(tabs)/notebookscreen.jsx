@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useWindowDimensions, Alert, TouchableOpacity, Text } from "react-native";
+import { useWindowDimensions, Alert, TouchableOpacity, Text, Platform } from "react-native";
 import Toast from "react-native-toast-message";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
@@ -17,6 +17,7 @@ import { apiGet } from "@/utils/fetchWithAuth";
 const NotebookScreen = () => {
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 928;
+  const isWeb = Platform.OS === 'web';
   const router = useRouter();
 
   // Estado para verificar suscripción
@@ -126,7 +127,7 @@ const NotebookScreen = () => {
     });
   };
 
-  // Nueva función para manejar la descarga
+  // Nueva función para manejar la descarga (solo en web)
   const handleDownloadPress = (notebook) => {
     console.log('📥 Seleccionado para descarga:', notebook);
     setSelectedNotebookForDownload(notebook);
@@ -157,10 +158,11 @@ const NotebookScreen = () => {
         onCreatePress={() => setShowCreateDialog(true)}
         onNewNotePress={() => setShowCanvas(true)}
         onAIOptionPress={hasActiveSubscription ? () => handleAIOptionPressWithCheck(noteBooks) : undefined}
-        onDownloadPress={handleDownloadPress}
+        onDownloadPress={isWeb ? handleDownloadPress : undefined} // ✅ Solo pasar si es web
         lastPngDataUrl={lastPngDataUrl}
         hasActiveSubscription={hasActiveSubscription}
         checkingSubscription={checkingSubscription}
+        isWeb={isWeb} // ✅ Pasar la prop isWeb
       />
 
       <CreateNotebookModal
@@ -171,12 +173,14 @@ const NotebookScreen = () => {
         onCancel={handleCancelCreate}
       />
 
-      {/* Modal de descarga */}
-      <NotebookDownloadModal
-        visible={showDownloadModal}
-        onClose={handleDownloadModalClose}
-        notebook={selectedNotebookForDownload}
-      />
+      {/* Modal de descarga - solo en web */}
+      {isWeb && (
+        <NotebookDownloadModal
+          visible={showDownloadModal}
+          onClose={handleDownloadModalClose}
+          notebook={selectedNotebookForDownload}
+        />
+      )}
 
       {/* Solo mostrar modales de IA si tiene suscripción activa */}
       {hasActiveSubscription && (
