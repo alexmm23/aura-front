@@ -84,7 +84,8 @@ export const API={
       PROFILE: '/users/profile',
       AUTH_CHECK: '/auth/check',
       LOGIN_WEB: '/auth/login/web',
-      COURSES: '/api/teacher/courses',
+      COURSES: '/teacher/courses', // Endpoint unificado (Classroom + Moodle)
+      MOODLE_COURSEWORK: (courseId) => `/teacher/courses/moodle/${courseId}/assignments`,
     },
     REMINDERS: {
       BASE: '/reminders',

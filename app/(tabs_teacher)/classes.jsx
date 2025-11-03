@@ -41,13 +41,17 @@ export default function TeacherClasses() {
     try {
       setLoading(true);
       setError(null);
-      console.log("🔄 Fetching classes from Google Classroom...");
-      const response = await apiGet(API.ENDPOINTS.GOOGLE_CLASSROOM.COURSES);
+      console.log("🔄 Fetching unified courses (Classroom + Moodle)...");
+      // Usar endpoint unificado de maestro
+      const response = await apiGet(API.ENDPOINTS.TEACHER.COURSES);
 
       if (!response.ok) {
         const errorResponse = await response.json();
         console.log("❌ Classes fetch error response:", errorResponse);
-        if (errorResponse.details && errorResponse.details.includes("Invalid")) {
+        if (
+          errorResponse.details &&
+          errorResponse.details.includes("Invalid")
+        ) {
           setError("Credenciales inválidas. Por favor, verifica tu sesión.");
           return;
           // Mostrar botón que mande al perfil a conectar classroom y/o moodle
@@ -56,25 +60,56 @@ export default function TeacherClasses() {
       }
 
       const result = await response.json();
-      console.log("📚 Classes response:", result);
+      console.log("📚 Unified courses response:", result.length);
 
-      if (result.success && result.data?.courses) {
-        console.log(`✅ Found ${result.data.courses.length} courses`);
+      // El endpoint unificado devuelve directamente un array de cursos
+      if (result.length > 0) {
+        console.log(`✅ Found ${result.length} courses`);
 
+        // Los cursos ya vienen con tareas próximas incluidas del backend
         const classesWithAssignments = await Promise.all(
-          result.data.courses.map(async (classData) => {
+          result.map(async (classData) => {
+            // Si el curso ya tiene tareas, usarlas; si no, cargar según plataforma
+            if (
+              classData.upcomingAssignments &&
+              classData.upcomingAssignments.length > 0
+            ) {
+              return classData;
+            }
+
             try {
-              const assignmentsResponse = await apiGet(
-                API.ENDPOINTS.GOOGLE_CLASSROOM.COURSEWORK(classData.id)
-              );
+              // Determinar el endpoint según la plataforma
+              let assignmentsResponse;
+              if (classData.source === "moodle") {
+                // Para Moodle, usar el endpoint específico
+                assignmentsResponse = await apiGet(
+                  `/api/teacher/courses/moodle/${classData.id}/assignments`
+                );
+              } else {
+                // Para Classroom, usar el endpoint de Google
+                assignmentsResponse = await apiGet(
+                  API.ENDPOINTS.GOOGLE_CLASSROOM.COURSEWORK(classData.id)
+                );
+              }
 
               if (assignmentsResponse.ok) {
                 const assignmentsResult = await assignmentsResponse.json();
-                const courseWork =
-                  assignmentsResult.success &&
-                  assignmentsResult.data?.courseWork
-                    ? assignmentsResult.data.courseWork
-                    : [];
+
+                // Normalizar la respuesta según la plataforma
+                let courseWork = [];
+                if (classData.source === "moodle") {
+                  courseWork =
+                    assignmentsResult.success &&
+                    assignmentsResult.data?.assignments
+                      ? assignmentsResult.data.assignments
+                      : [];
+                } else {
+                  courseWork =
+                    assignmentsResult.success &&
+                    assignmentsResult.data?.courseWork
+                      ? assignmentsResult.data.courseWork
+                      : [];
+                }
 
                 const today = new Date();
                 const nextWeek = new Date(
@@ -85,25 +120,32 @@ export default function TeacherClasses() {
                   .filter((assignment) => {
                     if (!assignment.dueDate) return false;
 
-                    const dueDate = new Date(
-                      assignment.dueDate.year,
-                      assignment.dueDate.month - 1,
-                      assignment.dueDate.day
-                    );
+                    // Manejar formato de fecha según plataforma
+                    let dueDate;
+                    if (classData.source === "moodle") {
+                      dueDate = new Date(assignment.dueDate);
+                    } else {
+                      dueDate = new Date(
+                        assignment.dueDate.year,
+                        assignment.dueDate.month - 1,
+                        assignment.dueDate.day
+                      );
+                    }
 
                     return dueDate >= today && dueDate <= nextWeek;
                   })
                   .slice(0, 3)
                   .map((assignment) => ({
                     id: assignment.id,
-                    title: assignment.title,
-                    dueDate: assignment.dueDate
-                      ? new Date(
-                          assignment.dueDate.year,
-                          assignment.dueDate.month - 1,
-                          assignment.dueDate.day
-                        ).toISOString()
-                      : null,
+                    title: assignment.title || assignment.name,
+                    dueDate:
+                      classData.source === "moodle"
+                        ? assignment.dueDate
+                        : new Date(
+                            assignment.dueDate.year,
+                            assignment.dueDate.month - 1,
+                            assignment.dueDate.day
+                          ).toISOString(),
                   }));
 
                 return {
@@ -137,7 +179,7 @@ export default function TeacherClasses() {
     } catch (error) {
       console.error("❌ Error fetching classes:", error);
       setError(
-        "No se pudieron cargar las clases. Verifica tu conexión a Google Classroom."
+        "No se pudieron cargar las clases. Verifica tu conexión a Google Classroom o Moodle."
       );
       setClasses([]);
     } finally {

@@ -34,22 +34,24 @@ export default function HomeTeacher() {
   const fetchClasses = async () => {
     try {
       setIsLoadingClasses(true);
-      const response = await apiGet(API.ENDPOINTS.GOOGLE_CLASSROOM.COURSES);
-      
+      // Usar endpoint unificado de maestro (Google Classroom + Moodle)
+      const response = await apiGet(API.ENDPOINTS.TEACHER.COURSES);
+
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
-      
+
       const result = await response.json();
-      console.log("Classes response:", result);
-      
-      if (result.success && result.data?.courses) {
-        setClasses(result.data.courses);
+      console.log("📚 Unified classes response:", result);
+
+      // El endpoint unificado devuelve directamente un array de cursos
+      if (result.length > 0) {
+        setClasses(result);
       } else {
         setClasses([]);
       }
     } catch (error) {
-      console.error("Error fetching classes:", error);
+      console.error("❌ Error fetching classes:", error);
       setClasses([]);
     } finally {
       setIsLoadingClasses(false);
@@ -60,13 +62,13 @@ export default function HomeTeacher() {
     try {
       setIsLoadingReminders(true);
       const response = await apiGet(API.ENDPOINTS.REMINDERS.PENDING_HOME);
-      
+
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
       const data = await response.json();
       console.log("Reminders data:", data);
-      
+
       if (data.success) {
         setReminders(data.data || []);
       }
@@ -90,7 +92,7 @@ export default function HomeTeacher() {
       console.log("📍 Pantalla HomeTeacher enfocada - Recargando datos...");
       fetchClasses();
       fetchReminders();
-      
+
       // Cleanup function (opcional)
       return () => {
         console.log("📍 Pantalla HomeTeacher desenfocada");
@@ -139,7 +141,7 @@ export default function HomeTeacher() {
   const navigateToReminders = () => {
     router.push({
       pathname: "/(tabs_teacher)/reminders",
-      params: { filterStatus: "pending" }
+      params: { filterStatus: "pending" },
     });
   };
 
@@ -172,7 +174,7 @@ export default function HomeTeacher() {
           >
             {/* Mis recordatorios */}
             <View style={styles.card}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={navigateToReminders}
                 style={styles.cardHeader}
                 activeOpacity={0.7}
@@ -212,7 +214,10 @@ export default function HomeTeacher() {
                       activeOpacity={0.8}
                     >
                       <View style={styles.reminderHeader}>
-                        <AuraText style={styles.noteTitleText} numberOfLines={2}>
+                        <AuraText
+                          style={styles.noteTitleText}
+                          numberOfLines={2}
+                        >
                           {reminder.title}
                         </AuraText>
                         {reminder.frequency !== "once" && (
@@ -224,7 +229,10 @@ export default function HomeTeacher() {
                         )}
                       </View>
                       {reminder.description && (
-                        <AuraText style={styles.noteTextNative} numberOfLines={2}>
+                        <AuraText
+                          style={styles.noteTextNative}
+                          numberOfLines={2}
+                        >
                           {reminder.description}
                         </AuraText>
                       )}
@@ -241,7 +249,7 @@ export default function HomeTeacher() {
 
             {/* Mis Clases */}
             <View style={styles.card}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={navigateToClasses}
                 style={styles.cardHeader}
                 activeOpacity={0.7}
@@ -284,7 +292,10 @@ export default function HomeTeacher() {
                         <Ionicons name="school" size={24} color="#CB8D27" />
                       </View>
                       <View style={styles.classInfo}>
-                        <AuraText style={styles.classNameText} numberOfLines={2}>
+                        <AuraText
+                          style={styles.classNameText}
+                          numberOfLines={2}
+                        >
                           {classItem.name}
                         </AuraText>
                         {classItem.section && (
@@ -293,7 +304,10 @@ export default function HomeTeacher() {
                           </AuraText>
                         )}
                         {classItem.descriptionHeading && (
-                          <AuraText style={styles.classDescriptionText} numberOfLines={1}>
+                          <AuraText
+                            style={styles.classDescriptionText}
+                            numberOfLines={1}
+                          >
                             {classItem.descriptionHeading}
                           </AuraText>
                         )}

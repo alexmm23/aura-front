@@ -29,7 +29,8 @@ export default function ClassDetail() {
       setLoading(true);
       setError(null);
 
-      // Obtener detalles de la clase
+      // Obtener detalles de la clase según la plataforma
+      // Por ahora asumimos Google Classroom, pero se puede adaptar
       const [courseworkResponse, announcementsResponse] = await Promise.all([
         apiGet(API.ENDPOINTS.GOOGLE_CLASSROOM.COURSEWORK(classId)),
         apiGet(API.ENDPOINTS.GOOGLE_CLASSROOM.ANNOUNCEMENTS(classId)),
