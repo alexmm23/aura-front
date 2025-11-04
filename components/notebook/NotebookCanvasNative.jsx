@@ -18,6 +18,7 @@ import {
   Dimensions,
   ActivityIndicator,
   FlatList,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
@@ -25,6 +26,7 @@ import { API } from "@/config/api";
 import { apiGet, apiPost } from "../../utils/fetchWithAuth";
 import Toast from "react-native-toast-message";
 import { captureRef } from "react-native-view-shot";
+import * as ImagePicker from "expo-image-picker";
 
 // Constantes de herramientas
 const TOOL_PENCIL = "pen";
@@ -32,6 +34,7 @@ const TOOL_RECT = "rect";
 const TOOL_ERASER = "eraser";
 const TOOL_TEXT = "text";
 const TOOL_SELECT = "select";
+const TOOL_IMAGE = "image";
 
 const colors = ["black", "red", "blue", "green", "orange", "purple", "brown"];
 const brushSizes = [1, 2, 5, 10, 15, 20];
@@ -47,6 +50,9 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
   const [brushSize, setBrushSize] = useState(2);
   const [textSize, setTextSize] = useState(16);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [pendingImage, setPendingImage] = useState(null);
+  const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
+  const previousToolRef = useRef(TOOL_PENCIL);
 
   // Estados para capas
   const [layers, setLayers] = useState([]);
@@ -77,14 +83,127 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
   const generateId = () =>
     `layer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+  const changeTool = (nextTool) => {
+    if (tool !== nextTool) {
+      previousToolRef.current = tool;
+    }
+    setTool(nextTool);
+    if (nextTool !== TOOL_IMAGE) {
+      setPendingImage(null);
+    }
+  };
+
+  const pickImageFromLibrary = async () => {
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          "Permiso requerido",
+          "Necesitamos acceso a tus fotos para insertar imágenes."
+        );
+        return null;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+        base64: false,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return null;
+      }
+
+      return result.assets[0];
+    } catch (error) {
+      console.error("Error picking image:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "No se pudo seleccionar la imagen",
+      });
+      return null;
+    }
+  };
+
+  const handleImageToolPress = async () => {
+    previousToolRef.current = tool;
+    setTool(TOOL_IMAGE);
+
+    const asset = await pickImageFromLibrary();
+    if (!asset) {
+      changeTool(previousToolRef.current || TOOL_PENCIL);
+      return;
+    }
+
+    setPendingImage(asset);
+    Toast.show({
+      type: "info",
+      text1: "Imagen lista",
+      text2: "Toca el lienzo para colocar la imagen",
+      visibilityTime: 2500,
+    });
+  };
+
+  const placeImageLayer = (asset, touchX, touchY) => {
+    if (!asset?.uri) {
+      return;
+    }
+
+    const containerWidth =
+      canvasLayout.width || Dimensions.get("window").width - 40;
+    const containerHeight =
+      canvasLayout.height || Dimensions.get("window").height * 0.6;
+
+    const sourceWidth = asset.width || containerWidth;
+    const sourceHeight = asset.height || containerHeight;
+
+    const maxWidth = containerWidth * 0.85;
+    const maxHeight = containerHeight * 0.85;
+    const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight, 1);
+
+    const displayWidth = sourceWidth * scale;
+    const displayHeight = sourceHeight * scale;
+
+    const clampedX = Math.max(
+      0,
+      Math.min(
+        touchX - displayWidth / 2,
+        Math.max(containerWidth - displayWidth, 0)
+      )
+    );
+    const clampedY = Math.max(
+      0,
+      Math.min(
+        touchY - displayHeight / 2,
+        Math.max(containerHeight - displayHeight, 0)
+      )
+    );
+
+    const imageLayerId = addLayer({
+      type: "image",
+      uri: asset.uri,
+      width: displayWidth,
+      height: displayHeight,
+      x: clampedX,
+      y: clampedY,
+    });
+
+    setSelectedLayerId(imageLayerId);
+  };
+
   const addLayer = (layerData) => {
-    const newLayer = {
-      id: generateId(),
-      ...layerData,
-      zIndex: layers.length,
-    };
-    setLayers((prev) => [...prev, newLayer]);
-    return newLayer.id;
+    const newId = generateId();
+    setLayers((prev) => [
+      ...prev,
+      {
+        id: newId,
+        ...layerData,
+        zIndex: prev.length,
+      },
+    ]);
+    return newId;
   };
 
   const addTextElement = (textData) => {
@@ -125,6 +244,17 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
         text: "",
         editingId: null,
       });
+      return;
+    }
+
+    if (tool === TOOL_IMAGE) {
+      if (!pendingImage) {
+        return;
+      }
+
+      placeImageLayer(pendingImage, x, y);
+      setPendingImage(null);
+      changeTool(TOOL_SELECT);
       return;
     }
 
@@ -262,6 +392,13 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
         );
       case "drawing":
         return false;
+      case "image":
+        return (
+          x >= layer.x &&
+          x <= layer.x + (layer.width || 0) &&
+          y >= layer.y &&
+          y <= layer.y + (layer.height || 0)
+        );
       default:
         return false;
     }
@@ -333,6 +470,7 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
         onPress: () => {
           setLayers([]);
           setTextElements([]);
+          setPendingImage(null);
         },
       },
     ]);
@@ -420,7 +558,7 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
         notebook_id: noteData.notebook_id,
         title: noteData.title,
         imagePrefix: noteData.image.substring(0, 50),
-        imageLength: noteData.image.length
+        imageLength: noteData.image.length,
       });
 
       // Enviar EXACTAMENTE como Web (sin headers extra)
@@ -443,7 +581,7 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
 
       if (response.ok) {
         console.log("✓ Nota guardada exitosamente");
-        
+
         setShowNotebookModal(false);
 
         Toast.show({
@@ -461,7 +599,7 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
       } else {
         console.error("Error del servidor:", response.status);
         console.error("Response text:", responseText);
-        
+
         Toast.show({
           type: "error",
           text1: "Error al guardar",
@@ -473,7 +611,7 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
       console.error("Error completo:", error);
       console.error("Error message:", error.message);
       console.error("Error stack:", error.stack);
-      
+
       Toast.show({
         type: "error",
         text1: "Error",
@@ -592,7 +730,7 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
                   styles.toolButton,
                   tool === TOOL_SELECT && styles.activeButton,
                 ]}
-                onPress={() => setTool(TOOL_SELECT)}
+                onPress={() => changeTool(TOOL_SELECT)}
               >
                 <Ionicons
                   name="hand-left"
@@ -606,7 +744,7 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
                   styles.toolButton,
                   tool === TOOL_PENCIL && styles.activeButton,
                 ]}
-                onPress={() => setTool(TOOL_PENCIL)}
+                onPress={() => changeTool(TOOL_PENCIL)}
               >
                 <Ionicons
                   name="create"
@@ -620,7 +758,7 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
                   styles.toolButton,
                   tool === TOOL_RECT && styles.activeButton,
                 ]}
-                onPress={() => setTool(TOOL_RECT)}
+                onPress={() => changeTool(TOOL_RECT)}
               >
                 <Ionicons
                   name="square-outline"
@@ -634,7 +772,7 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
                   styles.toolButton,
                   tool === TOOL_ERASER && styles.activeButton,
                 ]}
-                onPress={() => setTool(TOOL_ERASER)}
+                onPress={() => changeTool(TOOL_ERASER)}
               >
                 <Ionicons
                   name="brush"
@@ -648,12 +786,26 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
                   styles.toolButton,
                   tool === TOOL_TEXT && styles.activeButton,
                 ]}
-                onPress={() => setTool(TOOL_TEXT)}
+                onPress={() => changeTool(TOOL_TEXT)}
               >
                 <Ionicons
                   name="text"
                   size={20}
                   color={tool === TOOL_TEXT ? "#fff" : "#333"}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.toolButton,
+                  tool === TOOL_IMAGE && styles.activeButton,
+                ]}
+                onPress={handleImageToolPress}
+              >
+                <Ionicons
+                  name="image-outline"
+                  size={20}
+                  color={tool === TOOL_IMAGE ? "#fff" : "#333"}
                 />
               </TouchableOpacity>
 
@@ -775,6 +927,11 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
             ref={canvasContainerRef}
             style={styles.canvasContainer}
             collapsable={false}
+            onLayout={(event) =>
+              setCanvasLayout(
+                event.nativeEvent.layout || { width: 0, height: 0 }
+              )
+            }
           >
             <Canvas
               ref={canvasRef}
@@ -820,6 +977,35 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
                 {renderCurrentDrawing()}
               </Group>
             </Canvas>
+
+            {layers
+              .filter((layer) => layer.type === "image")
+              .map((layer) => (
+                <View
+                  key={layer.id}
+                  style={[
+                    styles.imageOverlay,
+                    {
+                      left: layer.x,
+                      top: layer.y,
+                      width: layer.width,
+                      height: layer.height,
+                      borderColor:
+                        selectedLayerId === layer.id
+                          ? "#4285F4"
+                          : "transparent",
+                      borderWidth: selectedLayerId === layer.id ? 2 : 0,
+                    },
+                  ]}
+                  pointerEvents="none"
+                >
+                  <Image
+                    source={{ uri: layer.uri }}
+                    style={StyleSheet.absoluteFillObject}
+                    resizeMode="contain"
+                  />
+                </View>
+              ))}
 
             {textElements.map((textEl) => (
               <View
@@ -901,6 +1087,8 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
                             ? "✏️"
                             : layer.type === "rect"
                             ? "▭"
+                            : layer.type === "image"
+                            ? "🖼️"
                             : "❓"}
                           {layer.type}
                         </Text>
@@ -1030,11 +1218,7 @@ const NotebookCanvasNative = ({ onSave, onBack }) => {
                     showsVerticalScrollIndicator={true}
                     ListEmptyComponent={
                       <View style={styles.emptyContainer}>
-                        <Ionicons
-                          name="book-outline"
-                          size={60}
-                          color="#ccc"
-                        />
+                        <Ionicons name="book-outline" size={60} color="#ccc" />
                         <Text style={styles.emptyText}>
                           No tienes cuadernos disponibles.{"\n"}
                           Crea un cuaderno primero para guardar tus notas.
@@ -1161,6 +1345,11 @@ const styles = StyleSheet.create({
   textOverlay: {
     position: "absolute",
     backgroundColor: "transparent",
+  },
+  imageOverlay: {
+    position: "absolute",
+    overflow: "hidden",
+    borderRadius: 4,
   },
   layersPanel: {
     position: "absolute",
