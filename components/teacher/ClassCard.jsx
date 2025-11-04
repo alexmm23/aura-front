@@ -21,7 +21,7 @@ export const ClassCard = ({ classData, onPress, upcomingAssignments = [] }) => {
     if (classData.teachers && classData.teachers.length > 0) {
       return classData.teachers[0].profile?.name?.fullName || "Profesor";
     }
-    return "Dr. José López"; // Default fallback
+    return "Yo"; // Default fallback
   };
 
   // Get the period information

@@ -1,34 +1,129 @@
 import { View, StyleSheet, TextInput, Pressable } from "react-native";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AuraText } from "@/components/AuraText";
-import { Colors } from "@/constants/Colors";
-import { API, buildApiUrl } from "@/config/api";
-import { apiGet, apiPost } from "../../utils/fetchWithAuth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API } from "@/config/api";
+import { CustomDateTimePicker } from "@/components/CustomDateTimePicker";
+import { apiPost } from "../../utils/fetchWithAuth";
 import { MaterialIcons } from "@expo/vector-icons";
 
-export const CreatePost = ({ classId, onPostCreated }) => {
-  const [content, setContent] = useState("");
+export const CreatePost = ({
+  classId,
+  onPostCreated,
+  source = "classroom",
+}) => {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [dueDate, setDueDate] = useState(() => {
+    const initial = new Date();
+    initial.setHours(initial.getHours() + 1, 0, 0, 0);
+    return initial;
+  });
   const [isLoading, setIsLoading] = useState(false);
-  const colors = Colors.light;
+  const isMoodle = source === "moodle";
+
+  const formattedDueDate = useMemo(() => {
+    if (!dueDate) return "Sin fecha";
+    return dueDate.toLocaleString("es-MX", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }, [dueDate]);
+
+  const handleDateChange = (event, selectedDate) => {
+    if (event?.type === "dismissed" || !selectedDate) {
+      return;
+    }
+
+    const updated = new Date(dueDate);
+    updated.setFullYear(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      selectedDate.getDate()
+    );
+    setDueDate(updated);
+  };
+
+  const handleTimeChange = (event, selectedTime) => {
+    if (event?.type === "dismissed" || !selectedTime) {
+      return;
+    }
+
+    const updated = new Date(dueDate);
+    updated.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
+    setDueDate(updated);
+  };
+
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    const reset = new Date();
+    reset.setHours(reset.getHours() + 1, 0, 0, 0);
+    setDueDate(reset);
+  };
 
   const handleSubmit = async () => {
-    if (!content.trim() || isLoading) return;
+    if (isLoading) return;
+
+    const trimmedTitle = title.trim();
+    const trimmedDescription = description.trim();
+
+    if (isMoodle) {
+      if (!trimmedTitle || !trimmedDescription) {
+        console.warn("⚠️ Moodle assignment requires título y descripción");
+        return;
+      }
+      if (dueDate.getTime() <= Date.now()) {
+        console.warn("⚠️ La fecha de entrega debe ser en el futuro");
+        return;
+      }
+    } else if (!trimmedTitle && !trimmedDescription) {
+      console.warn("⚠️ Debes ingresar un título o descripción para el anuncio");
+      return;
+    }
 
     setIsLoading(true);
+
     try {
-      const response = await apiPost(
-        API.ENDPOINTS.GOOGLE_CLASSROOM.ANNOUNCEMENTS(classId),
-        { text: content }
-      );
+      if (isMoodle) {
+        const payload = {
+          nombre: trimmedTitle,
+          descripcion: trimmedDescription,
+          duedate: dueDate.getTime(),
+        };
 
-      if (!response.ok) {
-        throw new Error("Error creating post");
+        const response = await apiPost(
+          API.ENDPOINTS.TEACHER.MOODLE_COURSEWORK(classId),
+          payload
+        );
+
+        if (!response.ok) {
+          throw new Error("Error creating Moodle assignment");
+        }
+
+        const data = await response.json();
+        resetForm();
+        onPostCreated?.(data);
+      } else {
+        const text = [trimmedTitle, trimmedDescription]
+          .filter(Boolean)
+          .join("\n\n");
+
+        const response = await apiPost(
+          API.ENDPOINTS.GOOGLE_CLASSROOM.ANNOUNCEMENTS(classId),
+          { text }
+        );
+
+        if (!response.ok) {
+          throw new Error("Error creating announcement");
+        }
+
+        const data = await response.json();
+        resetForm();
+        onPostCreated?.(data);
       }
-
-      const data = await response.json();
-      setContent("");
-      onPostCreated(data);
     } catch (error) {
       console.error("Error creating post:", error);
     } finally {
@@ -48,7 +143,9 @@ export const CreatePost = ({ classId, onPostCreated }) => {
             <MaterialIcons name="school" size={26} color="#9C27B0" />
             <MaterialIcons name="local-florist" size={22} color="#4CAF50" />
           </View>
-          <AuraText style={styles.className}>Análisis de Datos</AuraText>
+          <AuraText style={styles.className}>
+            {isMoodle ? "Crear tarea en Moodle" : "Publicar anuncio"}
+          </AuraText>
         </View>
 
         {/* Formulario */}
@@ -56,35 +153,71 @@ export const CreatePost = ({ classId, onPostCreated }) => {
           {/* Título del post */}
           <View style={styles.inputContainer}>
             <View style={styles.inputHeader}>
-              <MaterialIcons name="post-add" size={20} color="#FF9800" />
-              <AuraText style={styles.inputLabel}>Nuevo Anuncio</AuraText>
+              <MaterialIcons
+                name={isMoodle ? "assignment" : "post-add"}
+                size={20}
+                color="#FF9800"
+              />
+              <AuraText style={styles.inputLabel}>
+                {isMoodle ? "Nueva Tarea" : "Nuevo Anuncio"}
+              </AuraText>
             </View>
             <TextInput
               style={styles.titleInput}
-              placeholder="Título del anuncio"
+              placeholder={
+                isMoodle ? "Título de la tarea" : "Título del anuncio"
+              }
               placeholderTextColor="#999"
-              value={content.split("\n")[0]}
-              onChangeText={(text) => {
-                const lines = content.split("\n");
-                lines[0] = text;
-                setContent(lines.join("\n"));
-              }}
+              value={title}
+              onChangeText={setTitle}
             />
           </View>
 
           {/* Contenido */}
           <View style={styles.inputContainer}>
-            <AuraText style={styles.inputLabel}>Contenido</AuraText>
+            <AuraText style={styles.inputLabel}>
+              {isMoodle ? "Descripción" : "Contenido"}
+            </AuraText>
             <TextInput
               style={styles.descriptionInput}
-              placeholder="Escribe el contenido del anuncio..."
+              placeholder={
+                isMoodle
+                  ? "Describe la tarea y agrega instrucciones..."
+                  : "Escribe el contenido del anuncio..."
+              }
               placeholderTextColor="#999"
-              value={content}
-              onChangeText={setContent}
+              value={description}
+              onChangeText={setDescription}
               multiline
               textAlignVertical="top"
             />
           </View>
+
+          {isMoodle && (
+            <View style={styles.inputContainer}>
+              <AuraText style={styles.inputLabel}>Fecha de entrega</AuraText>
+              <View style={styles.datePickers}>
+                <View style={styles.datePicker}>
+                  <CustomDateTimePicker
+                    value={dueDate}
+                    mode="date"
+                    onChange={handleDateChange}
+                    minimumDate={new Date()}
+                  />
+                </View>
+                <View style={styles.datePicker}>
+                  <CustomDateTimePicker
+                    value={dueDate}
+                    mode="time"
+                    onChange={handleTimeChange}
+                  />
+                </View>
+              </View>
+              <AuraText style={styles.dueDatePreview}>
+                Entrega: {formattedDueDate}
+              </AuraText>
+            </View>
+          )}
 
           {/* Botones */}
           <View style={styles.buttonContainer}>
@@ -92,12 +225,21 @@ export const CreatePost = ({ classId, onPostCreated }) => {
               <MaterialIcons name="attach-file" size={24} color="#FF9800" />
             </Pressable>
             <Pressable
-              style={styles.createButton}
+              style={[
+                styles.createButton,
+                isLoading && styles.createButtonDisabled,
+              ]}
               onPress={handleSubmit}
               disabled={isLoading}
             >
               <AuraText style={styles.createButtonText}>
-                {isLoading ? "Publicando..." : "Publicar"}
+                {isMoodle
+                  ? isLoading
+                    ? "Creando..."
+                    : "Crear tarea"
+                  : isLoading
+                  ? "Publicando..."
+                  : "Publicar"}
               </AuraText>
             </Pressable>
           </View>
@@ -174,6 +316,19 @@ const styles = StyleSheet.create({
     minHeight: 100,
     textAlignVertical: "top",
   },
+  datePickers: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  datePicker: {
+    flex: 1,
+  },
+  dueDatePreview: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#666",
+    fontStyle: "italic",
+  },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -196,6 +351,9 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 15,
     alignItems: "center",
+  },
+  createButtonDisabled: {
+    opacity: 0.7,
   },
   createButtonText: {
     color: "#fff",

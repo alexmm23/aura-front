@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Modal,
   View,
@@ -10,8 +10,13 @@ import {
   Clipboard,
   Alert,
   ScrollView,
+  TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { CustomDateTimePicker } from "@/components/CustomDateTimePicker";
+import { apiPost } from "../../utils/fetchWithAuth";
+import { API } from "@/config/api";
 
 // Función helper para codificar IDs en base64 (igual que en TaskDetails)
 const encodeBase64 = (str) => {
@@ -47,6 +52,39 @@ const encodeBase64 = (str) => {
 };
 
 const TeacherClassModal = ({ visible, onClose, classData }) => {
+  const isMoodle = classData?.source === "moodle";
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [dueDate, setDueDate] = useState(() => {
+    const initial = new Date();
+    initial.setHours(initial.getHours() + 1, 0, 0, 0);
+    return initial;
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const formattedDueDate = useMemo(() => {
+    if (!dueDate) return "Sin fecha";
+    return dueDate.toLocaleString("es-MX", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }, [dueDate]);
+
+  useEffect(() => {
+    if (!visible || !isMoodle) {
+      return;
+    }
+
+    setTitle("");
+    setDescription("");
+    const reset = new Date();
+    reset.setHours(reset.getHours() + 1, 0, 0, 0);
+    setDueDate(reset);
+  }, [visible, isMoodle, classData?.id]);
+
   const copyToClipboard = async (text) => {
     try {
       if (Platform.OS === "web") {
@@ -95,6 +133,84 @@ const TeacherClassModal = ({ visible, onClose, classData }) => {
     await copyToClipboard(classroomUrl);
   };
 
+  const handleDateChange = (event, selectedDate) => {
+    if (event?.type === "dismissed" || !selectedDate) {
+      return;
+    }
+
+    const updated = new Date(dueDate);
+    updated.setFullYear(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      selectedDate.getDate()
+    );
+    setDueDate(updated);
+  };
+
+  const handleTimeChange = (event, selectedTime) => {
+    if (event?.type === "dismissed" || !selectedTime) {
+      return;
+    }
+
+    const updated = new Date(dueDate);
+    updated.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
+    setDueDate(updated);
+  };
+
+  const handleCreateMoodleAssignment = async () => {
+    if (!classData) return;
+
+    const trimmedTitle = title.trim();
+    const trimmedDescription = description.trim();
+
+    if (!trimmedTitle || !trimmedDescription) {
+      Alert.alert(
+        "Campos requeridos",
+        "Ingresa el título y la descripción de la tarea."
+      );
+      return;
+    }
+
+    if (dueDate.getTime() <= Date.now()) {
+      Alert.alert(
+        "Fecha inválida",
+        "La fecha de entrega debe ser posterior al momento actual."
+      );
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const payload = {
+        nombre: trimmedTitle,
+        descripcion: trimmedDescription,
+        duedate: dueDate.getTime(),
+      };
+
+      const response = await apiPost(
+        API.ENDPOINTS.TEACHER.MOODLE_COURSEWORK(classData.id),
+        payload
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData?.message || "Error al crear la tarea");
+      }
+
+      Alert.alert("Tarea creada", "La tarea de Moodle se creó correctamente.");
+      onClose?.();
+    } catch (error) {
+      console.error("Error creating Moodle assignment:", error);
+      Alert.alert(
+        "Error",
+        error.message || "No se pudo crear la tarea en Moodle"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (!classData) return null;
 
   return (
@@ -119,117 +235,211 @@ const TeacherClassModal = ({ visible, onClose, classData }) => {
               </View>
               <Text style={styles.modalTitle}>{classData.name}</Text>
               <Text style={styles.modalSubtitle}>
-                Selecciona una acción para esta clase
+                {isMoodle
+                  ? "Crear tarea directamente desde AURA"
+                  : "Selecciona una acción para esta clase"}
               </Text>
             </View>
 
-            {/* Opciones */}
-            <View style={styles.optionsContainer}>
-              {/* Opción: Crear Anuncio */}
-              <View style={styles.optionCard}>
-                <View style={styles.optionHeader}>
-                  <View style={styles.optionIconContainer}>
-                    <Ionicons
-                      name="megaphone-outline"
-                      size={24}
-                      color="#4285F4"
-                    />
-                  </View>
-                  <View style={styles.optionInfo}>
-                    <Text style={styles.optionTitle}>Crear Anuncio</Text>
-                    <Text style={styles.optionDescription}>
-                      Publica un anuncio para tus estudiantes
-                    </Text>
-                  </View>
+            {isMoodle ? (
+              <View style={styles.moodleContainer}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Título de la tarea</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Ej. Ensayo comparativo"
+                    placeholderTextColor="#999"
+                    value={title}
+                    onChangeText={setTitle}
+                  />
                 </View>
 
-                <View style={styles.optionUrlContainer}>
-                  <Text style={styles.optionUrlLabel}>Enlace directo:</Text>
-                  <Text style={styles.optionUrl} numberOfLines={2}>
-                    https://classroom.google.com/c/
-                    {encodeBase64(classData.id)}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Descripción</Text>
+                  <TextInput
+                    style={[styles.input, styles.inputMultiline]}
+                    placeholder="Describe instrucciones, recursos y criterios..."
+                    placeholderTextColor="#999"
+                    value={description}
+                    onChangeText={setDescription}
+                    multiline
+                    textAlignVertical="top"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Fecha y hora de entrega</Text>
+                  <View style={styles.datePickers}>
+                    <View style={styles.datePicker}>
+                      <CustomDateTimePicker
+                        value={dueDate}
+                        mode="date"
+                        onChange={handleDateChange}
+                        minimumDate={new Date()}
+                      />
+                    </View>
+                    <View style={styles.datePicker}>
+                      <CustomDateTimePicker
+                        value={dueDate}
+                        mode="time"
+                        onChange={handleTimeChange}
+                      />
+                    </View>
+                  </View>
+                  <Text style={styles.dueDatePreview}>
+                    Entrega: {formattedDueDate}
                   </Text>
                 </View>
 
-                <View style={styles.optionActions}>
-                  <TouchableOpacity
-                    style={styles.copyButton}
-                    onPress={() => copyClassroomUrl("announcement")}
-                  >
-                    <Ionicons name="copy-outline" size={16} color="#fff" />
-                    <Text style={styles.copyButtonText}>Copiar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.openButton, styles.announcementButton]}
-                    onPress={() => openGoogleClassroom("announcement")}
-                  >
-                    <Ionicons name="open-outline" size={16} color="#fff" />
-                    <Text style={styles.openButtonText}>Abrir Classroom</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+                <TouchableOpacity
+                  style={[
+                    styles.submitButton,
+                    isSubmitting && styles.submitButtonDisabled,
+                  ]}
+                  onPress={handleCreateMoodleAssignment}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="send-outline" size={18} color="#fff" />
+                      <Text style={styles.submitButtonText}>Crear tarea</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
 
-              {/* Opción: Crear Tarea */}
-              <View style={styles.optionCard}>
-                <View style={styles.optionHeader}>
-                  <View style={styles.optionIconContainer}>
+                <View style={styles.noteSection}>
+                  <View style={styles.noteHeader}>
                     <Ionicons
-                      name="document-text-outline"
-                      size={24}
-                      color="#34A853"
+                      name="information-circle-outline"
+                      size={20}
+                      color="#ffc107"
                     />
+                    <Text style={styles.noteTitle}>Recuerda</Text>
                   </View>
-                  <View style={styles.optionInfo}>
-                    <Text style={styles.optionTitle}>Crear Tarea</Text>
-                    <Text style={styles.optionDescription}>
-                      Crea una nueva asignación para tus estudiantes
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.optionUrlContainer}>
-                  <Text style={styles.optionUrlLabel}>Enlace directo:</Text>
-                  <Text style={styles.optionUrl} numberOfLines={2}>
-                    https://classroom.google.com/w/
-                    {encodeBase64(classData.id)}/t/all
+                  <Text style={styles.noteText}>
+                    La tarea se publicará en Moodle con el título, descripción y
+                    fecha seleccionados. Podrás revisarla y editarla después
+                    desde Moodle.
                   </Text>
                 </View>
+              </View>
+            ) : (
+              <>
+                {/* Opciones */}
+                <View style={styles.optionsContainer}>
+                  {/* Opción: Crear Anuncio */}
+                  <View style={styles.optionCard}>
+                    <View style={styles.optionHeader}>
+                      <View style={styles.optionIconContainer}>
+                        <Ionicons
+                          name="megaphone-outline"
+                          size={24}
+                          color="#4285F4"
+                        />
+                      </View>
+                      <View style={styles.optionInfo}>
+                        <Text style={styles.optionTitle}>Crear Anuncio</Text>
+                        <Text style={styles.optionDescription}>
+                          Publica un anuncio para tus estudiantes
+                        </Text>
+                      </View>
+                    </View>
 
-                <View style={styles.optionActions}>
-                  <TouchableOpacity
-                    style={styles.copyButton}
-                    onPress={() => copyClassroomUrl("assignment")}
-                  >
-                    <Ionicons name="copy-outline" size={16} color="#fff" />
-                    <Text style={styles.copyButtonText}>Copiar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.openButton, styles.assignmentButton]}
-                    onPress={() => openGoogleClassroom("assignment")}
-                  >
-                    <Ionicons name="open-outline" size={16} color="#fff" />
-                    <Text style={styles.openButtonText}>Abrir Classroom</Text>
-                  </TouchableOpacity>
+                    <View style={styles.optionUrlContainer}>
+                      <Text style={styles.optionUrlLabel}>Enlace directo:</Text>
+                      <Text style={styles.optionUrl} numberOfLines={2}>
+                        https://classroom.google.com/c/
+                        {encodeBase64(classData.id)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.optionActions}>
+                      <TouchableOpacity
+                        style={styles.copyButton}
+                        onPress={() => copyClassroomUrl("announcement")}
+                      >
+                        <Ionicons name="copy-outline" size={16} color="#fff" />
+                        <Text style={styles.copyButtonText}>Copiar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.openButton, styles.announcementButton]}
+                        onPress={() => openGoogleClassroom("announcement")}
+                      >
+                        <Ionicons name="open-outline" size={16} color="#fff" />
+                        <Text style={styles.openButtonText}>
+                          Abrir Classroom
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Opción: Crear Tarea */}
+                  <View style={styles.optionCard}>
+                    <View style={styles.optionHeader}>
+                      <View style={styles.optionIconContainer}>
+                        <Ionicons
+                          name="document-text-outline"
+                          size={24}
+                          color="#34A853"
+                        />
+                      </View>
+                      <View style={styles.optionInfo}>
+                        <Text style={styles.optionTitle}>Crear Tarea</Text>
+                        <Text style={styles.optionDescription}>
+                          Crea una nueva asignación para tus estudiantes
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.optionUrlContainer}>
+                      <Text style={styles.optionUrlLabel}>Enlace directo:</Text>
+                      <Text style={styles.optionUrl} numberOfLines={2}>
+                        https://classroom.google.com/w/
+                        {encodeBase64(classData.id)}/t/all
+                      </Text>
+                    </View>
+
+                    <View style={styles.optionActions}>
+                      <TouchableOpacity
+                        style={styles.copyButton}
+                        onPress={() => copyClassroomUrl("assignment")}
+                      >
+                        <Ionicons name="copy-outline" size={16} color="#fff" />
+                        <Text style={styles.copyButtonText}>Copiar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.openButton, styles.assignmentButton]}
+                        onPress={() => openGoogleClassroom("assignment")}
+                      >
+                        <Ionicons name="open-outline" size={16} color="#fff" />
+                        <Text style={styles.openButtonText}>
+                          Abrir Classroom
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </View>
-              </View>
-            </View>
 
-            {/* Nota importante */}
-            <View style={styles.noteSection}>
-              <View style={styles.noteHeader}>
-                <Ionicons
-                  name="information-circle-outline"
-                  size={20}
-                  color="#ffc107"
-                />
-                <Text style={styles.noteTitle}>Nota Importante</Text>
-              </View>
-              <Text style={styles.noteText}>
-                Los enlaces te redirigirán a Google Classroom donde podrás crear
-                tus anuncios o tareas. Asegúrate de haber iniciado sesión con tu
-                cuenta de Google.
-              </Text>
-            </View>
+                {/* Nota importante */}
+                <View style={styles.noteSection}>
+                  <View style={styles.noteHeader}>
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={20}
+                      color="#ffc107"
+                    />
+                    <Text style={styles.noteTitle}>Nota Importante</Text>
+                  </View>
+                  <Text style={styles.noteText}>
+                    Los enlaces te redirigirán a Google Classroom donde podrás
+                    crear tus anuncios o tareas. Asegúrate de haber iniciado
+                    sesión con tu cuenta de Google.
+                  </Text>
+                </View>
+              </>
+            )}
           </ScrollView>
         </View>
       </View>
@@ -301,6 +511,62 @@ const styles = StyleSheet.create({
   optionsContainer: {
     padding: 20,
     gap: 16,
+  },
+  moodleContainer: {
+    padding: 20,
+    gap: 20,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#555",
+  },
+  input: {
+    backgroundColor: "#F5F5F5",
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    fontSize: 16,
+    color: "#333",
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  inputMultiline: {
+    minHeight: 120,
+    textAlignVertical: "top",
+  },
+  datePickers: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  datePicker: {
+    flex: 1,
+  },
+  dueDatePreview: {
+    marginTop: 8,
+    fontSize: 12,
+    fontStyle: "italic",
+    color: "#666",
+  },
+  submitButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#CB8D27",
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  submitButtonDisabled: {
+    opacity: 0.7,
+  },
+  submitButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
   optionCard: {
     backgroundColor: "#F8F9FA",

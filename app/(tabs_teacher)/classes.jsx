@@ -42,19 +42,16 @@ export default function TeacherClasses() {
       setLoading(true);
       setError(null);
       console.log("🔄 Fetching unified courses (Classroom + Moodle)...");
-      // Usar endpoint unificado de maestro
       const response = await apiGet(API.ENDPOINTS.TEACHER.COURSES);
 
       if (!response.ok) {
         const errorResponse = await response.json();
-        console.log("❌ Classes fetch error response:", errorResponse);
         if (
           errorResponse.details &&
           errorResponse.details.includes("Invalid")
         ) {
           setError("Credenciales inválidas. Por favor, verifica tu sesión.");
           return;
-          // Mostrar botón que mande al perfil a conectar classroom y/o moodle
         }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -62,11 +59,9 @@ export default function TeacherClasses() {
       const result = await response.json();
       console.log("📚 Unified courses response:", result.length);
 
-      // El endpoint unificado devuelve directamente un array de cursos
       if (result.length > 0) {
         console.log(`✅ Found ${result.length} courses`);
 
-        // Los cursos ya vienen con tareas próximas incluidas del backend
         const classesWithAssignments = await Promise.all(
           result.map(async (classData) => {
             // Si el curso ya tiene tareas, usarlas; si no, cargar según plataforma
@@ -282,6 +277,7 @@ export default function TeacherClasses() {
       <CreatePost
         classId={selectedClass.id}
         onPostCreated={handlePostCreated}
+        source={selectedClass.source}
       />
 
       <CreateAssignment
