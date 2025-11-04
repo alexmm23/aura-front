@@ -16,7 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import * as FileSystem from "expo-file-system/legacy";
+import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
 import { API } from "@/config/api";
@@ -45,14 +45,17 @@ const NotebookView = () => {
       try {
         setLoading(true);
         console.log("Fetching page with ID:", pageId);
-        console.log("Full endpoint:", `${API.ENDPOINTS.STUDENT.NOTE_SHOW}/${pageId}`);
-        
+        console.log(
+          "Full endpoint:",
+          `${API.ENDPOINTS.STUDENT.NOTE_SHOW}/${pageId}`
+        );
+
         const response = await apiGet(
           `${API.ENDPOINTS.STUDENT.NOTE_SHOW}/${pageId}`
         );
-        
+
         console.log("Response status:", response.status);
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           console.error("Error response:", errorText);
@@ -75,7 +78,7 @@ const NotebookView = () => {
         console.error("Error details:", {
           message: error.message,
           pageId,
-          endpoint: `${API.ENDPOINTS.STUDENT.NOTE_SHOW}/${pageId}`
+          endpoint: `${API.ENDPOINTS.STUDENT.NOTE_SHOW}/${pageId}`,
         });
         Alert.alert("Error", `No se pudo cargar la página: ${error.message}`);
       } finally {
@@ -96,7 +99,6 @@ const NotebookView = () => {
       setDownloading(true);
       setShowMenu(false);
 
-      // Solicitar permisos para guardar en la galería
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== "granted") {
         Alert.alert("Permisos", "Se necesitan permisos para guardar la imagen");
@@ -107,18 +109,16 @@ const NotebookView = () => {
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const pageIdentifier = page.page_id || page.id || "unknown";
       const filename = `aura-page-${pageIdentifier}-${timestamp}.png`;
-      const fileUri = `${FileSystem.documentDirectory}${filename}`;
+      const outputFile = new File(Paths.document, filename);
 
       // Extraer datos base64 de la imagen
       const base64Data = page.data.replace(/^data:image\/[^;]+;base64,/, "");
 
-      // Guardar archivo temporalmente usando la API legacy
-      await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-        encoding: "base64",
-      });
+      // Guardar archivo temporalmente usando la nueva API
+      outputFile.write(base64Data, { encoding: "base64" });
 
       // Guardar en la galería
-      const asset = await MediaLibrary.createAssetAsync(fileUri);
+      const asset = await MediaLibrary.createAssetAsync(outputFile.uri);
       await MediaLibrary.createAlbumAsync("AURA", asset, false);
 
       Alert.alert("Éxito", "Imagen guardada en la galería");
@@ -142,19 +142,17 @@ const NotebookView = () => {
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const pageIdentifier = page.page_id || page.id || "unknown";
       const filename = `aura-page-${pageIdentifier}-${timestamp}.png`;
-      const fileUri = `${FileSystem.documentDirectory}${filename}`;
+      const outputFile = new File(Paths.document, filename);
 
       // Extraer datos base64 de la imagen
       const base64Data = page.data.replace(/^data:image\/[^;]+;base64,/, "");
 
       // Guardar archivo temporalmente
-      await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-        encoding: "base64",
-      });
+      outputFile.write(base64Data, { encoding: "base64" });
 
       // Compartir usando el menú nativo
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
+        await Sharing.shareAsync(outputFile.uri, {
           mimeType: "image/png",
           dialogTitle: "Compartir página de cuaderno",
         });
@@ -190,7 +188,7 @@ const NotebookView = () => {
 
   const handleDelete = async () => {
     setShowMenu(false);
-    
+
     // ✅ Para web, usar modal personalizado en lugar de Alert
     if (Platform.OS === "web") {
       setShowDeleteConfirm(true);
@@ -221,21 +219,24 @@ const NotebookView = () => {
       setDeleting(true);
       setShowDeleteConfirm(false);
 
-      console.log('🗑️ Eliminando nota con ID:', pageId);
-      console.log('🔗 Endpoint completo:', `${API.ENDPOINTS.STUDENT.NOTE_DELETE}/${pageId}`);
+      console.log("🗑️ Eliminando nota con ID:", pageId);
+      console.log(
+        "🔗 Endpoint completo:",
+        `${API.ENDPOINTS.STUDENT.NOTE_DELETE}/${pageId}`
+      );
 
       const response = await apiDelete(
         `${API.ENDPOINTS.STUDENT.NOTE_DELETE}/${pageId}`
       );
 
-      console.log('📊 Response status:', response.status);
+      console.log("📊 Response status:", response.status);
 
       if (response.ok) {
         try {
           const result = await response.json();
-          console.log('✅ Nota eliminada:', result);
+          console.log("✅ Nota eliminada:", result);
         } catch (parseError) {
-          console.log('✅ Nota eliminada (sin respuesta JSON)');
+          console.log("✅ Nota eliminada (sin respuesta JSON)");
         }
 
         // ✅ Mostrar mensaje de éxito según plataforma
@@ -243,9 +244,9 @@ const NotebookView = () => {
           // Para web, navegar directamente
           router.replace({
             pathname: "/(tabs)/notebookpages",
-            params: { 
+            params: {
               notebookId,
-              refresh: Date.now().toString()
+              refresh: Date.now().toString(),
             },
           });
         } else {
@@ -256,31 +257,30 @@ const NotebookView = () => {
               onPress: () => {
                 router.replace({
                   pathname: "/(tabs)/notebookpages",
-                  params: { 
+                  params: {
                     notebookId,
-                    refresh: Date.now().toString()
+                    refresh: Date.now().toString(),
                   },
                 });
-              }
-            }
+              },
+            },
           ]);
         }
-
       } else {
         let errorMessage = "Error al eliminar la nota";
         try {
           const errorData = await response.json();
-          console.error('❌ Error response:', errorData);
+          console.error("❌ Error response:", errorData);
           errorMessage = errorData.message || errorMessage;
         } catch (parseError) {
-          console.error('❌ Error status:', response.status);
+          console.error("❌ Error status:", response.status);
           errorMessage = `Error ${response.status}: ${response.statusText}`;
         }
         throw new Error(errorMessage);
       }
     } catch (error) {
       console.error("❌ Error deleting note:", error);
-      
+
       // ✅ Mostrar error según plataforma
       if (Platform.OS === "web") {
         alert(`Error: ${error.message || "No se pudo eliminar la nota"}`);
@@ -471,9 +471,10 @@ const NotebookView = () => {
               <Ionicons name="warning-outline" size={48} color="#DC3545" />
               <Text style={styles.confirmTitle}>Eliminar Nota</Text>
             </View>
-            
+
             <Text style={styles.confirmMessage}>
-              ¿Estás seguro de que deseas eliminar esta nota? Esta acción no se puede deshacer.
+              ¿Estás seguro de que deseas eliminar esta nota? Esta acción no se
+              puede deshacer.
             </Text>
 
             <View style={styles.confirmButtons}>

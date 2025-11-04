@@ -13,7 +13,7 @@ import {
   Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system/legacy";
+import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
 
@@ -46,25 +46,21 @@ export const AttachmentViewer = ({
         return;
       }
 
-      // En móvil, usa FileSystem para descargar
-      const fileUri = FileSystem.documentDirectory + attachment.file_name;
-
-      const downloadResult = await FileSystem.downloadAsync(
+      // En móvil, usa la nueva API de FileSystem para descargar
+      const fallbackName = attachment.file_name || `archivo-${Date.now()}`;
+      const targetFile = new File(Paths.document, fallbackName);
+      const downloadedFile = await File.downloadFileAsync(
         attachment.file_url,
-        fileUri
+        targetFile
       );
 
-      if (downloadResult.status === 200) {
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(downloadResult.uri);
-        } else {
-          Alert.alert(
-            "Descarga completada",
-            `Archivo guardado: ${attachment.file_name}`
-          );
-        }
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(downloadedFile.uri);
       } else {
-        Alert.alert("Error", "No se pudo descargar el archivo");
+        Alert.alert(
+          "Descarga completada",
+          `Archivo guardado: ${downloadedFile.name || fallbackName}`
+        );
       }
     } catch (error) {
       console.error("Error downloading attachment:", error);

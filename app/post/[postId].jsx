@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import * as DocumentPicker from "expo-document-picker";
+import { getDocumentAsync } from "expo-document-picker";
 import { API } from "@/config/api";
 
 import {
@@ -25,7 +25,7 @@ import {
   apiPostMultipart,
   apiDelete,
 } from "../../utils/fetchWithAuth";
-import * as FileSystem from "expo-file-system";
+import { File } from "expo-file-system";
 import {
   AttachmentViewer,
   LinksViewer,
@@ -96,7 +96,7 @@ const PostDetail = () => {
 
   const pickFiles = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
+      const result = await getDocumentAsync({
         type: "*/*",
         multiple: true,
         copyToCacheDirectory: true,
@@ -168,10 +168,9 @@ const PostDetail = () => {
                 reader.readAsDataURL(blob);
               });
             } else {
-              // En móvil (Android/iOS), usar FileSystem
-              base64Data = await FileSystem.readAsStringAsync(file.uri, {
-                encoding: FileSystem.EncodingType.Base64,
-              });
+              // En móvil (Android/iOS), usar la nueva API de FileSystem
+              const pickedFile = new File(file.uri);
+              base64Data = await pickedFile.base64();
             }
 
             attachments.push({

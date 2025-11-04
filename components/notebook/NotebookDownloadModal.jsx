@@ -11,21 +11,17 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AuraText } from "../AuraText";
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system'; // ✅ Solo este import
+import * as Sharing from "expo-sharing";
+import { File, Paths } from "expo-file-system";
 import Toast from "react-native-toast-message";
 import { apiGet } from "../../utils/fetchWithAuth";
 
-export default function DownloadNotebookModal({ 
-  visible, 
-  onClose, 
-  notebook 
-}) {
+export default function DownloadNotebookModal({ visible, onClose, notebook }) {
   const [downloading, setDownloading] = useState(false);
 
   // ✅ Convertir Uint8Array a Base64
   const uint8ArrayToBase64 = (uint8Array) => {
-    let binary = '';
+    let binary = "";
     const len = uint8Array.length;
     for (let i = 0; i < len; i++) {
       binary += String.fromCharCode(uint8Array[i]);
@@ -53,44 +49,44 @@ export default function DownloadNotebookModal({
   // ✅ Generar ZIP con las imágenes
   const generateZIP = async (pages) => {
     try {
-      const JSZip = (await import('jszip')).default;
+      const JSZip = (await import("jszip")).default;
       const zip = new JSZip();
-      const imagesFolder = zip.folder('imagenes');
-      
+      const imagesFolder = zip.folder("imagenes");
+
       for (let index = 0; index < pages.length; index++) {
         const page = pages[index];
-        
+
         if (page.contents && page.contents[0]?.data) {
           let imageData = page.contents[0].data;
-          
+
           // Si es URL, descargar la imagen
-          if (imageData.startsWith('http')) {
+          if (imageData.startsWith("http")) {
             try {
               console.log(`📥 Descargando imagen ${index + 1}...`);
               const base64Data = await convertImageToBase64(imageData);
-              imageData = base64Data.split(',')[1];
+              imageData = base64Data.split(",")[1];
             } catch (error) {
               console.warn(`⚠️ Error descargando imagen ${index + 1}:`, error);
               continue;
             }
           }
-          
+
           // Extraer base64 si es data URL
-          if (imageData.includes(',')) {
-            imageData = imageData.split(',')[1];
+          if (imageData.includes(",")) {
+            imageData = imageData.split(",")[1];
           }
-          
+
           // Agregar al ZIP
           imagesFolder.file(
-            `pagina_${String(index + 1).padStart(3, '0')}.jpg`, 
-            imageData, 
+            `pagina_${String(index + 1).padStart(3, "0")}.jpg`,
+            imageData,
             { base64: true }
           );
         }
       }
-      
+
       console.log(`✅ Generando ZIP con ${pages.length} imágenes...`);
-      return await zip.generateAsync({ type: 'uint8array' });
+      return await zip.generateAsync({ type: "uint8array" });
     } catch (error) {
       console.error("Error generando ZIP:", error);
       throw new Error("Error al generar ZIP: " + error.message);
@@ -102,7 +98,7 @@ export default function DownloadNotebookModal({
     try {
       const blob = new Blob([data], { type: mimeType });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
       link.download = filename;
       document.body.appendChild(link);
@@ -120,55 +116,55 @@ export default function DownloadNotebookModal({
   const downloadFileMobile = async (data, filename) => {
     try {
       console.log("📱 Preparando descarga en móvil...");
-      
+
       // Verificar disponibilidad
       const canShare = await Sharing.isAvailableAsync();
       if (!canShare) {
         throw new Error("La función de compartir no está disponible");
       }
-      
-      // ✅ CORRECCIÓN: Usar FileSystem legacy (no File class)
-      const fileUri = `${FileSystem.cacheDirectory}${filename}`;
-      console.log("📁 URI del archivo:", fileUri);
-      
+
+      // ✅ Guardar usando la nueva API moderna de FileSystem
+      const targetFile = new File(Paths.cache, filename);
+      console.log("📁 URI del archivo:", targetFile.uri);
+
       // Convertir Uint8Array a base64
       let base64Data;
       if (data instanceof Uint8Array || data instanceof ArrayBuffer) {
-        const uint8Array = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+        const uint8Array =
+          data instanceof ArrayBuffer ? new Uint8Array(data) : data;
         base64Data = uint8ArrayToBase64(uint8Array);
-      } else if (typeof data === 'string' && data.includes(',')) {
+      } else if (typeof data === "string" && data.includes(",")) {
         // Si ya es data URL, extraer solo la parte base64
-        base64Data = data.split(',')[1];
+        base64Data = data.split(",")[1];
       } else {
         base64Data = data;
       }
-      
-      console.log(`💾 Escribiendo archivo (${base64Data.length} chars base64)...`);
-      
+
+      console.log(
+        `💾 Escribiendo archivo (${base64Data.length} chars base64)...`
+      );
+
       // ✅ USAR LEGACY API (writeAsStringAsync en lugar de File.write)
-      await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-        encoding: 'base64',
-      });
-      
+      targetFile.write(base64Data, { encoding: "base64" });
+
       // Verificar que el archivo existe
-      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      const fileInfo = targetFile.info();
       console.log("📊 Info del archivo:", fileInfo);
-      
+
       if (!fileInfo.exists) {
         throw new Error("El archivo no se creó correctamente");
       }
-      
+
       console.log("✅ Archivo creado exitosamente, compartiendo...");
-      
+
       // Compartir archivo
-      await Sharing.shareAsync(fileUri, {
-        mimeType: 'application/zip',
+      await Sharing.shareAsync(targetFile.uri, {
+        mimeType: "application/zip",
         dialogTitle: `Compartir ${filename}`,
-        UTI: 'public.zip-archive',
+        UTI: "public.zip-archive",
       });
-      
+
       console.log("✅ Archivo compartido exitosamente");
-      
     } catch (error) {
       console.error("❌ Error en móvil:", error);
       console.error("Stack trace:", error.stack);
@@ -179,10 +175,10 @@ export default function DownloadNotebookModal({
   // ✅ Descargar Imágenes como ZIP
   const downloadAsImages = async () => {
     console.log("📥 Descargando imágenes:", notebook.title);
-    
+
     try {
       let pages = [];
-      
+
       // Intentar obtener páginas de diferentes formas
       if (notebook.pages && Array.isArray(notebook.pages)) {
         console.log("✅ Usando páginas del objeto notebook");
@@ -190,37 +186,48 @@ export default function DownloadNotebookModal({
       } else {
         console.log(`🌐 Consultando API: /notebook/${notebook.id}/pages`);
         const response = await apiGet(`/notebook/${notebook.id}/pages`);
-        
+
         if (!response.ok) {
-          throw new Error(`Error del servidor: ${response.status} ${response.statusText}`);
+          throw new Error(
+            `Error del servidor: ${response.status} ${response.statusText}`
+          );
         }
-        
+
         const responseData = await response.json();
         console.log("📡 Respuesta del servidor:", responseData);
-        
+
         pages = responseData?.data?.pages || responseData?.pages || [];
       }
-      
+
       // Filtrar páginas que tengan contenido de imagen
-      const pagesWithImages = pages.filter(page => 
-        page.contents && 
-        page.contents.length > 0 &&
-        page.contents.some(content => content.type === 'image' && content.data)
+      const pagesWithImages = pages.filter(
+        (page) =>
+          page.contents &&
+          page.contents.length > 0 &&
+          page.contents.some(
+            (content) => content.type === "image" && content.data
+          )
       );
 
       if (pagesWithImages.length === 0) {
-        throw new Error("El cuaderno no tiene páginas con imágenes para descargar");
+        throw new Error(
+          "El cuaderno no tiene páginas con imágenes para descargar"
+        );
       }
 
-      console.log(`🖼️ Se encontraron ${pagesWithImages.length} páginas con imágenes (${pages.length} total)`);
+      console.log(
+        `🖼️ Se encontraron ${pagesWithImages.length} páginas con imágenes (${pages.length} total)`
+      );
 
-      const filename = `${notebook.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_imagenes_${Date.now()}.zip`;
-      
+      const filename = `${notebook.title
+        .replace(/[^a-z0-9]/gi, "_")
+        .toLowerCase()}_imagenes_${Date.now()}.zip`;
+
       // Generar ZIP
       const zipBytes = await generateZIP(pagesWithImages);
-      
-      if (Platform.OS === 'web') {
-        downloadFileWeb(zipBytes, filename, 'application/zip');
+
+      if (Platform.OS === "web") {
+        downloadFileWeb(zipBytes, filename, "application/zip");
       } else {
         await downloadFileMobile(zipBytes, filename);
       }
@@ -282,9 +289,9 @@ export default function DownloadNotebookModal({
               <View style={styles.headerTextContainer}>
                 <AuraText text="Descargar Cuaderno" style={styles.title} />
                 {notebook && (
-                  <AuraText 
-                    text={notebook.title} 
-                    style={styles.subtitle} 
+                  <AuraText
+                    text={notebook.title}
+                    style={styles.subtitle}
                     numberOfLines={1}
                   />
                 )}
@@ -295,7 +302,7 @@ export default function DownloadNotebookModal({
             </TouchableOpacity>
           </View>
 
-          <ScrollView 
+          <ScrollView
             style={styles.scrollContent}
             contentContainerStyle={styles.scrollContentContainer}
             showsVerticalScrollIndicator={true}
@@ -322,20 +329,21 @@ export default function DownloadNotebookModal({
               <View style={styles.infoCard}>
                 <Ionicons name="information-circle" size={20} color="#007bff" />
                 <View style={styles.infoTextContainer}>
-                  <AuraText 
-                    text={Platform.OS === 'web' 
-                      ? "• El archivo ZIP se guardará en tu carpeta de Descargas"
-                      : "• Podrás abrir o compartir el archivo ZIP con otras aplicaciones"
-                    } 
-                    style={styles.infoText} 
+                  <AuraText
+                    text={
+                      Platform.OS === "web"
+                        ? "• El archivo ZIP se guardará en tu carpeta de Descargas"
+                        : "• Podrás abrir o compartir el archivo ZIP con otras aplicaciones"
+                    }
+                    style={styles.infoText}
                   />
-                  <AuraText 
-                    text="• Las páginas sin imágenes se omitirán automáticamente" 
-                    style={styles.infoText} 
+                  <AuraText
+                    text="• Las páginas sin imágenes se omitirán automáticamente"
+                    style={styles.infoText}
                   />
-                  <AuraText 
-                    text="• Las imágenes estarán en formato JPG dentro del ZIP" 
-                    style={styles.infoText} 
+                  <AuraText
+                    text="• Las imágenes estarán en formato JPG dentro del ZIP"
+                    style={styles.infoText}
                   />
                 </View>
               </View>
@@ -366,12 +374,18 @@ export default function DownloadNotebookModal({
               {downloading ? (
                 <View style={styles.downloadingContainer}>
                   <ActivityIndicator size="small" color="#fff" />
-                  <AuraText text="Descargando..." style={styles.downloadButtonText} />
+                  <AuraText
+                    text="Descargando..."
+                    style={styles.downloadButtonText}
+                  />
                 </View>
               ) : (
                 <View style={styles.downloadingContainer}>
                   <Ionicons name="download" size={20} color="#fff" />
-                  <AuraText text="Descargar ZIP" style={styles.downloadButtonText} />
+                  <AuraText
+                    text="Descargar ZIP"
+                    style={styles.downloadButtonText}
+                  />
                 </View>
               )}
             </TouchableOpacity>
@@ -392,8 +406,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: Platform.OS === 'web' ? "85%" : "90%",
-    minHeight: Platform.OS === 'web' ? "auto" : "70%",
+    maxHeight: Platform.OS === "web" ? "85%" : "90%",
+    minHeight: Platform.OS === "web" ? "auto" : "70%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.25,
