@@ -15,7 +15,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
-import * as MediaLibrary from "expo-media-library";
 
 export const AttachmentViewer = ({
   attachments,
@@ -47,11 +46,23 @@ export const AttachmentViewer = ({
       }
 
       // En móvil, usa la nueva API de FileSystem para descargar
-      const fallbackName = attachment.file_name || `archivo-${Date.now()}`;
-      const targetFile = new File(Paths.document, fallbackName);
+      const fallbackName = attachment.file_name || "archivo";
+      const uniqueName = (() => {
+        const normalized = fallbackName.trim() || "archivo";
+        const dotIndex = normalized.lastIndexOf(".");
+        const hasExtension = dotIndex > 0 && dotIndex < normalized.length - 1;
+        const baseName = hasExtension
+          ? normalized.slice(0, dotIndex)
+          : normalized;
+        const extension = hasExtension ? normalized.slice(dotIndex) : "";
+        return `${baseName}-${Date.now()}${extension}`;
+      })();
+
+      const targetFile = new File(Paths.document, uniqueName);
       const downloadedFile = await File.downloadFileAsync(
         attachment.file_url,
-        targetFile
+        targetFile,
+        { idempotent: true }
       );
 
       if (await Sharing.isAvailableAsync()) {
@@ -59,7 +70,7 @@ export const AttachmentViewer = ({
       } else {
         Alert.alert(
           "Descarga completada",
-          `Archivo guardado: ${downloadedFile.name || fallbackName}`
+          `Archivo guardado: ${downloadedFile.name || uniqueName}`
         );
       }
     } catch (error) {
