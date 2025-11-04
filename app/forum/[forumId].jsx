@@ -15,10 +15,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import * as DocumentPicker from "expo-document-picker";
+import { getDocumentAsync } from "expo-document-picker";
+import { File } from "expo-file-system";
 import { API } from "@/config/api";
 import { AuraText } from "../../components/AuraText";
-import { apiGet, apiPost, apiPostMultipart } from "../../utils/fetchWithAuth";
+import { apiGet, apiPost } from "../../utils/fetchWithAuth";
 import { PostCard } from "../../components/forums/PostCard";
 
 const ForumDetail = () => {
@@ -90,7 +91,7 @@ const ForumDetail = () => {
 
   const pickFiles = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
+      const result = await getDocumentAsync({
         type: "*/*",
         multiple: true,
         copyToCacheDirectory: true,
@@ -140,40 +141,52 @@ const ForumDetail = () => {
         links: links.filter((link) => link.trim() !== ""),
       };
 
-      let response;
-
-      // Si hay archivos, usar multipart/form-data
+      const attachments = [];
       if (selectedFiles.length > 0) {
-        const formData = new FormData();
-        formData.append("title", createData.title);
-        formData.append("description", createData.description);
-        formData.append("allowResponses", createData.allowResponses.toString());
+        for (const file of selectedFiles) {
+          try {
+            let base64Data;
 
-        // Agregar links
-        postData.links.forEach((link, index) => {
-          formData.append(`links[${index}]`, link);
-        });
+            if (Platform.OS === "web") {
+              const blob = await fetch(file.uri).then((r) => r.blob());
+              base64Data = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  const base64 = reader.result.split(",")[1];
+                  resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+            } else {
+              const pickedFile = new File(file.uri);
+              base64Data = await pickedFile.base64();
+            }
 
-        // Agregar archivos
-        selectedFiles.forEach((file, index) => {
-          formData.append("attachments", {
-            uri: file.uri,
-            type: file.mimeType || "application/octet-stream",
-            name: file.name,
-          });
-        });
-
-        response = await apiPostMultipart(
-          API.ENDPOINTS.FORUMS.CREATE_POST.replace(":id", forumId),
-          formData
-        );
-      } else {
-        // Solo datos JSON
-        response = await apiPost(
-          API.ENDPOINTS.FORUMS.CREATE_POST.replace(":id", forumId),
-          postData
-        );
+            attachments.push({
+              name: file.name,
+              type: file.mimeType || "application/octet-stream",
+              data: base64Data,
+            });
+          } catch (fileError) {
+            console.error("Error processing file:", file.name, fileError);
+            Alert.alert(
+              "Error",
+              `No se pudo procesar el archivo: ${file.name}`
+            );
+          }
+        }
       }
+
+      const payload = {
+        ...postData,
+        attachments,
+      };
+
+      const response = await apiPost(
+        API.ENDPOINTS.FORUMS.CREATE_POST.replace(":id", forumId),
+        payload
+      );
 
       if (response.ok) {
         Alert.alert("Éxito", "Post creado correctamente");
