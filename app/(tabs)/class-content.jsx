@@ -32,8 +32,8 @@ const HEADER_COLORS = [
   "#7B68EE",
 ];
 
-const HEADER_MAX_HEIGHT = 320;
-const HEADER_MIN_HEIGHT = 120;
+const HEADER_MAX_HEIGHT = 380; // ✅ CAMBIO: De 320 a 380
+const HEADER_MIN_HEIGHT = 140; // ✅ CAMBIO: De 120 a 140
 const HEADER_SCROLL_DISTANCE = HEADER_MAX_HEIGHT - HEADER_MIN_HEIGHT;
 
 export default function ClassContentView() {
@@ -47,6 +47,31 @@ export default function ClassContentView() {
   const isLandscape = width > height;
 
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  // ✅ CAMBIO: Usar transform en lugar de height
+  const headerTranslateY = scrollY.interpolate({
+    inputRange: [0, HEADER_SCROLL_DISTANCE],
+    outputRange: [0, -HEADER_SCROLL_DISTANCE],
+    extrapolate: 'clamp',
+  });
+
+  const imageOpacity = scrollY.interpolate({
+    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.3],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const imageScale = scrollY.interpolate({
+    inputRange: [0, HEADER_SCROLL_DISTANCE],
+    outputRange: [1, 0.6],
+    extrapolate: 'clamp',
+  });
+
+  const titleOpacity = scrollY.interpolate({
+    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.5, HEADER_SCROLL_DISTANCE],
+    outputRange: [1, 0.7, 0],
+    extrapolate: 'clamp',
+  });
 
   const {
     classDetails,
@@ -79,24 +104,6 @@ export default function ClassContentView() {
       headerImage: HEADER_IMAGES[imageIndex],
     };
   }, [classId]);
-
-  const headerHeight = scrollY.interpolate({
-    inputRange: [0, HEADER_SCROLL_DISTANCE],
-    outputRange: [HEADER_MAX_HEIGHT, HEADER_MIN_HEIGHT],
-    extrapolate: 'clamp',
-  });
-
-  const titleOpacity = scrollY.interpolate({
-    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.5, HEADER_SCROLL_DISTANCE],
-    outputRange: [1, 0.5, 0],
-    extrapolate: 'clamp',
-  });
-
-  const imageOpacity = scrollY.interpolate({
-    inputRange: [0, HEADER_SCROLL_DISTANCE * 0.3],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
 
   const allContent = useMemo(() => {
     const combined = [];
@@ -289,13 +296,20 @@ export default function ClassContentView() {
         </Pressable>
       </View>
 
-      <Animated.View style={[styles.header, { 
-        backgroundColor: headerColor,
-        height: headerHeight,
-      }]}>
+      {/* ✅ CAMBIO: Header con altura fija y transform */}
+      <Animated.View style={[
+        styles.header, 
+        { 
+          backgroundColor: headerColor,
+          transform: [{ translateY: headerTranslateY }],
+        }
+      ]}>
         <Animated.View style={[
           styles.headerImageContainer,
-          { opacity: imageOpacity }
+          { 
+            opacity: imageOpacity,
+            transform: [{ scale: imageScale }]
+          }
         ]}>
           <Image 
             source={headerImage} 
@@ -326,13 +340,17 @@ export default function ClassContentView() {
         </Animated.View>
       </Animated.View>
 
+      {/* ✅ CAMBIO: scrollEventThrottle más bajo y useNativeDriver */}
       <Animated.ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        scrollEventThrottle={8}
+        scrollEventThrottle={16} // ✅ CAMBIO: De 8 a 16 para suavidad
+        bounces={false} // ✅ NUEVO: Desactiva bounce en iOS
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
+          { 
+            useNativeDriver: true // ✅ Ahora SÍ funciona porque usamos transform
+          }
         )}
         refreshControl={
           <RefreshControl
@@ -340,6 +358,7 @@ export default function ClassContentView() {
             onRefresh={onRefresh}
             tintColor="#fff"
             colors={[headerColor]}
+            progressViewOffset={HEADER_MAX_HEIGHT} // ✅ NUEVO: Offset para RefreshControl
           />
         }
       >
@@ -385,7 +404,7 @@ const styles = StyleSheet.create({
     height: "100%",
     width: "100%",
     position: "absolute",
-    top: 320,
+    top: 380, // ✅ CAMBIO: De 320 a 380 (mismo que HEADER_MAX_HEIGHT)
     left: 0,
     right: 0,
     zIndex: 0,
@@ -415,27 +434,31 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: HEADER_MAX_HEIGHT,
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 90 : (StatusBar.currentHeight || 0) + 50,
-    paddingBottom: 20,
+    paddingTop: Platform.OS === 'ios' ? 100 : (StatusBar.currentHeight || 0) + 60, // ✅ CAMBIO: Más padding top
+    paddingBottom: 30, // ✅ CAMBIO: De 20 a 30
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
     zIndex: 10,
     overflow: 'hidden',
-    elevation: 0,
   },
   headerImageContainer: {
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 12, // ✅ CAMBIO: De 8 a 12
     marginTop: 0,
   },
   headerImage: {
-    width: 90,
-    height: 90,
+    width: 100, // ✅ CAMBIO: De 90 a 100
+    height: 100, // ✅ CAMBIO: De 90 a 100
   },
   headerContent: {
     alignItems: "center",
-    paddingBottom: 15,
+    paddingBottom: 20, // ✅ CAMBIO: De 15 a 20
   },
   headerTextContainer: {
     alignItems: "center",
@@ -445,7 +468,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: "#fff",
-    marginBottom: 10,
+    marginBottom: 12, // ✅ CAMBIO: De 10 a 12
     textAlign: "center",
     paddingHorizontal: 5,
   },
@@ -455,7 +478,7 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 10, // ✅ CAMBIO: De 8 a 10
     borderRadius: 12,
     minWidth: 140,
     justifyContent: "center",
@@ -471,7 +494,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E6E2D2",
   },
   scrollContent: {
-    paddingTop: 20,
+    paddingTop: HEADER_MAX_HEIGHT, // ✅ CAMBIO: Agregar padding para el header
   },
   content: {
     padding: 20,
