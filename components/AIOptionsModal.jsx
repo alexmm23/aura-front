@@ -75,7 +75,8 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
       );
       console.log("📘 notebookId recibido:", notebookId);
 
-      let allPages = data.data?.pages || [];
+      let allPages = data.data || [];
+      console.log("📄 Páginas obtenidas:", allPages.length) ;
       let filteredPages = allPages;
 
       setPages(filteredPages);
@@ -497,11 +498,9 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
                         onPress={() => togglePageSelection(page.id)}
                         activeOpacity={0.7}
                       >
-                        {page.contents &&
-                        page.contents.length > 0 &&
-                        page.contents[0].data ? (
+                        {page.data ? (
                           <SafeImage
-                            uri={page.contents[0].data}
+                            uri={page.data}
                             style={styles.pageImage}
                             resizeMode="cover"
                             fallbackIcon="document"
