@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Platform } from 'react-native';
+import { Platform, AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const STORAGE_KEY = 'aura_login_attempts'; // ✅ Clave única
-const MAX_ATTEMPTS = 3;
+const STORAGE_KEY = 'aura_login_attempts';
+const MAX_ATTEMPTS = 5;
 const BLOCK_DURATION = 60; // 60 segundos
 
 export const useLogin = () => {
@@ -21,68 +22,120 @@ export const useLogin = () => {
     const [isBlocked, setIsBlocked] = useState(false);
     const [remainingTime, setRemainingTime] = useState(0);
     const timerRef = useRef(null);
+    const appState = useRef(AppState.currentState);
 
-    // ✅ AGREGAR: Cargar estado del bloqueo desde sessionStorage
-    useEffect(() => {
-        if (Platform.OS === 'web') {
-            try {
+    // ✅ Función para obtener/guardar en storage según plataforma
+    const getStorageData = async () => {
+        try {
+            if (Platform.OS === 'web') {
                 const stored = sessionStorage.getItem(STORAGE_KEY);
-                if (stored) {
-                    const { attempts, blockedUntil } = JSON.parse(stored);
-                    const now = Date.now();
-                    
-                    // Verificar si el bloqueo aún está activo
-                    if (blockedUntil > now) {
-                        const remaining = Math.ceil((blockedUntil - now) / 1000);
-                        setFailedAttempts(attempts);
-                        setIsBlocked(true);
-                        setRemainingTime(remaining);
-                    } else {
-                        // El bloqueo expiró, limpiar
-                        sessionStorage.removeItem(STORAGE_KEY);
-                        setFailedAttempts(0);
-                        setIsBlocked(false);
-                        setRemainingTime(0);
-                    }
-                }
-            } catch (error) {
-                console.error('Error reading from sessionStorage:', error);
+                return stored ? JSON.parse(stored) : null;
+            } else {
+                const stored = await AsyncStorage.getItem(STORAGE_KEY);
+                return stored ? JSON.parse(stored) : null;
             }
+        } catch (error) {
+            console.error('Error reading from storage:', error);
+            return null;
+        }
+    };
+
+    const setStorageData = async (data) => {
+        try {
+            if (Platform.OS === 'web') {
+                if (data) {
+                    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                } else {
+                    sessionStorage.removeItem(STORAGE_KEY);
+                }
+            } else {
+                if (data) {
+                    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                } else {
+                    await AsyncStorage.removeItem(STORAGE_KEY);
+                }
+            }
+        } catch (error) {
+            console.error('Error saving to storage:', error);
+        }
+    };
+
+    // ✅ Función para calcular el tiempo restante basado en timestamp
+    const calculateRemainingTime = (blockedUntil) => {
+        const now = Date.now();
+        if (blockedUntil > now) {
+            return Math.ceil((blockedUntil - now) / 1000);
+        }
+        return 0;
+    };
+
+    // ✅ Función para actualizar el estado del bloqueo
+    const updateBlockStatus = async () => {
+        const stored = await getStorageData();
+        if (stored && stored.blockedUntil) {
+            const remaining = calculateRemainingTime(stored.blockedUntil);
+            
+            if (remaining > 0) {
+                setFailedAttempts(stored.attempts || 0);
+                setIsBlocked(true);
+                setRemainingTime(remaining);
+                return true;
+            } else {
+                // El bloqueo expiró
+                await setStorageData(null);
+                setFailedAttempts(0);
+                setIsBlocked(false);
+                setRemainingTime(0);
+                return false;
+            }
+        }
+        return false;
+    };
+
+    // ✅ Cargar estado inicial
+    useEffect(() => {
+        updateBlockStatus();
+    }, []);
+
+    // ✅ Detectar cuando la app vuelve del segundo plano (solo móvil)
+    useEffect(() => {
+        if (Platform.OS !== 'web') {
+            const subscription = AppState.addEventListener('change', async (nextAppState) => {
+                if (
+                    appState.current.match(/inactive|background/) &&
+                    nextAppState === 'active'
+                ) {
+                    // La app volvió al foreground, actualizar el estado
+                    await updateBlockStatus();
+                }
+                appState.current = nextAppState;
+            });
+
+            return () => {
+                subscription?.remove();
+            };
         }
     }, []);
 
-    // Limpiar timer al desmontar el componente
-    useEffect(() => {
-        return () => {
-            if (timerRef.current) {
-                clearInterval(timerRef.current);
-            }
-        };
-    }, []);
-
-    // Manejar el countdown cuando está bloqueado
+    // ✅ Timer para actualizar el countdown cada segundo
     useEffect(() => {
         if (isBlocked && remainingTime > 0) {
-            timerRef.current = setInterval(() => {
-                setRemainingTime((prev) => {
-                    if (prev <= 1) {
+            timerRef.current = setInterval(async () => {
+                const stored = await getStorageData();
+                if (stored && stored.blockedUntil) {
+                    const remaining = calculateRemainingTime(stored.blockedUntil);
+                    
+                    if (remaining > 0) {
+                        setRemainingTime(remaining);
+                    } else {
+                        // Tiempo agotado
                         setIsBlocked(false);
                         setFailedAttempts(0);
-                        
-                        // ✅ LIMPIAR sessionStorage al desbloquear
-                        if (Platform.OS === 'web') {
-                            try {
-                                sessionStorage.removeItem(STORAGE_KEY);
-                            } catch (error) {
-                                console.error('Error removing from sessionStorage:', error);
-                            }
-                        }
-                        
+                        setRemainingTime(0);
+                        await setStorageData(null);
                         clearInterval(timerRef.current);
-                        return 0;
                     }
-                    return prev - 1;
-                });
+                }
             }, 1000);
         }
 
@@ -93,12 +146,20 @@ export const useLogin = () => {
         };
     }, [isBlocked, remainingTime]);
 
+    // Limpiar timer al desmontar
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+            }
+        };
+    }, []);
+
     const handleChange = (field, value) => {
         setFormData({
             ...formData,
             [field]: value,
         });
-        // Limpiar error del campo cuando el usuario empieza a escribir
         if (errors[field]) {
             setErrors({ ...errors, [field]: undefined });
         }
@@ -124,41 +185,21 @@ export const useLogin = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    // ✅ AGREGAR: Función para guardar intentos en sessionStorage
-    const saveAttemptsToStorage = (attempts, blocked) => {
-        if (Platform.OS !== 'web') return;
-
-        try {
-            if (blocked) {
-                const blockedUntil = Date.now() + (BLOCK_DURATION * 1000);
-                sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-                    attempts,
-                    blockedUntil,
-                }));
-            } else {
-                sessionStorage.removeItem(STORAGE_KEY);
-            }
-        } catch (error) {
-            console.error('Error saving to sessionStorage:', error);
-        }
-    };
-
     const handleSubmit = async () => {
-        // Verificar si está bloqueado
-        if (isBlocked) {
+        // ✅ Verificar estado actual antes de continuar
+        const stillBlocked = await updateBlockStatus();
+        
+        if (stillBlocked || isBlocked) {
             setErrors({ 
                 form: `Demasiados intentos fallidos. Intenta de nuevo en ${remainingTime} segundos.` 
             });
             return;
         }
 
-        // Prevenir múltiples envíos
         if (isSubmitting) return;
 
-        // Limpiar errores previos
         setErrors({});
 
-        // Validación
         if (!validateForm()) {
             return;
         }
@@ -181,31 +222,58 @@ export const useLogin = () => {
             console.log('Login result received:', result);
 
             if (result && result.success) {
-                console.log('Login successful! AuthContext will handle redirection automatically');
+                console.log('Login successful!');
                 // ✅ Resetear intentos en caso de éxito
                 setFailedAttempts(0);
                 setIsBlocked(false);
                 setRemainingTime(0);
-                saveAttemptsToStorage(0, false);
-                // El AuthContext se encarga de la redirección
+                await setStorageData(null);
             } else {
                 // ✅ Incrementar intentos fallidos
                 const newFailedAttempts = failedAttempts + 1;
                 setFailedAttempts(newFailedAttempts);
 
-                const errorMessage = result?.message || 'Error desconocido en el login';
-                console.error('Login failed:', errorMessage);
-
-                // Verificar si se alcanzaron 3 intentos
-                if (newFailedAttempts >= MAX_ATTEMPTS) {
+                // 🔒 IMPORTANTE: El mensaje de error puede venir del servidor
+                // Si el servidor responde con un bloqueo, respetarlo
+                const errorMessage = result?.message || 'Credenciales incorrectas';
+                
+                // ✅ Verificar si el servidor indica un bloqueo
+                if (result?.blocked) {
+                    // El servidor indica que la cuenta está bloqueada
+                    const serverBlockTime = result?.blockDuration || BLOCK_DURATION;
+                    const blockedUntil = Date.now() + (serverBlockTime * 1000);
+                    
+                    setIsBlocked(true);
+                    setRemainingTime(serverBlockTime);
+                    
+                    await setStorageData({
+                        attempts: MAX_ATTEMPTS,
+                        blockedUntil: blockedUntil,
+                    });
+                    
+                    setErrors({ 
+                        form: result?.message || 'Cuenta bloqueada temporalmente por seguridad.' 
+                    });
+                } else if (newFailedAttempts >= MAX_ATTEMPTS) {
+                    // Bloqueo local del frontend
+                    const blockedUntil = Date.now() + (BLOCK_DURATION * 1000);
                     setIsBlocked(true);
                     setRemainingTime(BLOCK_DURATION);
-                    saveAttemptsToStorage(newFailedAttempts, true); // ✅ Guardar bloqueo
+                    
+                    await setStorageData({
+                        attempts: newFailedAttempts,
+                        blockedUntil: blockedUntil,
+                    });
+                    
                     setErrors({ 
                         form: 'Demasiados intentos fallidos. El inicio de sesión ha sido bloqueado por 1 minuto.' 
                     });
                 } else {
-                    saveAttemptsToStorage(newFailedAttempts, false); // ✅ Guardar intentos
+                    await setStorageData({
+                        attempts: newFailedAttempts,
+                        blockedUntil: null,
+                    });
+                    
                     setErrors({ 
                         form: `${errorMessage}. Intentos restantes: ${MAX_ATTEMPTS - newFailedAttempts}` 
                     });
@@ -216,19 +284,28 @@ export const useLogin = () => {
         } catch (error) {
             console.error('Login error in component:', error);
             
-            // ✅ Incrementar intentos fallidos también en caso de error
             const newFailedAttempts = failedAttempts + 1;
             setFailedAttempts(newFailedAttempts);
 
             if (newFailedAttempts >= MAX_ATTEMPTS) {
+                const blockedUntil = Date.now() + (BLOCK_DURATION * 1000);
                 setIsBlocked(true);
                 setRemainingTime(BLOCK_DURATION);
-                saveAttemptsToStorage(newFailedAttempts, true); // ✅ Guardar bloqueo
+                
+                await setStorageData({
+                    attempts: newFailedAttempts,
+                    blockedUntil: blockedUntil,
+                });
+                
                 setErrors({
                     form: 'Demasiados intentos fallidos. El inicio de sesión ha sido bloqueado por 1 minuto.',
                 });
             } else {
-                saveAttemptsToStorage(newFailedAttempts, false); // ✅ Guardar intentos
+                await setStorageData({
+                    attempts: newFailedAttempts,
+                    blockedUntil: null,
+                });
+                
                 setErrors({
                     form: `${error.message || 'Error de conexión. Verifica tu internet.'}. Intentos restantes: ${MAX_ATTEMPTS - newFailedAttempts}`,
                 });

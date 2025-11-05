@@ -11,7 +11,7 @@ import {
   Alert,
   KeyboardAvoidingView, 
 } from "react-native";
-import { SafeAreaView as SafeAreaViewContext } from "react-native-safe-area-context"; // ← AGREGAR
+import { SafeAreaView as SafeAreaViewContext } from "react-native-safe-area-context";
 import { API, buildApiUrl } from "@/config/api";
 import Svg, { Path } from "react-native-svg";
 import { StatusBar } from "expo-status-bar";
@@ -57,7 +57,7 @@ export default function Register() {
 
   const router = useRouter();
   const colors = Colors.light;
-  const styles = createStyles(colors, isLandscape);
+  const styles = useMemo(() => createStyles(colors, isLandscape), [colors, isLandscape]); // ✅ MEMO
 
   const [formData, setFormData] = useState({
     nombre: "",
@@ -149,7 +149,7 @@ export default function Register() {
         text1: "Error de registro",
         text2: error.message,
       });
-      setErrors({ general: error.message, ...formErrors });
+      setErrors({ general: error.message });
     } finally {
       setIsSubmitting(false);
     }
@@ -166,10 +166,12 @@ export default function Register() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 10}}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }} // ✅ CAMBIO: paddingBottom 10 → 20
           showsVerticalScrollIndicator={false}
           scrollEnabled={true}
           keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16} // ✅ NUEVO: Mejorar rendimiento del scroll
+          nestedScrollEnabled={false} // ✅ NUEVO: Evitar conflictos de scroll
         >
           <StatusBar style="light" />
 
@@ -259,7 +261,7 @@ const PortraitHeader = ({ colors, styles }) => (
 
 const createStyles = (theme, isLandscape) => {
   return StyleSheet.create({
-    container: { // ✨ ACTUALIZAR: agregar flex
+    container: {
       flex: 1,
       backgroundColor: "#e4d7c2",
     },
