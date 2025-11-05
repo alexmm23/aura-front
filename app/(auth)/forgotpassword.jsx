@@ -192,39 +192,46 @@ export default function ForgotPassword() {
     </View>
   );
 
+  // Solo usar TouchableWithoutFeedback en móvil, no en web
+  const Content = (
+    <View style={styles.innerContainer}>
+      <StatusBar style="light" />
+      {isLandscape || isLargeScreen ? (
+        <LandscapeHeader colors={colors} styles={styles}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {formularioCompleto}
+          </ScrollView>
+        </LandscapeHeader>
+      ) : (
+        <>
+          <PortraitHeader colors={colors} styles={styles} />
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {formularioCompleto}
+          </ScrollView>
+        </>
+      )}
+    </View>
+  );
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.innerContainer}>
-          <StatusBar style="light" />
-          {isLandscape || isLargeScreen ? (
-            <LandscapeHeader colors={colors} styles={styles}>
-              <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-              >
-                {formularioCompleto}
-              </ScrollView>
-            </LandscapeHeader>
-          ) : (
-            <>
-              <PortraitHeader colors={colors} styles={styles} />
-              <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-              >
-                {formularioCompleto}
-              </ScrollView>
-            </>
-          )}
-        </View>
-      </TouchableWithoutFeedback>
+      {Platform.OS === 'web' ? Content : (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          {Content}
+        </TouchableWithoutFeedback>
+      )}
     </KeyboardAvoidingView>
   );
 }
