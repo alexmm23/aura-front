@@ -1,4 +1,4 @@
-import React, { useRef } from "react"; // ✅ Agregar useRef
+import React from "react";
 import { View, Text, TouchableOpacity, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -22,7 +22,10 @@ export const LoginForm = ({
 
   const handleKeyPress = (e) => {
     if (Platform.OS === "web" && e.nativeEvent.key === "Enter") {
-      onSubmit();
+      // Solo ejecutar submit si no está bloqueado o enviando
+      if (!isSubmitting && !isBlocked) {
+        onSubmit();
+      }
     }
   };
 
@@ -37,8 +40,8 @@ export const LoginForm = ({
     return "Ingresar";
   };
 
-  // Determinar si el botón está deshabilitado
-  const isButtonDisabled = isSubmitting || isBlocked;
+  // ✅ Solo el botón de submit está deshabilitado
+  const isSubmitDisabled = isSubmitting || isBlocked;
 
   return (
     <View style={styles.card}>
@@ -49,6 +52,7 @@ export const LoginForm = ({
         <Text style={[styles.errorText, styles.formError]}>{errors.form}</Text>
       )}
 
+      {/* ✅ Input de email siempre habilitado */}
       <AuraTextInput
         style={styles.input}
         placeholder="Correo Electrónico"
@@ -56,11 +60,11 @@ export const LoginForm = ({
         onChangeText={(text) => onChangeText("email", text)}
         keyboardType="email-address"
         autoCapitalize="none"
-        editable={!isButtonDisabled}
         onKeyPress={handleKeyPress}
       />
       {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
+      {/* ✅ Input de contraseña siempre habilitado */}
       <View style={styles.passwordContainer}>
         <AuraTextInput
           style={styles.passwordInput}
@@ -68,13 +72,12 @@ export const LoginForm = ({
           value={formData.password}
           onChangeText={(text) => onChangeText("password", text)}
           secureTextEntry={!showPassword}
-          editable={!isButtonDisabled}
           onKeyPress={handleKeyPress}
         />
+        {/* ✅ Botón de ojo siempre habilitado */}
         <TouchableOpacity
           style={styles.eyeButton}
           onPress={onTogglePassword}
-          disabled={isButtonDisabled}
         >
           <Ionicons
             name={showPassword ? "eye" : "eye-off"}
@@ -87,10 +90,10 @@ export const LoginForm = ({
         <Text style={styles.errorText}>{errors.password}</Text>
       )}
 
+      {/* ✅ Link de contraseña olvidada siempre habilitado */}
       <TouchableOpacity
         style={styles.linkContainer}
         onPress={() => router.replace("/(auth)/forgotpassword")}
-        disabled={isButtonDisabled}
       >
         <AuraText
           style={styles.linkTextContraseña}
@@ -98,17 +101,18 @@ export const LoginForm = ({
         />
       </TouchableOpacity>
 
+      {/* ✅ Solo este botón se deshabilita */}
       <PrimaryButton
         title={getButtonText()}
         onPress={onSubmit}
-        disabled={isButtonDisabled}
+        disabled={isSubmitDisabled}
         style={styles}
       />
 
+      {/* ✅ Link de registro siempre habilitado */}
       <TouchableOpacity
         style={styles.linkContainer}
         onPress={() => router.push("/register")}
-        disabled={isButtonDisabled}
       >
         <AuraText
           style={styles.linkText}
