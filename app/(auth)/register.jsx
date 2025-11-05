@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -22,9 +22,38 @@ import { AuraText } from "@/components/AuraText";
 import Toast from "react-native-toast-message";
 
 export default function Register() {
-  const { height, width } = useWindowDimensions();
-  const isLargeScreen = width >= 928;
-  const isLandscape = width > height;
+
+  // Custom orientation detection to avoid loop on mobile web
+  const [isLandscape, setIsLandscape] = useState(() => {
+    if (typeof window !== 'undefined' && window.screen && window.screen.orientation) {
+      return window.screen.orientation.type.startsWith('landscape');
+    }
+    // fallback: use initial window size
+    if (typeof window !== 'undefined') {
+      return window.innerWidth > window.innerHeight;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // Prefer orientationchange over resize
+      const handleOrientation = () => {
+        if (window.screen && window.screen.orientation) {
+          setIsLandscape(window.screen.orientation.type.startsWith('landscape'));
+        } else {
+          setIsLandscape(window.innerWidth > window.innerHeight);
+        }
+      };
+      window.addEventListener('orientationchange', handleOrientation);
+      // fallback for browsers that don't support orientationchange
+      window.addEventListener('resize', handleOrientation);
+      return () => {
+        window.removeEventListener('orientationchange', handleOrientation);
+        window.removeEventListener('resize', handleOrientation);
+      };
+    }
+  }, []);
 
   const router = useRouter();
   const colors = Colors.light;
