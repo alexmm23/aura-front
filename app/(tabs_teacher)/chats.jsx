@@ -10,7 +10,7 @@ import {
   Platform,
   useWindowDimensions,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AuraText } from "@/components/AuraText";
 import { Colors } from "@/constants/Colors";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,13 +20,75 @@ import { useChatMessages } from "../../hooks/useChatMessages";
 import { UserSelectionModal } from "../../components/UserSelectionModal";
 import Svg, { Path } from "react-native-svg";
 
+const formatDateTime = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
+};
+
 export default function Chats() {
   const [selectedChat, setSelectedChat] = useState(null);
   const [newMessage, setNewMessage] = useState("");
   const [showUserSelection, setShowUserSelection] = useState(false);
 
   const { width, height } = useWindowDimensions();
-  const isLandscape = width > height;
+  const [isLandscape, setIsLandscape] = useState(() => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      if (window.screen && window.screen.orientation) {
+        return window.screen.orientation.type.startsWith("landscape");
+      }
+      return window.innerWidth > window.innerHeight;
+    }
+    return width > height;
+  });
+
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+
+  useEffect(() => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const handleOrientation = () => {
+        if (window.screen && window.screen.orientation) {
+          setIsLandscape(window.screen.orientation.type.startsWith("landscape"));
+        } else {
+          setIsLandscape(window.innerWidth > window.innerHeight);
+        }
+      };
+      window.addEventListener("orientationchange", handleOrientation);
+      window.addEventListener("resize", handleOrientation);
+      return () => {
+        window.removeEventListener("orientationchange", handleOrientation);
+        window.removeEventListener("resize", handleOrientation);
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") {
+      setIsLandscape(width > height);
+    }
+  }, [width, height]);
+
+  useEffect(() => {
+    if (Platform.OS === "web" && typeof window !== "undefined" && window.visualViewport) {
+      // Keep the message input visible when the mobile web keyboard appears.
+      const viewport = window.visualViewport;
+      const adjustForKeyboard = () => {
+        const offset = Math.max(0, window.innerHeight - viewport.height);
+        setKeyboardOffset(offset);
+      };
+      viewport.addEventListener("resize", adjustForKeyboard);
+      viewport.addEventListener("scroll", adjustForKeyboard);
+      adjustForKeyboard();
+      return () => {
+        viewport.removeEventListener("resize", adjustForKeyboard);
+        viewport.removeEventListener("scroll", adjustForKeyboard);
+      };
+    }
+  }, []);
 
   const {
     chats,
@@ -191,7 +253,7 @@ export default function Chats() {
                         : styles.otherMessageTime,
                     ]}
                   >
-                    {message.time}
+                    {formatDateTime(message.time)}
                   </AuraText>
                 </View>
               </View>
@@ -211,7 +273,14 @@ export default function Chats() {
           )}
 
           {/* Input */}
-          <View style={styles.inputContainer}>
+          <View
+            style={[
+              styles.inputContainer,
+              Platform.OS === "web" && keyboardOffset > 0
+                ? { marginBottom: keyboardOffset }
+                : null,
+            ]}
+          >
             <TextInput
               style={styles.messageInput}
               placeholder="Escribe un Mensaje"
@@ -319,7 +388,7 @@ export default function Chats() {
             </View>
             <View style={styles.chatMeta}>
               <AuraText style={styles.timeText}>
-                {chat.lastMessageTime}
+                {formatDateTime(chat.lastMessageTime)}
               </AuraText>
               {chat.unreadCount > 0 && (
                 <View style={styles.unreadBadge}>
