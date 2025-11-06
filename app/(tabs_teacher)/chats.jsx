@@ -10,7 +10,7 @@ import {
   Platform,
   useWindowDimensions,
 } from "react-native";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { AuraText } from "@/components/AuraText";
 import { Colors } from "@/constants/Colors";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -47,6 +47,16 @@ export default function Chats() {
   });
 
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+
+  const webKeyboardStyle = useMemo(() => {
+    if (Platform.OS !== "web" || keyboardOffset <= 0) {
+      return null;
+    }
+    return {
+      marginBottom: keyboardOffset,
+      paddingBottom: 4,
+    };
+  }, [keyboardOffset]);
 
   useEffect(() => {
     if (Platform.OS === "web" && typeof window !== "undefined") {
@@ -273,14 +283,7 @@ export default function Chats() {
           )}
 
           {/* Input */}
-          <View
-            style={[
-              styles.inputContainer,
-              Platform.OS === "web" && keyboardOffset > 0
-                ? { marginBottom: keyboardOffset }
-                : null,
-            ]}
-          >
+          <View style={[styles.inputContainer, webKeyboardStyle]}>
             <TextInput
               style={styles.messageInput}
               placeholder="Escribe un Mensaje"
