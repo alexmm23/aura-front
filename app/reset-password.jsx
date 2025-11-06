@@ -7,6 +7,10 @@ import {
   useWindowDimensions,
   TouchableOpacity,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import { API, buildApiUrl } from "@/config/api";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -87,36 +91,42 @@ export default function ResetPassword() {
 
   // Incrementar contador de renders
   renderCount.current += 1;
-
-  console.log(
-    "🔍🔍🔍 RESET-PASSWORD - Component render #",
-    renderCount.current,
-    "🔍🔍🔍"
-  );
-  console.log(
-    "🔍🔍🔍 RESET-PASSWORD - Token extraído:",
-    JSON.stringify(token),
-    "🔍🔍🔍"
-  );
-  console.log("🔍🔍🔍 RESET-PASSWORD - This is the NORMAL version 🔍🔍🔍");
-  console.log(
-    "🔍🔍🔍 RESET-PASSWORD - Tipo del token:",
-    typeof token,
-    "🔍🔍🔍"
-  );
-  console.log(
-    "🔍🔍🔍 RESET-PASSWORD - Longitud del token:",
-    token?.length,
-    "🔍🔍🔍"
-  );
-  console.log(
-    "🔍🔍🔍 RESET-PASSWORD - hasVerifiedToken:",
-    hasVerifiedToken.current,
-    "🔍🔍🔍"
-  );
-
   const { width, height } = useWindowDimensions();
   const colors = Colors.light;
+
+  const [isLandscape, setIsLandscape] = useState(() => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      if (window.screen && window.screen.orientation) {
+        return window.screen.orientation.type.startsWith("landscape");
+      }
+      return window.innerWidth > window.innerHeight;
+    }
+    return width > height;
+  });
+
+  useEffect(() => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const handleOrientation = () => {
+        if (window.screen && window.screen.orientation) {
+          setIsLandscape(window.screen.orientation.type.startsWith("landscape"));
+        } else {
+          setIsLandscape(window.innerWidth > window.innerHeight);
+        }
+      };
+      window.addEventListener("orientationchange", handleOrientation);
+      window.addEventListener("resize", handleOrientation);
+      return () => {
+        window.removeEventListener("orientationchange", handleOrientation);
+        window.removeEventListener("resize", handleOrientation);
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") {
+      setIsLandscape(width > height);
+    }
+  }, [width, height]);
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -127,37 +137,26 @@ export default function ResetPassword() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isLargeScreen = width >= 928;
-  const isLandscape = width > height;
 
   const [isSuccess, setIsSuccess] = useState(false); // Agregar este estado
 
   useEffect(() => {
     // PREVENIR múltiples ejecuciones del useEffect
     if (hasVerifiedToken.current) {
-      console.log("🔍 RESET-PASSWORD - useEffect already executed, skipping");
       return;
     }
 
     // Función para verificar el token - SOLO UNA VEZ
     const verifyTokenOnce = async () => {
-      console.log(
-        "🔍 RESET-PASSWORD - Component mounted, verifying token once"
-      );
       hasVerifiedToken.current = true; // Marcar como ejecutado INMEDIATAMENTE
 
       if (!token) {
-        console.log("🔍 RESET-PASSWORD - No token provided");
         setIsLoading(false);
         setErrors({ token: "Token no encontrado" });
         return;
       }
 
       try {
-        console.log(
-          "🔍🔍🔍 RESET-PASSWORD - Making API call to verify token:",
-          token,
-          "🔍🔍🔍"
-        );
         setIsLoading(true);
 
         const response = await apiGetResetToken(
@@ -165,33 +164,25 @@ export default function ResetPassword() {
         );
 
         if (response.ok) {
-          console.log("🔍 RESET-PASSWORD - Token verification successful");
           setIsValidToken(true);
           setUserData(response.data.user);
           setErrors({});
         } else {
-          console.log("🔍 RESET-PASSWORD - Token verification failed");
           setIsValidToken(false);
           setErrors({
             token: response.data?.error || "Token inválido o expirado",
           });
         }
       } catch (error) {
-        console.log("🔍 RESET-PASSWORD - Token verification error:", error);
         setIsValidToken(false);
         setErrors({ token: "Error al verificar el token" });
       } finally {
-        console.log(
-          "🔍 RESET-PASSWORD - Token verification complete, setting loading to false"
-        );
         setIsLoading(false);
       }
     };
 
-    // Ejecutar solo UNA VEZ al montar el componente
     verifyTokenOnce();
-  }, [token]); // Incluir token como dependencia para re-verificar si cambia
-
+  }, [token]);
   const validatePassword = (pass) => {
     if (pass.length < 8) {
       return "La contraseña debe tener al menos 8 caracteres";
@@ -262,8 +253,6 @@ export default function ResetPassword() {
       setIsSubmitting(false);
     }
   };
-
-  const Header = width > height ? LandscapeHeader : PortraitHeader;
 
   const formularioCompleto = (
     <View style={styles.card}>
@@ -380,30 +369,66 @@ export default function ResetPassword() {
     </View>
   );
 
-  return (
-    <View style={styles.container}>
+  const Content = (
+    <View style={styles.innerContainer}>
       <StatusBar style="light" />
       {isLandscape || isLargeScreen ? (
         <LandscapeHeader colors={colors} styles={styles}>
-          {formularioCompleto}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {formularioCompleto}
+          </ScrollView>
         </LandscapeHeader>
       ) : (
         <>
           <PortraitHeader colors={colors} styles={styles} />
-          {formularioCompleto}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {formularioCompleto}
+          </ScrollView>
         </>
       )}
     </View>
+  );
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
+      {Platform.OS === "web" ? Content : (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          {Content}
+        </TouchableWithoutFeedback>
+      )}
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
+    flex: 1,
     backgroundColor: "#e4d7c2",
     position: "relative",
+  },
+  innerContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    position: "relative",
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingBottom: 40,
   },
   card: {
     backgroundColor: "white",
