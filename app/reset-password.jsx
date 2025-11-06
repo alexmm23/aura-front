@@ -141,12 +141,9 @@ export default function ResetPassword() {
   const [isSuccess, setIsSuccess] = useState(false); // Agregar este estado
 
   useEffect(() => {
-    // PREVENIR múltiples ejecuciones del useEffect
     if (hasVerifiedToken.current) {
       return;
     }
-
-    // Función para verificar el token - SOLO UNA VEZ
     const verifyTokenOnce = async () => {
       hasVerifiedToken.current = true; // Marcar como ejecutado INMEDIATAMENTE
 
