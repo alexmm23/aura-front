@@ -78,8 +78,20 @@ const TaskDetails = () => {
 
   // Cargar detalles de la tarea
   useEffect(() => {
+    const resetForNewTask = () => {
+      setTask(null);
+      setTaskSubmitted(false);
+      setSubmitting(false);
+      setSubmissionText("");
+      setSelectedFile(null);
+      setHasSubmission(false);
+      setManualSubmissionData(null);
+      setShowManualSubmissionModal(false);
+    };
+
     const fetchTaskDetails = async () => {
       try {
+        setLoading(true);
         let response;
         if (platform === "moodle") {
           response = await apiGet(
@@ -113,9 +125,10 @@ const TaskDetails = () => {
 
     if (courseId && courseWorkId) {
       console.log("Fetching task details...");
+      resetForNewTask();
       fetchTaskDetails();
     }
-  }, [courseId, courseWorkId]);
+  }, [courseId, courseWorkId, submissionId]);
 
   // Función para seleccionar archivo
   const pickDocument = async () => {
