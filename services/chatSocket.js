@@ -86,6 +86,11 @@ class ChatSocketService {
             this.emit('user_typing', data);
         });
 
+        this.socket.on('message_error', (data) => {
+            console.warn('⚠️ Message error received:', data);
+            this.emit('message_error', data);
+        });
+
         this.socket.on('user_online_status', (data) => {
             console.log('🟢 User online status:', data);
             this.emit('user_online_status', data);

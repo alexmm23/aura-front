@@ -245,6 +245,22 @@ const chatStyles = StyleSheet.create({
     color: "#666",
     fontStyle: "italic",
   },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fce4e4",
+    borderRadius: 8,
+    marginHorizontal: 15,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  errorBannerText: {
+    color: "#b3261e",
+    fontSize: 12,
+    flexShrink: 1,
+  },
 });
 
 export default chatStyles;

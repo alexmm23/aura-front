@@ -90,6 +90,8 @@ const ChatScreen = ({
     stopTyping,
     typingUsers,
     messagesEndRef,
+    messageError,
+    clearMessageError,
   } = useChatMessages(selectedChat?.id);
 
   const chatList = Array.isArray(chats) ? chats : [];
@@ -98,6 +100,10 @@ const ChatScreen = ({
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || sending) return;
+
+    if (messageError) {
+      clearMessageError();
+    }
 
     const success = await sendMessage(newMessage);
     if (success) {
@@ -123,6 +129,7 @@ const ChatScreen = ({
     stopTyping();
     setSelectedChat(null);
     setNewMessage("");
+    clearMessageError();
   };
 
   const handleUserSelect = async (user) => {
@@ -246,6 +253,13 @@ const ChatScreen = ({
                 ? "Escribiendo..."
                 : `${typingSet.size} personas escribiendo...`}
             </AuraText>
+          </View>
+        )}
+
+        {messageError && (
+          <View style={styles.errorBanner}>
+            <MaterialIcons name="error-outline" size={16} color="#b3261e" />
+            <AuraText style={styles.errorBannerText}>{messageError}</AuraText>
           </View>
         )}
 

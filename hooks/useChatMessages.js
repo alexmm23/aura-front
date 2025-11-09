@@ -18,6 +18,7 @@ export const useChatMessages=(chatId) => {
     const [loading, setLoading]=useState(true);
     const [sending, setSending]=useState(false);
     const [error, setError]=useState(null);
+    const [messageError, setMessageError]=useState(null);
     const [onlineUsers, setOnlineUsers]=useState(new Set());
     const [typingUsers, setTypingUsers]=useState(new Set());
     const [hasMoreMessages, setHasMoreMessages]=useState(true);
@@ -28,7 +29,12 @@ export const useChatMessages=(chatId) => {
 
     // Initialize chat and WebSocket listeners
     useEffect(() => {
-        if (!chatId) return;
+        if (!chatId) {
+            setMessageError(null);
+            return;
+        }
+
+        setMessageError(null);
 
         // Join the chat room
         chatSocket.joinChat(chatId);
@@ -73,6 +79,14 @@ export const useChatMessages=(chatId) => {
             }
         });
 
+        const unsubscribeMessageError=chatSocket.on('message_error', (data) => {
+            const targetChatId=data?.chatId??data?.chat_id;
+            if (targetChatId===chatId) {
+                const errorMessage=data?.error||'No se pudo enviar el mensaje.';
+                setMessageError(errorMessage);
+            }
+        });
+
         // Load initial messages
         fetchMessages();
 
@@ -84,6 +98,7 @@ export const useChatMessages=(chatId) => {
             unsubscribeUserLeft();
             unsubscribeMessagesRead();
             unsubscribeTyping();
+            unsubscribeMessageError();
             if (typingTimeoutRef.current) {
                 clearTimeout(typingTimeoutRef.current);
             }
@@ -159,6 +174,7 @@ export const useChatMessages=(chatId) => {
 
             // Try to send via WebSocket first
             const socketSent=chatSocket.sendMessage(chatId, content);
+            setMessageError(null);
 
             if (!socketSent) {
                 // Fallback to REST API if WebSocket fails
@@ -198,6 +214,7 @@ export const useChatMessages=(chatId) => {
 
             setMessages(prevMessages => [...prevMessages, mockMessage]);
             scrollToBottom();
+            setMessageError('No se pudo enviar el mensaje en tiempo real. Intento usando datos locales.');
             return true;
         } finally {
             setSending(false);
@@ -297,6 +314,7 @@ export const useChatMessages=(chatId) => {
         loading,
         sending,
         error,
+        messageError,
         onlineUsers,
         typingUsers,
         hasMoreMessages,
@@ -306,6 +324,7 @@ export const useChatMessages=(chatId) => {
         startTyping,
         stopTyping,
         scrollToBottom,
+        clearMessageError: () => setMessageError(null),
         refreshMessages: () => fetchMessages(1),
     };
 };
