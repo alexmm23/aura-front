@@ -19,18 +19,15 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { getDocumentAsync } from "expo-document-picker";
 import { API } from "@/config/api";
 
-import {
-  apiGet,
-  apiPost,
-  apiPostMultipart,
-  apiDelete,
-} from "../../utils/fetchWithAuth";
+import { apiGet, apiPost, apiDelete } from "../../utils/fetchWithAuth";
 import { File } from "expo-file-system";
 import {
   AttachmentViewer,
   LinksViewer,
   CommentCard,
 } from "../../components/forums";
+import { CustomAlert } from "@/components/CustomAlert";
+import { useCustomAlert } from "@/hooks/useCustomAlert";
 
 const PostDetail = () => {
   const router = useRouter();
@@ -47,6 +44,21 @@ const PostDetail = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [links, setLinks] = useState([""]);
   const [commenting, setCommenting] = useState(false);
+  const { alertConfig, showAlert: showCustomAlert, hideAlert } = useCustomAlert();
+
+  const showErrorFeedback = (message, title = "Error") => {
+    const fallbackMessage = message || "Algo salió mal. Inténtalo de nuevo.";
+    if (Platform.OS === "web") {
+      showCustomAlert({
+        title,
+        message: fallbackMessage,
+        type: "error",
+        confirmText: "Entendido",
+      });
+    } else {
+      Alert.alert(title, fallbackMessage);
+    }
+  };
 
   useEffect(() => {
     if (postId) {
@@ -133,7 +145,7 @@ const PostDetail = () => {
 
   const createComment = async () => {
     if (!commentText.trim()) {
-      Alert.alert("Error", "El comentario no puede estar vacío");
+      showErrorFeedback("El comentario no puede estar vacío");
       return;
     }
 
@@ -180,10 +192,7 @@ const PostDetail = () => {
             });
           } catch (fileError) {
             console.error("Error processing file:", file.name, fileError);
-            Alert.alert(
-              "Error",
-              `No se pudo procesar el archivo: ${file.name}`
-            );
+            showErrorFeedback(`No se pudo procesar el archivo: ${file.name}`);
           }
         }
       }
@@ -200,21 +209,39 @@ const PostDetail = () => {
         completeCommentData
       );
 
-      if (response.ok) {
-        Alert.alert("Éxito", "Comentario agregado correctamente");
-        setShowCommentModal(false);
-        resetCommentForm();
-        fetchComments();
-      } else {
-        const errorData = await response.json();
-        Alert.alert(
-          "Error",
-          errorData.message || "No se pudo agregar el comentario"
-        );
+      let responseData = null;
+      try {
+        responseData = await response.json();
+      } catch (parseError) {
+        responseData = null;
       }
+
+      if (!response.ok || responseData?.success === false) {
+        const errorMessage =
+          responseData?.error ||
+          responseData?.message ||
+          "No se pudo agregar el comentario";
+        showErrorFeedback(errorMessage);
+        return;
+      }
+
+      if (Platform.OS === "web") {
+        showCustomAlert({
+          title: "¡Éxito!",
+          message: "Comentario agregado correctamente",
+          type: "success",
+          confirmText: "Entendido",
+        });
+      } else {
+        Alert.alert("Éxito", "Comentario agregado correctamente");
+      }
+
+      setShowCommentModal(false);
+      resetCommentForm();
+      fetchComments();
     } catch (error) {
       console.error("Error creating comment:", error);
-      Alert.alert("Error", "Error de conexión");
+      showErrorFeedback("Error de conexión");
     } finally {
       setCommenting(false);
     }
@@ -484,6 +511,17 @@ const PostDetail = () => {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={hideAlert}
+        onConfirm={alertConfig.onConfirm}
+        confirmText={alertConfig.confirmText}
+        cancelText={alertConfig.cancelText}
+        showCancel={alertConfig.showCancel}
+      />
     </SafeAreaView>
   );
 };

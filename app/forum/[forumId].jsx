@@ -18,9 +18,10 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { getDocumentAsync } from "expo-document-picker";
 import { File } from "expo-file-system";
 import { API } from "@/config/api";
-import { AuraText } from "../../components/AuraText";
 import { apiGet, apiPost } from "../../utils/fetchWithAuth";
 import { PostCard } from "../../components/forums/PostCard";
+import { CustomAlert } from "@/components/CustomAlert";
+import { useCustomAlert } from "@/hooks/useCustomAlert";
 
 const ForumDetail = () => {
   const router = useRouter();
@@ -42,6 +43,21 @@ const ForumDetail = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [links, setLinks] = useState([""]);
   const [creating, setCreating] = useState(false);
+  const { alertConfig, showAlert: showCustomAlert, hideAlert } = useCustomAlert();
+
+  const showErrorFeedback = (message, title = "Error") => {
+    const fallbackMessage = message || "Algo salió mal. Inténtalo de nuevo.";
+    if (Platform.OS === "web") {
+      showCustomAlert({
+        title,
+        message: fallbackMessage,
+        type: "error",
+        confirmText: "Entendido",
+      });
+    } else {
+      Alert.alert(title, fallbackMessage);
+    }
+  };
 
   useEffect(() => {
     if (forumId) {
@@ -128,7 +144,7 @@ const ForumDetail = () => {
 
   const createPost = async () => {
     if (!createData.title.trim() || !createData.description.trim()) {
-      Alert.alert("Error", "El título y la descripción son requeridos");
+      showErrorFeedback("El título y la descripción son requeridos");
       return;
     }
 
@@ -170,10 +186,7 @@ const ForumDetail = () => {
             });
           } catch (fileError) {
             console.error("Error processing file:", file.name, fileError);
-            Alert.alert(
-              "Error",
-              `No se pudo procesar el archivo: ${file.name}`
-            );
+            showErrorFeedback(`No se pudo procesar el archivo: ${file.name}`);
           }
         }
       }
@@ -187,19 +200,39 @@ const ForumDetail = () => {
         API.ENDPOINTS.FORUMS.CREATE_POST.replace(":id", forumId),
         payload
       );
-
-      if (response.ok) {
-        Alert.alert("Éxito", "Post creado correctamente");
-        setShowCreateModal(false);
-        resetCreateForm();
-        fetchPosts();
-      } else {
-        const errorData = await response.json();
-        Alert.alert("Error", errorData.message || "No se pudo crear el post");
+      let responseData = null;
+      try {
+        responseData = await response.json();
+      } catch (parseError) {
+        responseData = null;
       }
+
+      if (!response.ok || responseData?.success === false) {
+        const errorMessage =
+          responseData?.error ||
+          responseData?.message ||
+          "No se pudo crear el post";
+        showErrorFeedback(errorMessage);
+        return;
+      }
+
+      if (Platform.OS === "web") {
+        showCustomAlert({
+          title: "¡Éxito!",
+          message: "Post creado correctamente",
+          type: "success",
+          confirmText: "Entendido",
+        });
+      } else {
+        Alert.alert("Éxito", "Post creado correctamente");
+      }
+
+      setShowCreateModal(false);
+      resetCreateForm();
+      fetchPosts();
     } catch (error) {
       console.error("Error creating post:", error);
-      Alert.alert("Error", "Error de conexión");
+      showErrorFeedback("Error de conexión");
     } finally {
       setCreating(false);
     }
@@ -450,6 +483,17 @@ const ForumDetail = () => {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={hideAlert}
+        onConfirm={alertConfig.onConfirm}
+        confirmText={alertConfig.confirmText}
+        cancelText={alertConfig.cancelText}
+        showCancel={alertConfig.showCancel}
+      />
     </SafeAreaView>
   );
 };

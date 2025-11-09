@@ -20,6 +20,9 @@ import { AuraText } from "../../components/AuraText";
 import { apiGet, apiPost } from "../../utils/fetchWithAuth";
 import { ForumCard } from "../../components/forums/ForumCard";
 import Head from "expo-router/head";
+import { CustomAlert } from "@/components/CustomAlert";
+import { useCustomAlert } from "@/hooks/useCustomAlert";
+
 const ForumsScreen = () => {
   const router = useRouter();
   const [forums, setForums] = useState([]);
@@ -39,6 +42,21 @@ const ForumsScreen = () => {
     career: "",
   });
   const [creating, setCreating] = useState(false);
+  const { alertConfig, showAlert: showCustomAlert, hideAlert } = useCustomAlert();
+
+  const showErrorFeedback = (message, title = "Error") => {
+    const fallbackMessage = message || "Algo salió mal. Inténtalo de nuevo.";
+    if (Platform.OS === "web") {
+      showCustomAlert({
+        title,
+        message: fallbackMessage,
+        type: "error",
+        confirmText: "Entendido",
+      });
+    } else {
+      Alert.alert(title, fallbackMessage);
+    }
+  };
 
   const categories = [
     { value: "all", label: "Todos" },
@@ -77,33 +95,53 @@ const ForumsScreen = () => {
 
   const createForum = async () => {
     if (!createData.title.trim()) {
-      Alert.alert("Error", "El título es requerido");
+      showErrorFeedback("El título es requerido");
       return;
     }
 
     try {
       setCreating(true);
       const response = await apiPost(API.ENDPOINTS.FORUMS.CREATE, createData);
-
-      if (response.ok) {
-        Alert.alert("Éxito", "Foro creado correctamente");
-        setShowCreateModal(false);
-        setCreateData({
-          title: "",
-          description: "",
-          category: "general",
-          grade: "",
-          subject: "",
-          career: "",
-        });
-        fetchForums();
-      } else {
-        const errorData = await response.json();
-        Alert.alert("Error", errorData.message || "No se pudo crear el foro");
+      let responseData = null;
+      try {
+        responseData = await response.json();
+      } catch (parseError) {
+        responseData = null;
       }
+
+      if (!response.ok || responseData?.success === false) {
+        const errorMessage =
+          responseData?.error ||
+          responseData?.message ||
+          "No se pudo crear el foro";
+        showErrorFeedback(errorMessage);
+        return;
+      }
+
+      if (Platform.OS === "web") {
+        showCustomAlert({
+          title: "¡Éxito!",
+          message: "Foro creado correctamente",
+          type: "success",
+          confirmText: "Entendido",
+        });
+      } else {
+        Alert.alert("Éxito", "Foro creado correctamente");
+      }
+
+      setShowCreateModal(false);
+      setCreateData({
+        title: "",
+        description: "",
+        category: "general",
+        grade: "",
+        subject: "",
+        career: "",
+      });
+      fetchForums();
     } catch (error) {
       console.error("Error creating forum:", error);
-      Alert.alert("Error", "Error de conexión");
+      showErrorFeedback("Error de conexión");
     } finally {
       setCreating(false);
     }
@@ -348,6 +386,17 @@ const ForumsScreen = () => {
             </ScrollView>
           </SafeAreaView>
         </Modal>
+        <CustomAlert
+          visible={alertConfig.visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          type={alertConfig.type}
+          onClose={hideAlert}
+          onConfirm={alertConfig.onConfirm}
+          confirmText={alertConfig.confirmText}
+          cancelText={alertConfig.cancelText}
+          showCancel={alertConfig.showCancel}
+        />
       </SafeAreaView>
     </>
   );
