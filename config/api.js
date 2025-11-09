@@ -112,6 +112,7 @@ export const API = {
     // Student endpoints
     STUDENT: {
       HOMEWORK: '/student/homework',
+      HOMEWORK_SUBMIT_FILE: '/student/homework/:courseId/:courseWorkId/submit-file',
       HOMEWORK_MOODLE: '/student/homework/moodle',
       HOMEWORK_MOODLE_SUBMIT: '/student/homework/moodle/:courseId/:assignmentId/submit',
       COURSES: '/student/courses/list',
