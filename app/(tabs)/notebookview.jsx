@@ -291,6 +291,16 @@ const NotebookView = () => {
     }
   };
 
+  // ✅ NUEVO: Función para volver a notebookpages
+  const handleGoBack = () => {
+    router.push({
+      pathname: "/(tabs)/notebookpages",
+      params: {
+        notebookId: notebookId,
+      },
+    });
+  };
+
   if (loading) {
     return (
       <SafeAreaView
@@ -299,7 +309,7 @@ const NotebookView = () => {
       >
         <StatusBar
           barStyle="dark-content"
-          backgroundColor="#F8F9FA"
+          backgroundColor="#E6E2D2" // ✅ CAMBIO
           translucent={false}
         />
         <View style={styles.loadingContainer}>
@@ -318,7 +328,7 @@ const NotebookView = () => {
       >
         <StatusBar
           barStyle="dark-content"
-          backgroundColor="#F8F9FA"
+          backgroundColor="#E6E2D2"
           translucent={false}
         />
         <View style={styles.errorContainer}>
@@ -326,7 +336,7 @@ const NotebookView = () => {
           <Text style={styles.errorText}>No se pudo cargar la página</Text>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={handleGoBack} // ✅ CAMBIO: Usar handleGoBack
           >
             <Text style={styles.backButtonText}>Volver</Text>
           </TouchableOpacity>
@@ -342,7 +352,7 @@ const NotebookView = () => {
     >
       <StatusBar
         barStyle="dark-content"
-        backgroundColor="#F8F9FA"
+        backgroundColor="#E6E2D2"
         translucent={false}
       />
 
@@ -350,7 +360,7 @@ const NotebookView = () => {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.headerButton}
-          onPress={() => router.back()}
+          onPress={handleGoBack} // ✅ CAMBIO: Usar handleGoBack en lugar de router.back()
         >
           <Ionicons name="arrow-back" size={24} color="#CB8D27" />
         </TouchableOpacity>
@@ -506,7 +516,7 @@ const NotebookView = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: "#E6E2D2", // ✅ CAMBIO
   },
   header: {
     flexDirection: "row",
@@ -525,7 +535,7 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: "#F8F9FA", // ✅ CAMBIO
   },
   headerContent: {
     flex: 1,
@@ -560,7 +570,7 @@ const styles = StyleSheet.create({
   },
   pageImage: {
     borderRadius: 8,
-    backgroundColor: "#fff",
+    backgroundColor: "#E6E2D2",
     elevation: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },

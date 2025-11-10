@@ -13,6 +13,8 @@ import {
 import Toast from "react-native-toast-message";
 import { API, buildApiUrl } from "@/config/api";
 import { apiGet, apiPostMultipart, apiPost } from "../../utils/fetchWithAuth";
+import { CustomAlert } from "../CustomAlert"; 
+
 // Este componente usa Canvas HTML5 nativo para web
 const TOOL_PENCIL = "pen";
 const TOOL_RECT = "rect";
@@ -34,6 +36,7 @@ const ASSETS = {
   BRUSH_SIZE: require("../../assets/images/anchura.png"),
   COLOR: require("../../assets/images/color.png"),
   CLEAR: require("../../assets/images/limpiar.png"),
+  DOWNLOAD: require("../../assets/images/download.png"),
   SAVE: require("../../assets/images/salvar.png"),
   BACK: require("../../assets/images/volver.png"),
   TEXTURE: require("../../assets/images/textura_lapiz.jpg"),
@@ -43,12 +46,6 @@ const ASSETS = {
 const IMAGE_STYLE = { width: 24, height: 24 };
 
 const NotebookCanvasWeb = ({ onSave, onBack }) => {
-  // return (
-  //   <CanvaLiteBoard
-  //     onSave={onSave}
-  //     onBack={onBack}
-  //   />
-  // );
   const canvasRef = useRef();
   const fileInputRef = useRef();
   const [tool, setTool] = useState(TOOL_PENCIL);
@@ -56,6 +53,10 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
   const [brushSize, setBrushSize] = useState(2);
   const [textSize, setTextSize] = useState(16);
   const [pencilTexture, setPencilTexture] = useState(false);
+  
+  // NUEVO: Estado para el CustomAlert
+  const [showClearAlert, setShowClearAlert] = useState(false);
+  
   // Usar useRef para estados que no afectan el render del UI
   const isDrawingRef = useRef(false);
   const lastPointRef = useRef({ x: 0, y: 0 });
@@ -73,7 +74,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     x: 0,
     y: 0,
     text: "",
-  }); // Solo para el render del input visual
+  });
   const [showBrushSlider, setShowBrushSlider] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
 
@@ -134,56 +135,45 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     }
   }, []);
 
-  // Callback para manejar cambios en el texto sin causar re-renders del toolbar
   const handleTextInputChange = useCallback((e) => {
     const newText = e.target.value;
     textInputRef.current = { ...textInputRef.current, text: newText };
     setTextInput((prev) => ({ ...prev, text: newText }));
   }, []);
 
-  // Configuración inicial del canvas (solo una vez)
   useEffect(() => {
     if (Platform.OS === "web" && canvasRef.current) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d");
 
-      // Configurar canvas inicial
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.lineWidth = brushSize;
 
-      // Limpiar canvas solo al inicio
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Pre-cargar la textura de lápiz
       const textureImg = new window.Image();
       textureImg.onload = () => {
         texturePatternRef.current = ctx.createPattern(textureImg, "repeat");
       };
       textureImg.src = ASSETS.TEXTURE;
-      console.log("Texture image loading initiated", ASSETS.TEXTURE);
-      console.log("Canvas initialized", canvas, textureImg);
     }
-  }, []); // Solo ejecutar una vez al montar el componente
+  }, []);
 
   const getCanvasPos = (e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
 
-    // Detectar si es un evento táctil o de mouse
     let clientX, clientY;
 
     if (e.touches && e.touches.length > 0) {
-      // Evento táctil
       clientX = e.touches[0].clientX;
       clientY = e.touches[0].clientY;
     } else if (e.changedTouches && e.changedTouches.length > 0) {
-      // Evento táctil finalizado
       clientX = e.changedTouches[0].clientX;
       clientY = e.changedTouches[0].clientY;
     } else {
-      // Evento de mouse
       clientX = e.clientX;
       clientY = e.clientY;
     }
@@ -193,31 +183,28 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
       y: clientY - rect.top,
     };
   };
+
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     const pos = getCanvasPos(e);
 
     if (tool === TOOL_TEXT) {
-      // Mostrar input de texto en la posición clickeada
       textInputRef.current = {
         visible: true,
         x: pos.x,
         y: pos.y,
         text: "",
       };
-      // Forzar re-render solo para mostrar el input de texto
       setTextInput({ ...textInputRef.current });
       return;
     }
 
     if (tool === TOOL_IMAGE) {
       if (pendingImage) {
-        // Si hay una imagen pendiente, colocarla en la posición clickeada
         addImageToCanvas(pendingImage, pos.x, pos.y);
         setPendingImage(null);
       } else {
-        // Si no hay imagen, abrir el selector de archivos
         fileInputRef.current?.click();
       }
       return;
@@ -227,7 +214,6 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     lastPointRef.current = pos;
     if (tool === TOOL_RECT) {
       rectStartRef.current = pos;
-      // Guardar el estado actual del canvas
       canvasStateRef.current = ctx.getImageData(
         0,
         0,
@@ -237,9 +223,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     } else if (tool === TOOL_PENCIL) {
       ctx.globalCompositeOperation = "source-over";
 
-      // Aplicar textura si está activada y disponible
       if (pencilTexture && texturePatternRef.current) {
-        console.log("Applying pencil texture");
         ctx.strokeStyle = texturePatternRef.current;
       } else {
         ctx.strokeStyle = color;
@@ -250,7 +234,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
       ctx.moveTo(pos.x, pos.y);
     } else if (tool === TOOL_ERASER) {
       ctx.globalCompositeOperation = "destination-out";
-      ctx.lineWidth = brushSize * 2; // El borrador es más grande
+      ctx.lineWidth = brushSize * 2;
       ctx.beginPath();
       ctx.moveTo(pos.x, pos.y);
     }
@@ -273,10 +257,8 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
       rectStartRef.current &&
       canvasStateRef.current
     ) {
-      // Restaurar el estado original del canvas
       ctx.putImageData(canvasStateRef.current, 0, 0);
 
-      // Dibujar el rectángulo preview
       ctx.globalCompositeOperation = "source-over";
       ctx.strokeStyle = color;
       ctx.lineWidth = brushSize;
@@ -290,15 +272,15 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
 
     lastPointRef.current = pos;
   };
+
   const stopDrawing = (e) => {
-    // Prevenir el comportamiento por defecto en eventos táctiles
     if (e && e.type.includes("touch")) {
       e.preventDefault();
     }
 
     isDrawingRef.current = false;
     rectStartRef.current = null;
-    canvasStateRef.current = null; // Limpiar el estado guardado
+    canvasStateRef.current = null;
 
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext("2d");
@@ -319,10 +301,10 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
 
     ctx.fillText(text, textInput.x, textInput.y);
 
-    // Ocultar el input de texto
     textInputRef.current = { visible: false, x: 0, y: 0, text: "" };
     setTextInput({ visible: false, x: 0, y: 0, text: "" });
   };
+
   const handleTextKeyPress = (e) => {
     if (e.key === "Enter") {
       addTextToCanvas(textInput.text);
@@ -337,7 +319,6 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     if (file && file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        // Usar HTMLImageElement específicamente para evitar conflictos con React Native
         const img = new window.Image();
         img.onload = () => {
           setPendingImage(img);
@@ -346,36 +327,32 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
       };
       reader.readAsDataURL(file);
     }
-    // Limpiar el input para permitir seleccionar el mismo archivo otra vez
     e.target.value = "";
   };
+
   const addImageToCanvas = (img, x, y) => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
-    // Calcular el tamaño de la imagen para que ocupe el 100% del canvas manteniendo proporción
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
     let { width, height } = img;
 
-    // Calcular el ratio para ajustar al 100% del canvas
     const widthRatio = canvasWidth / width;
     const heightRatio = canvasHeight / height;
 
-    // Usar el ratio menor para mantener la proporción dentro del canvas
     const ratio = Math.min(widthRatio, heightRatio);
 
     width *= ratio;
     height *= ratio;
 
-    // Centrar la imagen en el canvas
     const centerX = (canvasWidth - width) / 2;
     const centerY = (canvasHeight - height) / 2;
 
-    // Dibujar la imagen centrada y ajustada al 100% del canvas
     ctx.globalCompositeOperation = "source-over";
     ctx.drawImage(img, centerX, centerY, width, height);
   };
+
   const getCanvasCursor = () => {
     if (tool === TOOL_IMAGE && pendingImage) {
       return "copy";
@@ -389,7 +366,6 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
 
   const handleToolChange = useCallback(
     (newTool) => {
-      // Si hay una imagen pendiente y se cambia de herramienta, cancelarla
       if (tool === TOOL_IMAGE && newTool !== TOOL_IMAGE && pendingImage) {
         setPendingImage(null);
       }
@@ -398,33 +374,34 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     [tool, pendingImage]
   );
 
-  const clearCanvas = useCallback(() => {
+  // MODIFICADO: Función para limpiar canvas (sin confirmación)
+  const clearCanvasConfirmed = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }, []);
 
+  // NUEVO: Función que muestra el alert antes de limpiar
+  const clearCanvas = useCallback(() => {
+    setShowClearAlert(true);
+  }, []);
+
   const saveCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
-    // Guardar el contenido actual
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-    // Rellenar fondo blanco
     ctx.globalCompositeOperation = "destination-over";
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Descargar imagen
     const dataURL = canvas.toDataURL("image/png");
 
-    // Restaurar el contenido original
     ctx.putImageData(imageData, 0, 0);
     ctx.globalCompositeOperation = "source-over";
 
-    // Crear un enlace para descargar
     const link = document.createElement("a");
     link.download = `notebook-${Date.now()}.png`;
     link.href = dataURL;
@@ -433,7 +410,6 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     onSave?.(dataURL);
   }, [onSave]);
 
-  // Función para obtener los cuadernos del usuario
   const fetchUserNotebooks = async () => {
     setLoadingNotebooks(true);
     try {
@@ -441,10 +417,8 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Fetched notebooks:", data);
         setNotebooks(data);
       } else {
-        console.error("Error fetching notebooks:", response.status);
         Toast.show({
           type: "error",
           text1: "Error al cargar cuadernos",
@@ -452,7 +426,6 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         });
       }
     } catch (error) {
-      console.error("Error fetching notebooks:", error);
       Toast.show({
         type: "error",
         text1: "Error de conexión",
@@ -463,19 +436,16 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     }
   };
 
-  // Función para guardar la nota en un cuaderno específico
   const saveNoteToNotebook = async (notebookId) => {
     if (!canvasDataToSave) return;
 
     setSavingNote(true);
     try {
-      // Convertir la imagen base64 a un blob para enviarla
       const response = await fetch(canvasDataToSave);
       const blob = await response.blob();
 
-      // Crear el objeto JSON para enviar la imagen en base64
       const noteData = {
-        image: canvasDataToSave, // Ya es base64
+        image: canvasDataToSave,
         notebook_id: notebookId,
         title: `Nota del ${new Date().toLocaleDateString()}`,
       };
@@ -486,11 +456,9 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
       );
 
       if (saveResponse.ok) {
-        // Cerrar el modal inmediatamente
         setShowNotebookModal(false);
         setCanvasDataToSave(null);
 
-        // Mostrar el Toast de éxito
         Toast.show({
           type: "success",
           text1: "¡Nota guardada!",
@@ -498,12 +466,10 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
           visibilityTime: 3000,
         });
 
-        // Esperar 2 segundos antes de ejecutar el callback de guardado
         setTimeout(() => {
           onSave?.(canvasDataToSave);
         }, 2000);
       } else {
-        console.error("Error saving note:", saveResponse.status);
         Toast.show({
           type: "error",
           text1: "Error al guardar",
@@ -511,7 +477,6 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
         });
       }
     } catch (error) {
-      console.error("Error saving note:", error);
       Toast.show({
         type: "error",
         text1: "Error de conexión",
@@ -522,33 +487,26 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     }
   };
 
-  // Función modificada para abrir el modal de selección
   const openNotebookSelector = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
-    // Guardar el contenido actual
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-    // Rellenar fondo blanco
     ctx.globalCompositeOperation = "destination-over";
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Obtener la imagen
     const dataURL = canvas.toDataURL("image/png");
 
-    // Restaurar el contenido original
     ctx.putImageData(imageData, 0, 0);
     ctx.globalCompositeOperation = "source-over";
 
-    // Guardar la data del canvas y mostrar el modal
     setCanvasDataToSave(dataURL);
     setShowNotebookModal(true);
     fetchUserNotebooks();
   }, []);
 
-  // Componente del modal para seleccionar cuaderno
   const NotebookSelectorModal = () => (
     <Modal
       visible={showNotebookModal}
@@ -626,7 +584,6 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     </Modal>
   );
 
-  // Componentes individuales memoizados para el toolbar
   const ToolButtons = memo(
     ({ tool, onToolChange }) => (
       <>
@@ -768,37 +725,6 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     [showColorPicker, color]
   );
 
-  const TextureControls = memo(
-    ({ pencilTexture, setPencilTexture }) => {
-      const handleToggle = useCallback(() => {
-        setPencilTexture((prev) => !prev);
-      }, [setPencilTexture]);
-
-      return (
-        <button
-          onClick={handleToggle}
-          style={{
-            ...styles.toolButton,
-            ...(pencilTexture ? styles.activeBtn : {}),
-          }}
-          title="Textura de lápiz"
-        >
-          <div
-            style={{
-              width: 24,
-              height: 24,
-              background: `url(${ASSETS.TEXTURE})`,
-              backgroundSize: "cover",
-              borderRadius: 3,
-              border: pencilTexture ? "2px solid #007bff" : "1px solid #ccc",
-            }}
-          />
-        </button>
-      );
-    },
-    [pencilTexture]
-  );
-
   const TextControls = memo(
     ({ tool, textSize, setTextSize }) => {
       const handleChange = useCallback(
@@ -857,7 +783,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
           style={{ ...styles.actionButton, ...styles.downloadBtn }}
           title="Descargar imagen"
         >
-          <Image source={ASSETS.SAVE} style={IMAGE_STYLE} />
+          <Image source={ASSETS.DOWNLOAD} style={IMAGE_STYLE} />
         </button>
         <button
           onClick={onOpenNotebookSelector}
@@ -876,7 +802,6 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     []
   );
 
-  // Toolbar dividido en componentes granulares
   const Toolbar = memo(
     () => (
       <View style={styles.toolbar}>
@@ -892,10 +817,6 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
           setShowColorPicker={setShowColorPickerCallback}
           color={color}
           setColor={setColorCallback}
-        />
-        <TextureControls
-          pencilTexture={pencilTexture}
-          setPencilTexture={setPencilTextureCallback}
         />
         <TextControls
           tool={tool}
@@ -914,8 +835,8 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
     []
   );
 
-  // Componente Toolbar memoizado para evitar re-renders
   const MemoizedToolbar = memo(() => <Toolbar />, []);
+
   if (Platform.OS !== "web") {
     return (
       <View style={styles.fallbackContainer}>
@@ -925,8 +846,22 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
       </View>
     );
   }
+
   return (
     <View style={styles.container}>
+      {/* NUEVO: CustomAlert para confirmación de limpieza */}
+      <CustomAlert
+        visible={showClearAlert}
+        type="warning"
+        title="¿Limpiar canvas?"
+        message="Esto borrará todo el contenido del canvas. Esta acción no se puede deshacer."
+        showCancel={true}
+        confirmText="Sí, limpiar"
+        cancelText="Cancelar"
+        onConfirm={clearCanvasConfirmed}
+        onClose={() => setShowClearAlert(false)}
+      />
+
       <View style={styles.mainContent}>
         <View style={styles.toolbarContainer}>
           <MemoizedToolbar />
@@ -939,7 +874,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
             style={{
               ...styles.canvas,
               cursor: getCanvasCursor(),
-              touchAction: "none", // Prevenir el zoom y scroll en dispositivos táctiles
+              touchAction: "none",
             }}
             onMouseDown={startDrawing}
             onMouseMove={draw}
@@ -960,7 +895,7 @@ const NotebookCanvasWeb = ({ onSave, onBack }) => {
               autoFocus
               style={{
                 position: "absolute",
-                left: textInput.x + 16, // offset para que no se superponga con el canvas
+                left: textInput.x + 16,
                 top: textInput.y + 16,
                 fontSize: `${textSize}px`,
                 color: color,
@@ -1022,7 +957,7 @@ const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "column",
     gap: 12,
-    position: "relative", // <-- Asegúrate de tener esto
+    position: "relative",
   },
   toolbar: {
     flexDirection: "column",
@@ -1122,8 +1057,8 @@ const styles = StyleSheet.create({
   },
   brushSliderPopover: {
     position: "absolute",
-    left: "120%", // Justo a la derecha de la barra
-    top: 260, // <-- Ajusta este valor según la altura de tus botones
+    left: "120%",
+    top: 260,
     backgroundColor: "#fff",
     border: "1px solid #dee2e6",
     borderRadius: 8,
@@ -1138,7 +1073,7 @@ const styles = StyleSheet.create({
   colorPickerPopover: {
     position: "absolute",
     left: "180%",
-    top: 310, // Ajusta este valor para la altura deseada
+    top: 310,
     transform: "translateX(-50%)",
     backgroundColor: "#fff",
     border: "1px solid #dee2e6",
@@ -1152,8 +1087,8 @@ const styles = StyleSheet.create({
   },
   textSizePopover: {
     position: "absolute",
-    left: "120%", // Justo a la derecha de la barra
-    top: 155, // Ajusta este valor para alinearlo con el botón de texto
+    left: "120%",
+    top: 155,
     backgroundColor: "#fff",
     border: "1px solid #dee2e6",
     borderRadius: 8,
@@ -1165,8 +1100,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     minWidth: 140,
   },
-
-  // Estilos para el modal
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",

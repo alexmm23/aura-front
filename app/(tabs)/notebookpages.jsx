@@ -186,18 +186,11 @@ const NotebookPages = () => {
           >
             <Ionicons name="arrow-back" size={24} color="#CB8D27" />
           </TouchableOpacity>
+
+          {/* Título centrado (se queda con flex para centrar correctamente) */}
           <AuraText text="Páginas del Cuaderno" style={styles.header} />
-          <TouchableOpacity
-            style={styles.refreshButton}
-            onPress={handleRefresh}
-            disabled={refreshing}
-          >
-            <Ionicons 
-              name="refresh" 
-              size={24} 
-              color={refreshing ? "#ccc" : "#CB8D27"} 
-            />
-          </TouchableOpacity>
+
+          {/* Botón de recargar eliminado */}
         </View>
         <FlatList
           data={pages}
@@ -223,11 +216,11 @@ const NotebookPages = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: "#E6E2D2", // ✅ CAMBIO
   },
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: "#E6E2D2", // ✅ CAMBIO
     paddingHorizontal: 16,
   },
   headerContainer: {
@@ -253,16 +246,6 @@ const styles = StyleSheet.create({
     color: "#CB8D27",
     flex: 1,
     textAlign: "center",
-  },
-  refreshButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: "#fff",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   grid: {
     paddingBottom: Platform.OS === "android" ? 100 : 32,

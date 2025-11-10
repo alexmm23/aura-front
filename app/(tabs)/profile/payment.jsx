@@ -284,13 +284,13 @@ export default function PaymentWeb() {
                 )}
               </View>
 
-              <TouchableOpacity
+              {/*<TouchableOpacity
                 style={[styles.secondaryButton, processing && styles.secondaryButtonDisabled]}
                 onPress={sendManualEmail}
                 disabled={processing}
               >
                 <AuraText style={styles.secondaryButtonText} text={processing ? "Enviando..." : "📧 Enviar recibo"} />
-              </TouchableOpacity>
+              </TouchableOpacity>*/}
 
               <TouchableOpacity
                 style={styles.renewButton}
@@ -569,6 +569,10 @@ const createCheckoutForm = (stripeReact) => {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [pendingCardElement, setPendingCardElement] = useState(null);
 
+    // ✅ NUEVO: Estados para errores de validación
+    const [countryError, setCountryError] = useState('');
+    const [phoneError, setPhoneError] = useState('');
+
     const showSuccessAlert = (message) => {
       setErrorMessage('');
       setSuccessMessage(message);
@@ -581,22 +585,109 @@ const createCheckoutForm = (stripeReact) => {
       setTimeout(() => setErrorMessage(''), 8000); 
     };
 
+    // ✅ NUEVO: Validar código de país (solo MX o US)
+    const validateCountry = (value) => {
+      const upperValue = value.toUpperCase().trim();
+      
+      if (!value.trim()) {
+        setCountryError('El país es requerido');
+        return false;
+      }
+
+      if (upperValue !== 'MX' && upperValue !== 'US') {
+        setCountryError('Solo se acepta MX o US');
+        return false;
+      }
+
+      setCountryError('');
+      return true;
+    };
+
+    // ✅ NUEVO: Validar teléfono (solo números, sin espacios)
+    const validatePhone = (value) => {
+      const cleanPhone = value.replace(/\s/g, ''); // Eliminar espacios
+
+      if (!cleanPhone) {
+        setPhoneError('El teléfono es requerido');
+        return false;
+      }
+
+      // Solo números, mínimo 10 dígitos
+      const phoneRegex = /^\d{10,15}$/;
+      
+      if (!phoneRegex.test(cleanPhone)) {
+        setPhoneError('Teléfono inválido (10-15 dígitos, solo números)');
+        return false;
+      }
+
+      setPhoneError('');
+      return true;
+    };
+
+    // ✅ NUEVO: Manejar cambio de país con validación
+    const handleCountryChange = (text) => {
+      // Solo permitir letras (MX/US)
+      const filtered = text.replace(/[^a-zA-Z]/g, '').toUpperCase();
+      
+      // Limitar a 2 caracteres
+      const limited = filtered.slice(0, 2);
+      
+      setCountry(limited);
+      
+      // Validar solo si tiene 2 caracteres
+      if (limited.length === 2) {
+        validateCountry(limited);
+      } else if (limited.length === 0) {
+        setCountryError('');
+      }
+    };
+
+    // ✅ NUEVO: Manejar cambio de teléfono con validación
+    const handlePhoneChange = (text) => {
+      // Solo permitir números (eliminar espacios y otros caracteres)
+      const filtered = text.replace(/[^\d]/g, '');
+      
+      // Limitar a 15 dígitos
+      const limited = filtered.slice(0, 15);
+      
+      setPhone(limited);
+      
+      // Validar en tiempo real solo si tiene al menos 10 dígitos
+      if (limited.length >= 10) {
+        validatePhone(limited);
+      } else if (limited.length === 0) {
+        setPhoneError('');
+      } else {
+        setPhoneError('Mínimo 10 dígitos');
+      }
+    };
+
     const handleSubmit = async (event) => {
       event.preventDefault();
       if (!stripe || !elements) return;
 
+      // ✅ VALIDACIONES ACTUALIZADAS
       if (!email.trim()) {
         showErrorAlert('Por favor ingresa tu correo electrónico');
         return;
       }
 
-      if (!country.trim()) {
-        showErrorAlert('Por favor ingresa tu país/región');
+      // Validar email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        showErrorAlert('Correo electrónico inválido');
         return;
       }
 
-      if (!phone.trim()) {
-        showErrorAlert('Por favor ingresa tu número de teléfono');
+      // Validar país
+      if (!validateCountry(country)) {
+        showErrorAlert(countryError || 'País inválido (solo MX o US)');
+        return;
+      }
+
+      // Validar teléfono
+      if (!validatePhone(phone)) {
+        showErrorAlert(phoneError || 'Teléfono inválido');
         return;
       }
 
@@ -631,10 +722,10 @@ const createCheckoutForm = (stripeReact) => {
           type: "card",
           card: cardElement,
           billing_details: {
-            email: email,
-            phone: phone,
+            email: email.trim(),
+            phone: phone.trim(),
             address: {
-              country: country,
+              country: country.toUpperCase().trim(),
             },
           },
         });
@@ -649,14 +740,14 @@ const createCheckoutForm = (stripeReact) => {
           paymentMethodId: paymentMethod.id, 
           amount: 9900, 
           currency: "mxn",
-          billingEmail: email, 
-          phone: phone,
-          country: country,
+          billingEmail: email.trim(), 
+          phone: phone.trim(),
+          country: country.toUpperCase().trim(),
           sendConfirmationEmail: true
         };
 
         console.log("Request body:", paymentData);
-        console.log("📧 Email del formulario que recibirá la confirmación:", email);
+        console.log("📧 Email del formulario que recibirá la confirmación:", email.trim());
 
         const response = await apiPost(API.ENDPOINTS.PAYMENT.CONFIRM, paymentData);
         
@@ -680,9 +771,9 @@ const createCheckoutForm = (stripeReact) => {
           
           if (!data.emailSent) {
             console.log('⚠️ Email not sent automatically, sending manually...');
-            await sendManualConfirmationEmail(data, email);
+            await sendManualConfirmationEmail(data, email.trim());
           } else {
-            console.log(`✅ Confirmation email sent automatically to: ${email}`);
+            console.log(`✅ Confirmation email sent automatically to: ${email.trim()}`);
           }
           
           console.log('🔄 Actualizando estado de suscripción después del pago...');
@@ -721,14 +812,14 @@ const createCheckoutForm = (stripeReact) => {
         console.log('📧 Sending manual payment confirmation email to:', userEmail);
 
         const emailResponse = await apiPost(API.ENDPOINTS.PAYMENT.SEND_CONFIRMATION, {
-          email: email,
+          email: userEmail,
           paymentData: {
             amount: 99,
             currency: 'MXN',
             paymentId: paymentData.paymentId || paymentData.id || 'N/A',
             date: new Date().toISOString(),
-            phone: phone,
-            country: country
+            phone: phone.trim(),
+            country: country.toUpperCase().trim()
           }
         });
 
@@ -754,7 +845,7 @@ const createCheckoutForm = (stripeReact) => {
               <View style={styles.modalDetails}>
                 <Text style={styles.modalDetailText}>📧 Correo: {email}</Text>
                 <Text style={styles.modalDetailText}>📱 Teléfono: {phone}</Text>
-                <Text style={styles.modalDetailText}>🌍 País: {country}</Text>
+                <Text style={styles.modalDetailText}>🌍 País: {country.toUpperCase()}</Text>
               </View>
               <View style={styles.modalButtons}>
                 <TouchableOpacity 
@@ -824,21 +915,38 @@ const createCheckoutForm = (stripeReact) => {
 
         <Text style={styles.sectionTitle}>País/Región</Text>
         <TextInput
-          style={styles.input}
-          placeholder="MX/EU/US"
+          style={[
+            styles.input, 
+            countryError && styles.inputError // ✅ NUEVO: Estilo de error
+          ]}
+          placeholder="MX o US"
           placeholderTextColor="#999"
           value={country}
-          onChangeText={setCountry}
+          onChangeText={handleCountryChange} // ✅ CAMBIADO
+          maxLength={2} // ✅ NUEVO: Límite de 2 caracteres
+          autoCapitalize="characters" // ✅ NUEVO: Auto mayúsculas
         />
+        {/* ✅ NUEVO: Mensaje de error para país */}
+        {countryError ? (
+          <Text style={styles.errorTextInput}>{countryError}</Text>
+        ) : null}
 
         <TextInput
-          style={styles.input}
-          placeholder="Teléfono"
+          style={[
+            styles.input,
+            phoneError && styles.inputError // ✅ NUEVO: Estilo de error
+          ]}
+          placeholder="Teléfono (solo números)"
           placeholderTextColor="#999"
           value={phone}
-          onChangeText={setPhone}
+          onChangeText={handlePhoneChange} // ✅ CAMBIADO
           keyboardType="phone-pad"
+          maxLength={15} // ✅ NUEVO: Límite de 15 dígitos
         />
+        {/* ✅ NUEVO: Mensaje de error para teléfono */}
+        {phoneError ? (
+          <Text style={styles.errorTextInput}>{phoneError}</Text>
+        ) : null}
 
         <TouchableOpacity
           style={[styles.payButton, processing && styles.payButtonDisabled]}
@@ -1219,5 +1327,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2E7D32',
     fontWeight: '600',
+  },
+
+  // ✅ NUEVO: Estilo para inputs con error
+  inputError: {
+    borderColor: '#F44336',
+    borderWidth: 2,
+  },
+
+  // ✅ NUEVO: Texto de error debajo de inputs
+  errorTextInput: {
+    color: '#F44336',
+    fontSize: 12,
+    marginTop: -10,
+    marginBottom: 10,
+    marginLeft: 5,
   },
 });
