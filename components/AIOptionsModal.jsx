@@ -5,8 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  TextInput,
-  ActivityIndicator,
+  ActivityIndicator,    // ... TextInput eliminado
   useWindowDimensions,
   Alert,
   Platform,
@@ -27,8 +26,7 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
   const [selectedPages, setSelectedPages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [selectedOption, setSelectedOption] = useState(null);
-  const [numQuestions, setNumQuestions] = useState("10");
+  const [selectedOption, setSelectedOption] = useState("ocr"); // ✅ por defecto OCR
 
   // ✅ Estado para CustomAlert
   const [alertConfig, setAlertConfig] = useState({
@@ -38,18 +36,13 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
     type: "error",
   });
 
+  // ✅ Solo dejamos OCR
   const aiOptions = [
     {
       id: "ocr",
       title: "📝 Procesar con OCR",
       description: "Extrae texto de las páginas seleccionadas",
       icon: "scan",
-    },
-    {
-      id: "study",
-      title: "❓ Generar Preguntas",
-      description: "Crea preguntas de estudio automáticamente",
-      icon: "help-circle",
     },
   ];
 
@@ -144,70 +137,40 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
       return;
     }
 
-    if (!selectedOption) {
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "Debes seleccionar una opción de IA",
-      });
-      return;
-    }
-
     try {
       setProcessing(true);
 
-      let endpoint, payload;
+      // ✅ Solo OCR
+      const endpoint = API.ENDPOINTS.AI.OCR;
+      const payload = { content_ids: selectedPages };
 
-      if (selectedOption === "ocr") {
-        endpoint = API.ENDPOINTS.AI.OCR;
-        payload = { content_ids: selectedPages };
-      } else if (selectedOption === "study") {
-        const questions = parseInt(numQuestions) || 10;
-        endpoint = API.ENDPOINTS.AI.STUDY_QUESTIONS;
-        payload = { page_ids: selectedPages, num_questions: questions };
-      }
-
-      console.log("🚀 Procesando con IA:", { endpoint, payload });
+      console.log("🚀 Procesando con IA (OCR):", { endpoint, payload });
 
       const response = await apiPost(endpoint, payload);
 
       if (!response.ok) {
         const errorData = await response.json();
         const errorMsg = errorData.error || errorData.message || "Error desconocido";
-        
         console.error("❌ Error de IA (respuesta no OK):", errorMsg);
         setProcessing(false);
-        showAIErrorAlert(errorMsg); // ✅ Cierra el modal automáticamente
+        showAIErrorAlert(errorMsg);
         return;
       }
 
       const result = await response.json();
       console.log("✅ Resultado de IA:", result);
 
-      // ✅ VALIDAR: Verificar si el procesamiento fue exitoso
+      // ✅ Validación de OCR (se mantiene)
       if (result.data) {
         const { successful, failed, results } = result.data;
-        
-        console.log("📊 Estadísticas:", { successful, failed, results });
-
-        // Si todas las páginas fallaron
         if (failed > 0 && successful === 0) {
-          console.log("❌ Todas las páginas fallaron");
-          
-          // ✅ Log detallado del error para debugging (solo en consola)
           const failedResults = results.filter(r => !r.success);
-          failedResults.forEach(r => {
-            console.error(`Página ${r.page_id} falló:`, r.error);
-          });
-          
+          failedResults.forEach(r => console.error(`Página ${r.page_id} falló:`, r.error));
           setProcessing(false);
-          showAIErrorAlert("No se pudo procesar ninguna página"); // ✅ Mensaje genérico
+          showAIErrorAlert("No se pudo procesar ninguna página");
           return;
         }
-
-        // Si algunas páginas fallaron pero otras sí funcionaron
         if (failed > 0 && successful > 0) {
-          console.log("⚠️ Procesamiento parcial");
           Toast.show({
             type: "warning",
             text1: "⚠️ Procesamiento parcial",
@@ -216,127 +179,61 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
           });
         }
       }
-      if (selectedOption === "ocr") {
-        const hasTopLevelText =
-          !!result.text ||
-          !!result.extracted_text ||
-          !!result.texto_extraido ||
-          !!result.texto_corregido;
 
-        const resultsArray = result.data?.results || result.results || [];
-        const hasResultsText =
-          Array.isArray(resultsArray) &&
-          resultsArray.some((r) => {
-        return (
-          r.success &&
-          (
-            !!r.texto_extraido ||
-            !!r.texto_corregido ||
-            (r.estadisticas && (r.estadisticas.palabras_extraidas || 0) > 0)
-          )
-        );
-          });
+      const resultsArray = result.data?.results || result.results || [];
+      const hasTopLevelText = !!result.text || !!result.extracted_text || !!result.texto_extraido || !!result.texto_corregido;
+      const hasResultsText =
+        Array.isArray(resultsArray) &&
+        resultsArray.some((r) => r.success && (!!r.texto_extraido || !!r.texto_corregido || (r.estadisticas && (r.estadisticas.palabras_extraidas || 0) > 0)));
+      const hasText = hasTopLevelText || hasResultsText;
 
-        const hasText = hasTopLevelText || hasResultsText;
-
-        if (!hasText) {
-          console.log("❌ No se extrajo texto");
-          setProcessing(false);
-          showAIErrorAlert("La IA no pudo extraer texto");
-          return;
-        }
-
-        let extractedWordCount = 0;
-
-        if (Array.isArray(resultsArray) && resultsArray.length > 0) {
-          extractedWordCount = resultsArray.reduce((sum, r) => {
-        if (r.estadisticas && typeof r.estadisticas.palabras_extraidas === "number") {
-          return sum + r.estadisticas.palabras_extraidas;
-        }
-        if (r.texto_extraido) {
-          return sum + (String(r.texto_extraido).split(/\s+/).filter(Boolean).length || 0);
-        }
-        if (r.texto_corregido) {
-          return sum + (String(r.texto_corregido).split(/\s+/).filter(Boolean).length || 0);
-        }
-        return sum;
-          }, 0);
-        } else {
-          // Fallback a campos top-level
-          if (result.texto_extraido) {
-        extractedWordCount = String(result.texto_extraido).split(/\s+/).filter(Boolean).length;
-          } else if (result.texto_corregido) {
-        extractedWordCount = String(result.texto_corregido).split(/\s+/).filter(Boolean).length;
-          } else if (result.text || result.extracted_text) {
-        const txt = result.text || result.extracted_text;
-        extractedWordCount = String(txt).split(/\s+/).filter(Boolean).length;
-          }
-        }
-
-        console.log("✅ OCR exitoso - palabras aproximadas extraídas:", extractedWordCount);
-        Toast.show({
-          type: "success",
-          text1: "✅ Texto extraído",
-          text2:
-        extractedWordCount > 0
-          ? `${extractedWordCount} palabras extraídas`
-          : "El texto se procesó correctamente",
-          visibilityTime: 3000,
-        });
-      } else if (selectedOption === "study") {
-        const hasQuestions = result.questions || 
-                            (result.data?.results && 
-                             result.data.results.some(r => r.success && r.data?.questions));
-        
-        const questionCount = result.questions?.length || 
-                             result.data?.results?.reduce((sum, r) => 
-                               sum + (r.data?.questions?.length || 0), 0) || 0;
-
-        if (!hasQuestions || questionCount === 0) {
-          console.log("❌ No se generaron preguntas");
-          setProcessing(false);
-          showAIErrorAlert("La IA no pudo generar preguntas"); // ✅ Mensaje genérico
-          return;
-        }
-
-        console.log("✅ Preguntas generadas:", questionCount);
-        Toast.show({
-          type: "success",
-          text1: "✅ Preguntas generadas",
-          text2: `${questionCount} preguntas creadas exitosamente`,
-          visibilityTime: 3000,
-        });
+      if (!hasText) {
+        console.log("❌ No se extrajo texto");
+        setProcessing(false);
+        showAIErrorAlert("La IA no pudo extraer texto");
+        return;
       }
+
+      let extractedWordCount = 0;
+      if (Array.isArray(resultsArray) && resultsArray.length > 0) {
+        extractedWordCount = resultsArray.reduce((sum, r) => {
+          if (r.estadisticas && typeof r.estadisticas.palabras_extraidas === "number") return sum + r.estadisticas.palabras_extraidas;
+          if (r.texto_extraido) return sum + (String(r.texto_extraido).split(/\s+/).filter(Boolean).length || 0);
+          if (r.texto_corregido) return sum + (String(r.texto_corregido).split(/\s+/).filter(Boolean).length || 0);
+          return sum;
+        }, 0);
+      } else {
+        if (result.texto_extraido) extractedWordCount = String(result.texto_extraido).split(/\s+/).filter(Boolean).length;
+        else if (result.texto_corregido) extractedWordCount = String(result.texto_corregido).split(/\s+/).filter(Boolean).length;
+        else if (result.text || result.extracted_text) extractedWordCount = String(result.text || result.extracted_text).split(/\s+/).filter(Boolean).length;
+      }
+
+      console.log("✅ OCR exitoso - palabras aproximadas extraídas:", extractedWordCount);
+      Toast.show({
+        type: "success",
+        text1: "✅ Texto extraído",
+        text2: extractedWordCount > 0 ? `${extractedWordCount} palabras extraídas` : "El texto se procesó correctamente",
+        visibilityTime: 3000,
+      });
 
       // ✅ ÉXITO: Limpiar y cerrar
       setSelectedPages([]);
-      setSelectedOption(null);
-      setNumQuestions("10");
-      
+      setSelectedOption("ocr");
       console.log("✅ Enviando resultado al padre:", result);
-      
-      // Delay para que el usuario vea el toast de éxito
-      setTimeout(() => {
-        onClose(result);
-      }, 800);
-
+      setTimeout(() => onClose(result), 800);
     } catch (error) {
       console.error("❌ Error processing AI (catch):", error);
       setProcessing(false);
-      showAIErrorAlert(error.message); // ✅ Cierra el modal automáticamente
+      showAIErrorAlert(error.message);
     } finally {
-      // Resetear processing después de un delay
-      setTimeout(() => {
-        setProcessing(false);
-      }, 100);
+      setTimeout(() => setProcessing(false), 100);
     }
   };
 
   const handleClose = () => {
     setSelectedPages([]);
-    setSelectedOption(null);
-    setNumQuestions("10");
-    setProcessing(false); // ✅ Asegurar que se resetea processing
+    setSelectedOption("ocr");
+    setProcessing(false);
     onClose();
   };
 
@@ -387,10 +284,10 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
               contentContainerStyle={styles.scrollContentContainer}
               showsVerticalScrollIndicator={true}
             >
-              {/* Opciones de IA */}
+              {/* Opciones de IA (solo OCR) */}
               <View style={styles.section}>
                 <AuraText
-                  text="Selecciona una opción:"
+                  text="Procesamiento disponible:"
                   style={styles.sectionTitle}
                 />
                 {aiOptions.map((option) => (
@@ -419,8 +316,7 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
                           text={option.title}
                           style={[
                             styles.optionTitle,
-                            selectedOption === option.id &&
-                              styles.optionTitleSelected,
+                            selectedOption === option.id && styles.optionTitleSelected,
                           ]}
                         />
                         <AuraText
@@ -429,36 +325,16 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
                         />
                       </View>
                       {selectedOption === option.id && (
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={28}
-                          color="#007bff"
-                        />
+                        <Ionicons name="checkmark-circle" size={28} color="#007bff" />
                       )}
                     </View>
                   </TouchableOpacity>
                 ))}
 
-                {/* Opciones adicionales para preguntas */}
-                {selectedOption === "study" && (
-                  <View style={styles.questionOptions}>
-                    <AuraText
-                      text="Número de preguntas:"
-                      style={styles.questionLabel}
-                    />
-                    <TextInput
-                      style={styles.questionInput}
-                      value={numQuestions}
-                      onChangeText={setNumQuestions}
-                      keyboardType="numeric"
-                      placeholder="10"
-                      placeholderTextColor="#999"
-                    />
-                  </View>
-                )}
+                {/* ❌ Se elimina por completo el bloque de “study” y el input de número de preguntas */}
               </View>
 
-              {/* Selección de páginas */}
+              {/* Selección de páginas (sin cambios) */}
               <View style={styles.section}>
                 <AuraText
                   text={`Selecciona las páginas (${selectedPages.length} seleccionadas):`}
@@ -545,13 +421,10 @@ export default function AIOptionsModal({ visible, onClose, notebookId }) {
                 style={[
                   styles.button,
                   styles.processButton,
-                  (processing || selectedPages.length === 0 || !selectedOption) &&
-                    styles.buttonDisabled,
+                  (processing || selectedPages.length === 0) && styles.buttonDisabled, // ✅ condición simplificada
                 ]}
                 onPress={handleProcessAI}
-                disabled={
-                  processing || selectedPages.length === 0 || !selectedOption
-                }
+                disabled={processing || selectedPages.length === 0}
                 activeOpacity={0.8}
               >
                 {processing ? (
@@ -680,26 +553,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#666",
     lineHeight: 18,
-  },
-  questionOptions: {
-    marginTop: 12,
-    padding: 16,
-    backgroundColor: "#f8f9fa",
-    borderRadius: 12,
-  },
-  questionLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
-  },
-  questionInput: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 14,
-    fontSize: 16,
-    backgroundColor: "#fff",
   },
   loadingContainer: {
     alignItems: "center",

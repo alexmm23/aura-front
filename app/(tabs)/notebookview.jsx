@@ -299,7 +299,7 @@ const NotebookView = () => {
       >
         <StatusBar
           barStyle="dark-content"
-          backgroundColor="#F8F9FA"
+          backgroundColor="#E6E2D2" // ✅ CAMBIO
           translucent={false}
         />
         <View style={styles.loadingContainer}>
@@ -318,7 +318,7 @@ const NotebookView = () => {
       >
         <StatusBar
           barStyle="dark-content"
-          backgroundColor="#F8F9FA"
+          backgroundColor="#E6E2D2" // ✅ CAMBIO
           translucent={false}
         />
         <View style={styles.errorContainer}>
@@ -342,7 +342,7 @@ const NotebookView = () => {
     >
       <StatusBar
         barStyle="dark-content"
-        backgroundColor="#F8F9FA"
+        backgroundColor="#E6E2D2" // ✅ CAMBIO
         translucent={false}
       />
 
@@ -506,7 +506,7 @@ const NotebookView = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: "#E6E2D2", // ✅ CAMBIO
   },
   header: {
     flexDirection: "row",
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: "#F8F9FA", // ✅ CAMBIO
   },
   headerContent: {
     flex: 1,
@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
   },
   pageImage: {
     borderRadius: 8,
-    backgroundColor: "#fff",
+    backgroundColor: "#E6E2D2",
     elevation: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
