@@ -1,4 +1,4 @@
-import { View, ScrollView, useWindowDimensions } from "react-native";
+import { View, ScrollView, useWindowDimensions, Platform } from "react-native";
 import React from "react";
 import { AuraText } from "@/components/AuraText";
 import Head from "expo-router/head";
@@ -12,21 +12,27 @@ import { PortraitHeader } from "@/components/classes/PortraitHeader";
 import { EmptyState } from "@/components/classes/EmptyState";
 import { LoadingState } from "@/components/classes/LoadingState";
 import { styles } from "@/components/classes/styles";
+import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet } from "react-native";
 
 export default function HomeTeacher() {
   const { classes, loading } = useClasses();
   const { height, width } = useWindowDimensions();
   const isLandscape = width > height;
+  const isWeb = Platform.OS === 'web';
   const router = useRouter();
 
   const handleConnectGoogleClassroom = () => {
     router.push("/(tabs)/profile");
   };
 
+  // Calcular el ancho máximo de las cards - ahora ocupará todo el ancho con padding
+  const maxContentWidth = '100%';
+
   return (
     <>
       <Head>
-        <title>Mis Clases - AURA | Plataforma Educativa</title>
+        <title>Clases | AURA - Plataforma Educativa</title>
         <meta
           name="description"
           content="Visualiza y gestiona todas tus clases de Google Classroom y Microsoft Teams en un solo lugar. Accede fácilmente a tus cursos académicos."
@@ -38,22 +44,25 @@ export default function HomeTeacher() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
       <SafeAreaProvider>
-        <SafeAreaView style={styles.container} edges={["right", "left", "top"]}>
+        <SafeAreaView style={styles.container} edges={["right", "left", "bottom"]}>
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={true}
           >
-            {/* Header con SVG */}
+            {/* SVG de fondo en todas las plataformas */}
             {isLandscape ? <LandscapeHeader /> : <PortraitHeader />}
 
-            {/* Título responsive */}
-            <View style={styles.contentWrapper}>
-              <View style={styles.headerTitle}>
-                <AuraText
-                  text={"Mis Clases"}
-                  style={isLandscape ? styles.titleLandscape : styles.title}
-                />
+            {/* Header con recuadro en todas las plataformas */}
+            <View style={headerStyles.headerContainer}>
+              <View style={headerStyles.header}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                  <Ionicons name="school" size={48} color="#CB8D27" />
+                  <AuraText
+                    text="Mis Clases"
+                    style={headerStyles.title}
+                  />
+                </View>
               </View>
             </View>
 
@@ -64,7 +73,11 @@ export default function HomeTeacher() {
               ) : classes.length === 0 ? (
                 <EmptyState onConnect={handleConnectGoogleClassroom} />
               ) : (
-                <View style={styles.classesGrid}>
+                <View style={[styles.classesGrid, {
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  width: '100%',
+                }]}>
                   {classes.map((classItem) => (
                     <ClassCard
                       key={classItem.id}
@@ -82,3 +95,33 @@ export default function HomeTeacher() {
     </>
   );
 }
+
+const headerStyles = StyleSheet.create({
+  headerContainer: {
+    width: '100%',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 10,
+    alignSelf: 'center',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    width: '100%',
+  },
+  title: {
+    fontSize: 42,
+    fontWeight: 'bold',
+    color: '#CB8D27',
+  },
+});
