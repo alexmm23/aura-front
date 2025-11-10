@@ -82,6 +82,32 @@ export default function HomeScreen() {
     }, [])
   );
 
+  // ✅ NUEVA: Función para navegar a la nota
+  const handleNotePress = (note) => {
+    console.log("📝 Navegando a nota:", note);
+
+    // Verificar que la nota tenga el ID necesario
+    if (!note.id) {
+      console.error("❌ La nota no tiene ID");
+      return;
+    }
+
+    // Si la nota tiene notebook_id, ir a notebookview con la página específica
+    if (note.notebook_id) {
+      router.push({
+        pathname: "/(tabs)/notebookview",
+        params: {
+          pageId: note.id,
+          notebookId: note.notebook_id,
+        },
+      });
+    } else {
+      // Si no tiene notebook_id, intentar ir a la lista de cuadernos
+      console.warn("⚠️ La nota no tiene notebook_id, redirigiendo a cuadernos");
+      router.push("/(tabs)/notebookscreen");
+    }
+  };
+
   return (
     <>
       <Head>
@@ -113,19 +139,31 @@ export default function HomeScreen() {
               ) : (
                 <>
                   {notes.map((note, index) => (
-                    <View key={index} style={styles.noteCard}>
+                    <TouchableOpacity
+                      key={note.id || index}
+                      style={styles.noteCard}
+                      onPress={() => handleNotePress(note)} // ✅ NUEVO: Agregar onPress
+                      activeOpacity={0.7}
+                    >
                       <View style={{ flex: 1, marginRight: 10 }}>
                         <AuraText
                           style={styles.noteTitle}
                           text={`Nota #${index + 1}`}
-                        ></AuraText>
+                        />
+                        {/* ✅ NUEVO: Mostrar nombre del cuaderno si está disponible */}
+                        {note.notebook_title && (
+                          <AuraText
+                            style={styles.notebookName}
+                            text={note.notebook_title}
+                          />
+                        )}
                       </View>
                       <Image
                         source={{ uri: note.data }}
                         style={styles.noteImage}
                         resizeMode="cover"
                       />
-                    </View>
+                    </TouchableOpacity>
                   ))}
 
                   {notes.length === 0 && (
@@ -133,11 +171,11 @@ export default function HomeScreen() {
                       <AuraText
                         style={styles.noteTitle}
                         text={"No hay notas por mostrar"}
-                      ></AuraText>
+                      />
                       <AuraText
                         style={styles.noteText}
                         text={"No hay contenido disponible"}
-                      ></AuraText>
+                      />
                     </View>
                   )}
                 </>
@@ -159,7 +197,6 @@ export default function HomeScreen() {
                     key={task.id || index}
                     style={styles.taskCard}
                     onPress={() => {
-                      //task.id contiene el id_courseid_courseworkid
                       const { id } = task;
                       const [platform, courseId, courseWorkId, submissionId] =
                         id.split("_");
@@ -360,6 +397,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#A64AC9",
     marginBottom: 5,
+  },
+  // ✅ NUEVO: Estilo para el nombre del cuaderno
+  notebookName: {
+    fontSize: 12,
+    color: "#666",
+    fontStyle: "italic",
+    marginTop: 2,
   },
   noteImage: {
     width: 60,
