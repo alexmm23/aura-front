@@ -193,6 +193,10 @@ export const API = {
       OCR: '/auraai/ocr',
       STUDY_QUESTIONS: '/auraai/study',
     },
+    NOTIFICATIONS: {
+      TOKENS: '/notifications/tokens',
+      TEST: '/notifications/test',
+    },
 
   }
 }

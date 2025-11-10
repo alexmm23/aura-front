@@ -46,7 +46,8 @@ module.exports={
       permissions: [
         "CAMERA",
         "WRITE_EXTERNAL_STORAGE",
-        "READ_EXTERNAL_STORAGE"
+        "READ_EXTERNAL_STORAGE",
+        "POST_NOTIFICATIONS"
       ],
       // ✅ Configuración para Android deep links
       intentFilters: [
@@ -87,6 +88,7 @@ module.exports={
           origin: env.webUrl
         }
       ],
+      "expo-notifications",
       "expo-dev-client",
       "expo-web-browser",
       [

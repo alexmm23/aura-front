@@ -6,16 +6,21 @@ import { apiGet, apiPost, apiPostNoAuth } from "../utils/fetchWithAuth";
 import { View, ActivityIndicator, Text } from "react-native";
 import { Colors } from "../constants/Colors";
 import AppNavigator from "../components/AppNavigator";
+import {
+  registerDevicePushToken,
+  unregisterDevicePushToken,
+  initializeNotificationListeners,
+  removeStoredPushToken,
+} from "@/services/pushNotifications";
 
 const AuthContext = createContext(null);
 
 async function clearAuthData() {
-  if (isWeb()) {
-    // Para web, no necesitamos limpiar AsyncStorage
-    return;
+  if (!isWeb()) {
+    await AsyncStorage.removeItem("userToken");
+    await AsyncStorage.removeItem("refreshToken");
   }
-  await AsyncStorage.removeItem("userToken");
-  await AsyncStorage.removeItem("refreshToken");
+  await removeStoredPushToken();
 }
 
 export const AuthProvider = ({ children }) => {
@@ -25,8 +30,29 @@ export const AuthProvider = ({ children }) => {
   const [shouldPreserveRoute, setShouldPreserveRoute] = useState(false);
 
   useEffect(() => {
+    const cleanup = initializeNotificationListeners({
+      onResponse: (response) => {
+        const data = response?.notification?.request?.content?.data;
+        console.log("[Notifications] Interaction received", data);
+      },
+    });
 
-  }, [isAuthenticated, isLoading, user]);
+    return () => {
+      if (typeof cleanup === "function") {
+        cleanup();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) {
+      return;
+    }
+
+    registerDevicePushToken({ force: true }).catch((error) => {
+      console.warn("[Notifications] Failed to sync push token", error);
+    });
+  }, [isAuthenticated, user?.id]);
 
   // Verificación inicial de autenticación - SOLO UNA VEZ
   useEffect(() => {
@@ -204,6 +230,9 @@ export const AuthProvider = ({ children }) => {
         const decodedUser = jwtDecode(token);
         setUser(decodedUser);
         setIsAuthenticated(true);
+        registerDevicePushToken({ force: true }).catch((error) =>
+          console.warn("[Notifications] Post-login push registration failed", error)
+        );
         return { success: true, message: "Login exitoso" };
       }
     } catch (error) {
@@ -216,6 +245,12 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
+      await unregisterDevicePushToken();
+    } catch (error) {
+      console.warn("[Notifications] Unable to unregister push token on logout", error);
+    }
+
+    try {
       if (isWeb()) {
         await apiPost(`${API.ENDPOINTS.AUTH.LOGOUT}/web`);
       } else {
@@ -224,9 +259,7 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       // Incluso si hay error en el API call, limpiar estado local
-      if (!isWeb()) {
-        await clearAuthData();
-      }
+      await clearAuthData();
     } finally {
       setUser(null);
       setIsAuthenticated(false);
