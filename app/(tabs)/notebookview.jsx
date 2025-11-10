@@ -291,6 +291,16 @@ const NotebookView = () => {
     }
   };
 
+  // ✅ NUEVO: Función para volver a notebookpages
+  const handleGoBack = () => {
+    router.push({
+      pathname: "/(tabs)/notebookpages",
+      params: {
+        notebookId: notebookId,
+      },
+    });
+  };
+
   if (loading) {
     return (
       <SafeAreaView
@@ -318,7 +328,7 @@ const NotebookView = () => {
       >
         <StatusBar
           barStyle="dark-content"
-          backgroundColor="#E6E2D2" // ✅ CAMBIO
+          backgroundColor="#E6E2D2"
           translucent={false}
         />
         <View style={styles.errorContainer}>
@@ -326,7 +336,7 @@ const NotebookView = () => {
           <Text style={styles.errorText}>No se pudo cargar la página</Text>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={handleGoBack} // ✅ CAMBIO: Usar handleGoBack
           >
             <Text style={styles.backButtonText}>Volver</Text>
           </TouchableOpacity>
@@ -342,7 +352,7 @@ const NotebookView = () => {
     >
       <StatusBar
         barStyle="dark-content"
-        backgroundColor="#E6E2D2" // ✅ CAMBIO
+        backgroundColor="#E6E2D2"
         translucent={false}
       />
 
@@ -350,7 +360,7 @@ const NotebookView = () => {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.headerButton}
-          onPress={() => router.back()}
+          onPress={handleGoBack} // ✅ CAMBIO: Usar handleGoBack en lugar de router.back()
         >
           <Ionicons name="arrow-back" size={24} color="#CB8D27" />
         </TouchableOpacity>
