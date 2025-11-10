@@ -251,3 +251,28 @@ export const initializeNotificationListeners = ({ onReceive, onResponse } = {}) 
     });
   };
 };
+
+export const presentLocalNotification = async ({
+  title,
+  body,
+  data = {},
+  sound = Platform.OS === 'ios' ? 'default' : undefined,
+} = {}) => {
+  if (isWeb()) {
+    return;
+  }
+
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: title || 'Aura',
+        body: body || 'Tienes una nueva notificación',
+        data,
+        sound,
+      },
+      trigger: null,
+    });
+  } catch (error) {
+    console.warn('[Notifications] Unable to present local notification:', error);
+  }
+};

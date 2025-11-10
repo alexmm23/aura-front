@@ -133,10 +133,14 @@ const chatStyles = StyleSheet.create({
   },
   messagesContainer: {
     flex: 1,
-    padding: 15,
+    paddingHorizontal: 15,
+  },
+  messagesContent: {
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   messageContainer: {
-    marginBottom: 15,
+    marginBottom: 12,
   },
   ownMessage: {
     alignItems: "flex-end",

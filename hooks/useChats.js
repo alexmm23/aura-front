@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiGet, apiPost } from '../utils/fetchWithAuth';
 import { API } from '../config/api';
@@ -55,21 +55,41 @@ export const useChats=(userType='student') => {
 
     // Update chat list when new message arrives
     const updateChatWithNewMessage=(data) => {
-        const { message, chatId }=data;
+        const message=data?.message;
+        const chatId=data?.chatId??data?.chat_id;
+        if (!message||!chatId) {
+            return;
+        }
 
-        setChats(prevChats => {
-            return prevChats.map(chat => {
-                if (chat.id===chatId) {
-                    return {
-                        ...chat,
-                        last_message: message,
-                        unread_count: chat.unread_count+1,
-                        updated_at: message.created_at
-                    };
+        const senderId=message.sender_id||message.senderId;
+        const isOwnMessage=senderId&&currentUserId&&senderId===currentUserId;
+        const isViewingActiveChat=chatSocket.activeChatId===chatId&&AppState.currentState==='active';
+
+        setChats(prevChats =>
+            prevChats.map(chat => {
+                if (chat.id!==chatId) {
+                    return chat;
                 }
-                return chat;
-            });
-        });
+
+                const previousUnreadRaw=chat.unreadCount??chat.unread_count??0;
+                const previousUnread=Number.isFinite(previousUnreadRaw)?previousUnreadRaw:Number(previousUnreadRaw)||0;
+                const shouldResetUnread=isViewingActiveChat||isOwnMessage;
+                const nextUnread=shouldResetUnread?0:previousUnread+1;
+
+                const lastMessageContent=message.content||chat.lastMessage||chat.last_message?.content||'';
+                const lastMessageTime=message.created_at||chat.lastMessageTime||chat.updated_at||new Date().toISOString();
+
+                return {
+                    ...chat,
+                    lastMessage: lastMessageContent,
+                    last_message: message,
+                    lastMessageTime,
+                    updated_at: lastMessageTime,
+                    unreadCount: nextUnread,
+                    unread_count: nextUnread,
+                };
+            })
+        );
     };
 
     // Fetch chats from API

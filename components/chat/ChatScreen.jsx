@@ -154,46 +154,53 @@ const ChatScreen = ({
     setShowUserSelection(false);
   };
 
-  const renderMessages = () => (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-    >
-      <SafeAreaView style={styles.container}>
-        <View style={styles.chatHeader}>
-          <Pressable onPress={goBack} style={styles.backButton}>
-            <MaterialIcons name="arrow-back" size={24} color="#fff" />
-          </Pressable>
-          <View style={styles.chatHeaderInfo}>
-            <View style={styles.avatarContainer}>
-              <AuraText style={styles.avatarText}>
-                {selectedChat?.avatar}
+  const renderMessages = () => {
+    const KeyboardContainer = Platform.OS === "ios" ? KeyboardAvoidingView : View;
+    const keyboardProps =
+      Platform.OS === "ios"
+        ? { behavior: "padding", keyboardVerticalOffset: 90 }
+        : {};
+
+    return (
+      <KeyboardContainer style={styles.container} {...keyboardProps}>
+        <SafeAreaView style={styles.container} edges={["bottom"]}>
+          <View style={styles.chatHeader}>
+            <Pressable onPress={goBack} style={styles.backButton}>
+              <MaterialIcons name="arrow-back" size={24} color="#fff" />
+            </Pressable>
+            <View style={styles.chatHeaderInfo}>
+              <View style={styles.avatarContainer}>
+                <AuraText style={styles.avatarText}>
+                  {selectedChat?.avatar}
+                </AuraText>
+              </View>
+              <AuraText style={styles.chatHeaderName}>
+                {selectedChat?.name}
               </AuraText>
             </View>
-            <AuraText style={styles.chatHeaderName}>
-              {selectedChat?.name}
-            </AuraText>
+            <View
+              style={[
+                styles.connectionStatusInline,
+                { backgroundColor: socketConnected ? "#4CAF50" : "#FFB800" },
+              ]}
+            >
+              <MaterialIcons
+                name={socketConnected ? "check-circle" : "cancel"}
+                size={14}
+                color="#fff"
+                style={{ marginRight: 4 }}
+              />
+              <AuraText style={styles.connectionTextInline}>
+                {socketConnected ? "●" : "●"}
+              </AuraText>
+            </View>
           </View>
-          <View
-            style={[
-              styles.connectionStatusInline,
-              { backgroundColor: socketConnected ? "#4CAF50" : "#FFB800" },
-            ]}
-          >
-            <MaterialIcons
-              name={socketConnected ? "check-circle" : "cancel"}
-              size={14}
-              color="#fff"
-              style={{ marginRight: 4 }}
-            />
-            <AuraText style={styles.connectionTextInline}>
-              {socketConnected ? "●" : "●"}
-            </AuraText>
-          </View>
-        </View>
 
-        <ScrollView ref={messagesEndRef} style={styles.messagesContainer}>
+        <ScrollView
+          ref={messagesEndRef}
+          style={styles.messagesContainer}
+          contentContainerStyle={styles.messagesContent}
+        >
           {messageList.length === 0 && !loading && (
             <View style={styles.emptyState}>
               <MaterialIcons name="chat-bubble-outline" size={48} color="#999" />
@@ -263,45 +270,46 @@ const ChatScreen = ({
           </View>
         )}
 
-        <View style={[styles.inputContainer, webKeyboardStyle]}>
-          <TextInput
-            style={styles.messageInput}
-            placeholder="Escribe un Mensaje"
-            placeholderTextColor="#999"
-            value={newMessage}
-            onChangeText={(text) => {
-              setNewMessage(text);
-              handleTyping();
-            }}
-            onBlur={stopTyping}
-            onSubmitEditing={(e) => {
-              e.preventDefault();
-              handleSendMessage();
-            }}
-            blurOnSubmit={false}
-            multiline
-            returnKeyType="send"
-            onKeyPress={(e) => {
-              if (e.nativeEvent.key === "Enter" && !e.nativeEvent.shiftKey) {
+          <View style={[styles.inputContainer, webKeyboardStyle]}>
+            <TextInput
+              style={styles.messageInput}
+              placeholder="Escribe un Mensaje"
+              placeholderTextColor="#999"
+              value={newMessage}
+              onChangeText={(text) => {
+                setNewMessage(text);
+                handleTyping();
+              }}
+              onBlur={stopTyping}
+              onSubmitEditing={(e) => {
                 e.preventDefault();
                 handleSendMessage();
-              }
-            }}
-          />
-          <Pressable
-            style={[
-              styles.sendButton,
-              { opacity: newMessage.trim() ? 1 : 0.5 },
-            ]}
-            onPress={handleSendMessage}
-            disabled={sending || !newMessage.trim()}
-          >
-            <MaterialIcons name="send" size={24} color="#fff" />
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
-  );
+              }}
+              blurOnSubmit={false}
+              multiline
+              returnKeyType="send"
+              onKeyPress={(e) => {
+                if (e.nativeEvent.key === "Enter" && !e.nativeEvent.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+            />
+            <Pressable
+              style={[
+                styles.sendButton,
+                { opacity: newMessage.trim() ? 1 : 0.5 },
+              ]}
+              onPress={handleSendMessage}
+              disabled={sending || !newMessage.trim()}
+            >
+              <MaterialIcons name="send" size={24} color="#fff" />
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </KeyboardContainer>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
