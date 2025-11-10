@@ -284,13 +284,13 @@ export default function PaymentWeb() {
                 )}
               </View>
 
-              <TouchableOpacity
+              {/*<TouchableOpacity
                 style={[styles.secondaryButton, processing && styles.secondaryButtonDisabled]}
                 onPress={sendManualEmail}
                 disabled={processing}
               >
                 <AuraText style={styles.secondaryButtonText} text={processing ? "Enviando..." : "📧 Enviar recibo"} />
-              </TouchableOpacity>
+              </TouchableOpacity>*/}
 
               <TouchableOpacity
                 style={styles.renewButton}
