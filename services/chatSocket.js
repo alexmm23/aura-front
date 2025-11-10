@@ -1,6 +1,8 @@
 import io from 'socket.io-client';
-import { CONFIG } from '../config/api';
+import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { presentLocalNotification } from './pushNotifications';
+import { CONFIG } from '../config/api';
 
 class ChatSocketService {
     constructor() {
@@ -9,6 +11,7 @@ class ChatSocketService {
         this.isConnected=false;
         this.eventListeners=new Map();
         this.currentUserId=null;
+        this.activeChatId=null;
     }
 
     // Initialize connection with authentication
@@ -17,6 +20,16 @@ class ChatSocketService {
             // Get WebSocket URL (remove /api from the end and add WebSocket path)
             let wsUrl=CONFIG.API_URL.replace('/api', '');
             const token=await AsyncStorage.getItem('userToken');
+            try {
+                const userDataRaw=await AsyncStorage.getItem('userData');
+                if (userDataRaw) {
+                    const parsedUser=JSON.parse(userDataRaw);
+                    this.currentUserId=parsedUser?.id||parsedUser?.userId||parsedUser?.user?.id||null;
+                }
+            } catch (error) {
+                console.warn('Unable to parse stored user data for chat socket:', error);
+                this.currentUserId=null;
+            }
             if (token) {
                 wsUrl+=`?token=${token}`;
             }
@@ -63,6 +76,9 @@ class ChatSocketService {
         // Chat-specific events
         this.socket.on('new_message', (data) => {
             console.log('📨 New message received:', data);
+            if (this.shouldNotifyForMessage(data)) {
+                this.notifyNewMessage(data);
+            }
             this.emit('new_message', data);
         });
 
@@ -145,6 +161,7 @@ class ChatSocketService {
 
         console.log(`🏠 Joining chat: ${chatId}`);
         this.socket.emit('join_chat', chatId);
+        this.activeChatId=chatId;
     }
 
     leaveChat(chatId) {
@@ -155,6 +172,9 @@ class ChatSocketService {
 
         console.log(`🚪 Leaving chat: ${chatId}`);
         this.socket.emit('leave_chat', chatId);
+        if (this.activeChatId===chatId) {
+            this.activeChatId=null;
+        }
     }
 
     sendMessage(chatId, content) {
@@ -203,6 +223,8 @@ class ChatSocketService {
             this.socket=null;
             this.isConnected=false;
             this.eventListeners.clear();
+            this.activeChatId=null;
+            this.currentUserId=null;
         }
     }
 
@@ -220,6 +242,48 @@ class ChatSocketService {
         this.disconnect();
         await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
         await this.connect();
+    }
+
+    shouldNotifyForMessage(data) {
+        if (!data||!data.message) {
+            return false;
+        }
+
+        const senderId=data.message.sender_id||data.message.senderId;
+        if (senderId&&this.currentUserId&&senderId===this.currentUserId) {
+            return false;
+        }
+
+        const chatId=data.chatId||data.chat_id;
+        const isViewingActiveChat=chatId&&this.activeChatId&&chatId===this.activeChatId;
+        const appState=AppState.currentState;
+
+        if (isViewingActiveChat&&appState==='active') {
+            return false;
+        }
+
+        return true;
+    }
+
+    notifyNewMessage(data) {
+        const message=data.message||{};
+        const chatId=data.chatId||data.chat_id||null;
+        const sender=message.sender||{};
+
+        const senderName=sender.name||sender.fullName||sender.email||'Nuevo mensaje';
+        const preview=typeof message.content==='string'
+            ? message.content.trim().slice(0, 140)
+            :'Tienes un nuevo mensaje';
+
+        presentLocalNotification({
+            title: senderName,
+            body: preview.length>0?preview:'Tienes un nuevo mensaje',
+            data: {
+                type: 'chat_message',
+                chatId,
+                messageId: message.id,
+            },
+        });
     }
 }
 
