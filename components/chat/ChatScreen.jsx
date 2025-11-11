@@ -8,6 +8,7 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -32,6 +33,9 @@ const ChatScreen = ({
   modalUserType,
   modalTitle,
   screenTitle,
+  hideTitle = false,
+  showCustomHeader = false,
+  customHeader = null,
 }) => {
   const styles = chatStyles;
 
@@ -155,14 +159,17 @@ const ChatScreen = ({
   };
 
   const renderMessages = () => {
-    const KeyboardContainer = Platform.OS === "ios" ? KeyboardAvoidingView : View;
-    const keyboardProps =
-      Platform.OS === "ios"
-        ? { behavior: "padding", keyboardVerticalOffset: 90 }
-        : {};
-
     return (
-      <KeyboardContainer style={styles.container} {...keyboardProps}>
+      // ✅ CAMBIO: KeyboardAvoidingView para todas las plataformas
+      <KeyboardAvoidingView 
+        style={styles.fullScreenContainer} 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      >
+        {/* StatusBar con color naranja */}
+        <View style={styles.statusBarFill} />
+        
+        {/* SafeAreaView solo para bottom */}
         <SafeAreaView style={styles.container} edges={["bottom"]}>
           <View style={styles.chatHeader}>
             <Pressable onPress={goBack} style={styles.backButton}>
@@ -196,79 +203,85 @@ const ChatScreen = ({
             </View>
           </View>
 
-        <ScrollView
-          ref={messagesEndRef}
-          style={styles.messagesContainer}
-          contentContainerStyle={styles.messagesContent}
-        >
-          {messageList.length === 0 && !loading && (
-            <View style={styles.emptyState}>
-              <MaterialIcons name="chat-bubble-outline" size={48} color="#999" />
-              <AuraText style={styles.emptyText}>No hay mensajes aún</AuraText>
+          <ScrollView
+            ref={messagesEndRef}
+            style={styles.messagesContainer}
+            contentContainerStyle={styles.messagesContent}
+          >
+            {messageList.length === 0 && !loading && (
+              <View style={styles.emptyState}>
+                <MaterialIcons name="chat-bubble-outline" size={48} color="#999" />
+                <AuraText style={styles.emptyText}>No hay mensajes aún</AuraText>
+              </View>
+            )}
+
+            {messageList.map((message) => (
+              <View
+                key={message.id}
+                style={[
+                  styles.messageContainer,
+                  message.isOwn ? styles.ownMessage : styles.otherMessage,
+                ]}
+              >
+                {!message.isOwn && (
+                  <AuraText style={styles.senderName}>
+                    {message.senderName}
+                  </AuraText>
+                )}
+                <View
+                  style={[
+                    styles.messageBubble,
+                    message.isOwn ? styles.ownBubble : styles.otherBubble,
+                  ]}
+                >
+                  <AuraText
+                    style={[
+                      styles.messageText,
+                      message.isOwn
+                        ? styles.ownMessageText
+                        : styles.otherMessageText,
+                    ]}
+                  >
+                    {message.content}
+                  </AuraText>
+                  <AuraText
+                    style={[
+                      styles.messageTime,
+                      message.isOwn
+                        ? styles.ownMessageTime
+                        : styles.otherMessageTime,
+                    ]}
+                  >
+                    {formatDateTime(message.time)}
+                  </AuraText>
+                </View>
+              </View>
+            ))}
+            <View ref={messagesEndRef} />
+          </ScrollView>
+
+          {/* Indicador de escritura mejorado */}
+          {typingSet.size > 0 && (
+            <View style={styles.typingIndicator}>
+              <View style={styles.typingDots}>
+                <View style={[styles.typingDot, styles.typingDot1]} />
+                <View style={[styles.typingDot, styles.typingDot2]} />
+                <View style={[styles.typingDot, styles.typingDot3]} />
+              </View>
+              <AuraText style={styles.typingText}>
+                {typingSet.size === 1
+                  ? "Escribiendo..."
+                  : `${typingSet.size} personas escribiendo...`}
+              </AuraText>
             </View>
           )}
 
-          {messageList.map((message) => (
-            <View
-              key={message.id}
-              style={[
-                styles.messageContainer,
-                message.isOwn ? styles.ownMessage : styles.otherMessage,
-              ]}
-            >
-              {!message.isOwn && (
-                <AuraText style={styles.senderName}>
-                  {message.senderName}
-                </AuraText>
-              )}
-              <View
-                style={[
-                  styles.messageBubble,
-                  message.isOwn ? styles.ownBubble : styles.otherBubble,
-                ]}
-              >
-                <AuraText
-                  style={[
-                    styles.messageText,
-                    message.isOwn
-                      ? styles.ownMessageText
-                      : styles.otherMessageText,
-                  ]}
-                >
-                  {message.content}
-                </AuraText>
-                <AuraText
-                  style={[
-                    styles.messageTime,
-                    message.isOwn
-                      ? styles.ownMessageTime
-                      : styles.otherMessageTime,
-                  ]}
-                >
-                  {formatDateTime(message.time)}
-                </AuraText>
-              </View>
+          {messageError && (
+            <View style={styles.errorBanner}>
+              <MaterialIcons name="error-outline" size={16} color="#b3261e" />
+              <AuraText style={styles.errorBannerText}>{messageError}</AuraText>
             </View>
-          ))}
-          <View ref={messagesEndRef} />
-        </ScrollView>
-
-        {typingSet.size > 0 && (
-          <View style={styles.typingIndicator}>
-            <AuraText style={styles.typingText}>
-              {typingSet.size === 1
-                ? "Escribiendo..."
-                : `${typingSet.size} personas escribiendo...`}
-            </AuraText>
-          </View>
-        )}
-
-        {messageError && (
-          <View style={styles.errorBanner}>
-            <MaterialIcons name="error-outline" size={16} color="#b3261e" />
-            <AuraText style={styles.errorBannerText}>{messageError}</AuraText>
-          </View>
-        )}
+          )}
 
           <View style={[styles.inputContainer, webKeyboardStyle]}>
             <TextInput
@@ -307,24 +320,31 @@ const ChatScreen = ({
             </Pressable>
           </View>
         </SafeAreaView>
-      </KeyboardContainer>
+      </KeyboardAvoidingView>
     );
   };
 
+  if (selectedChat) {
+    return renderMessages();
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
-      {selectedChat ? (
-        renderMessages()
-      ) : (
-        <>
-          <View style={styles.header}>
-            <AuraText style={styles.title}>{screenTitle}</AuraText>
-          </View>
+    <View style={{ flex: 1 }}> {/* ✅ CAMBIO: View en lugar de ScrollView para mejor control del FAB */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={true}
+      >
+        {showCustomHeader && customHeader}
+
+        <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 100 }}>
           <ScrollView
             style={styles.chatList}
+            contentContainerStyle={{ paddingBottom: 20 }}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
+            showsVerticalScrollIndicator={false}
           >
             {chatList.map((chat) => (
               <Pressable
@@ -356,21 +376,22 @@ const ChatScreen = ({
               </Pressable>
             ))}
           </ScrollView>
+        </View>
+      </ScrollView>
 
-          <Pressable style={styles.fab} onPress={handleNewChatPress}>
-            <MaterialIcons name="add" size={24} color="#fff" />
-          </Pressable>
+      {/* ✅ CAMBIO: FAB fuera del ScrollView para que esté siempre fijo */}
+      <Pressable style={styles.fab} onPress={handleNewChatPress}>
+        <MaterialIcons name="add" size={24} color="#fff" />
+      </Pressable>
 
-          <UserSelectionModal
-            visible={showUserSelection}
-            onClose={closeUserSelection}
-            onUserSelect={handleUserSelect}
-            userType={modalUserType}
-            title={modalTitle}
-          />
-        </>
-      )}
-    </SafeAreaView>
+      <UserSelectionModal
+        visible={showUserSelection}
+        onClose={closeUserSelection}
+        onUserSelect={handleUserSelect}
+        userType={modalUserType}
+        title={modalTitle}
+      />
+    </View>
   );
 };
 
