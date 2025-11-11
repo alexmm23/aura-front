@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -75,6 +76,34 @@ const ChatScreen = ({
       paddingBottom: 4,
     };
   }, [keyboardOffset]);
+
+  // Android: listen to keyboard events to adjust input position
+  useEffect(() => {
+    if (Platform.OS !== "android") return undefined;
+
+    const onShow = (e) => {
+      const height = e?.endCoordinates?.height || 0;
+      setKeyboardOffset(height);
+    };
+
+    const onHide = () => setKeyboardOffset(0);
+
+    const showSub = Keyboard.addListener("keyboardDidShow", onShow);
+    const hideSub = Keyboard.addListener("keyboardDidHide", onHide);
+
+    return () => {
+      try {
+        showSub.remove();
+      } catch (err) {
+        /* ignore */
+      }
+      try {
+        hideSub.remove();
+      } catch (err) {
+        /* ignore */
+      }
+    };
+  }, []);
 
   const {
     chats,
@@ -145,7 +174,8 @@ const ChatScreen = ({
       }
     } catch (error) {
       console.error("Error creating chat:", error);
-      const targetLabel = userRole === "teacher" ? "este usuario" : "este profesor";
+      const targetLabel =
+        userRole === "teacher" ? "este usuario" : "este profesor";
       Alert.alert("Error", `No se pudo crear el chat con ${targetLabel}`);
     }
   };
@@ -159,16 +189,21 @@ const ChatScreen = ({
   };
 
   const renderMessages = () => {
+    const Container = Platform.OS === "ios" ? KeyboardAvoidingView : View;
+    const containerProps =
+      Platform.OS === "ios"
+        ? {
+            behavior: "padding",
+            keyboardVerticalOffset: 90,
+            style: styles.container,
+          }
+        : { style: styles.container };
+
     return (
-      // ✅ CAMBIO: KeyboardAvoidingView para todas las plataformas
-      <KeyboardAvoidingView 
-        style={styles.fullScreenContainer} 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-      >
+      <Container {...containerProps}>
         {/* StatusBar con color naranja */}
         <View style={styles.statusBarFill} />
-        
+
         {/* SafeAreaView solo para bottom */}
         <SafeAreaView style={styles.container} edges={["bottom"]}>
           <View style={styles.chatHeader}>
@@ -210,8 +245,14 @@ const ChatScreen = ({
           >
             {messageList.length === 0 && !loading && (
               <View style={styles.emptyState}>
-                <MaterialIcons name="chat-bubble-outline" size={48} color="#999" />
-                <AuraText style={styles.emptyText}>No hay mensajes aún</AuraText>
+                <MaterialIcons
+                  name="chat-bubble-outline"
+                  size={48}
+                  color="#999"
+                />
+                <AuraText style={styles.emptyText}>
+                  No hay mensajes aún
+                </AuraText>
               </View>
             )}
 
@@ -283,7 +324,14 @@ const ChatScreen = ({
             </View>
           )}
 
-          <View style={[styles.inputContainer, webKeyboardStyle]}>
+          {/* Apply keyboard offset (web or Android) to input container to lift it above keyboard */}
+          <View
+            style={[
+              styles.inputContainer,
+              webKeyboardStyle /* legacy */,
+              keyboardOffset > 0 ? { marginBottom: keyboardOffset } : null,
+            ]}
+          >
             <TextInput
               style={styles.messageInput}
               placeholder="Escribe un Mensaje"
@@ -320,7 +368,7 @@ const ChatScreen = ({
             </Pressable>
           </View>
         </SafeAreaView>
-      </KeyboardAvoidingView>
+      </Container>
     );
   };
 
@@ -329,7 +377,9 @@ const ChatScreen = ({
   }
 
   return (
-    <View style={{ flex: 1 }}> {/* ✅ CAMBIO: View en lugar de ScrollView para mejor control del FAB */}
+    <View style={{ flex: 1 }}>
+      {" "}
+      {/* ✅ CAMBIO: View en lugar de ScrollView para mejor control del FAB */}
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ flexGrow: 1 }}
@@ -337,7 +387,14 @@ const ChatScreen = ({
       >
         {showCustomHeader && customHeader}
 
-        <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 100 }}>
+        <View
+          style={{
+            flex: 1,
+            paddingHorizontal: 20,
+            paddingTop: 20,
+            paddingBottom: 100,
+          }}
+        >
           <ScrollView
             style={styles.chatList}
             contentContainerStyle={{ paddingBottom: 20 }}
@@ -378,12 +435,10 @@ const ChatScreen = ({
           </ScrollView>
         </View>
       </ScrollView>
-
       {/* ✅ CAMBIO: FAB fuera del ScrollView para que esté siempre fijo */}
       <Pressable style={styles.fab} onPress={handleNewChatPress}>
         <MaterialIcons name="add" size={24} color="#fff" />
       </Pressable>
-
       <UserSelectionModal
         visible={showUserSelection}
         onClose={closeUserSelection}
