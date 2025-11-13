@@ -1,6 +1,6 @@
 // components/CustomDateTimePicker.jsx
-import React from 'react';
-import { Platform } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Para web, usaremos input HTML nativo
@@ -74,10 +74,88 @@ const WebDateTimePicker = ({ value, mode, onChange, minimumDate }) => {
   );
 };
 
+const NativeDateTimePicker = ({ value, mode, onChange, minimumDate, placeholder, display, ...rest }) => {
+  const [visible, setVisible] = useState(false);
+
+  const formattedValue = useMemo(() => {
+    const fallback = placeholder || (mode === 'time' ? 'Seleccionar hora' : 'Seleccionar fecha');
+    if (!value || Number.isNaN(new Date(value).getTime())) {
+      return fallback;
+    }
+
+    const dateValue = new Date(value);
+    if (mode === 'time') {
+      return dateValue.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    return dateValue.toLocaleDateString();
+  }, [value, mode, placeholder]);
+
+  const handleOpen = () => {
+    setVisible(true);
+  };
+
+  const handleChange = (event, selectedDate) => {
+    if (Platform.OS === 'android') {
+      setVisible(false);
+    }
+
+    if (event?.type === 'dismissed') {
+      return;
+    }
+
+    if (selectedDate && typeof onChange === 'function') {
+      onChange(event, selectedDate);
+    }
+
+    if (Platform.OS === 'ios') {
+      setVisible(false);
+    }
+  };
+
+  return (
+    <View>
+      <TouchableOpacity style={stylesNative.trigger} onPress={handleOpen}>
+        <Text style={[stylesNative.triggerText, !value && stylesNative.placeholder]}>
+          {formattedValue}
+        </Text>
+      </TouchableOpacity>
+      {visible && (
+        <DateTimePicker
+          value={value instanceof Date ? value : new Date(value || Date.now())}
+          mode={mode}
+          minimumDate={minimumDate}
+          display={display || (Platform.OS === 'ios' ? 'spinner' : 'default')}
+          onChange={handleChange}
+          {...rest}
+        />
+      )}
+    </View>
+  );
+};
+
 export const CustomDateTimePicker = (props) => {
   if (Platform.OS === 'web') {
     return <WebDateTimePicker {...props} />;
   }
-  
-  return <DateTimePicker {...props} />;
+
+  return <NativeDateTimePicker {...props} />;
 };
+
+const stylesNative = StyleSheet.create({
+  trigger: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#F5F5F5',
+  },
+  triggerText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  placeholder: {
+    color: '#888',
+  },
+});
