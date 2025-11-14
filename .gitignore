@@ -38,7 +38,3 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
-
-# Firebase config (manage via secure channel, not source control)
-google-services.json
-aura-6c2ef-firebase-adminsdk-fbsvc-61a4b40211.json
