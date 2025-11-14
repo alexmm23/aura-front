@@ -22,7 +22,7 @@ module.exports={
     name: env.name,
     slug: "aura-front",
     owner: "alexmm23",
-    version: "2.0.1",
+    version: "2.2.1",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "aura", // ✅ Cambiado de "myapp" a "aura" para consistencia
@@ -37,12 +37,13 @@ module.exports={
       bundleIdentifier: "com.alexmm23.aurafront"
     },
     android: {
-      versionCode: 15, // <-- INCREMENTA este número en cada build nueva
+      versionCode: 16, // <-- INCREMENTA este número en cada build nueva
       adaptiveIcon: {
         foregroundImage: "./assets/images/icon.png",
         backgroundColor: "#ffffff"
       },
       package: "com.alexmm23.aurafront",
+      googleServicesFile: "./google-services.json",
       permissions: [
         "CAMERA",
         "WRITE_EXTERNAL_STORAGE",
