@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useMemo } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { jwtDecode } from "jwt-decode";
 import { API, buildApiUrl, isWeb } from "../config/api";
@@ -43,15 +43,18 @@ export const AuthProvider = ({ children }) => {
       }
     };
   }, []);
+  const pushRegisteredRef = useRef(false);
 
   useEffect(() => {
-    if (!isAuthenticated || !user?.id) {
-      return;
-    }
-
-    registerDevicePushToken({ force: true }).catch((error) => {
-      console.warn("[Notifications] Failed to sync push token", error);
-    });
+    if (!isAuthenticated || !user?.id) return;
+    if (pushRegisteredRef.current) return;
+    pushRegisteredRef.current = true;
+    setTimeout(() => {
+      registerDevicePushToken({ force: false }).catch((error) => {
+        console.warn("[Notifications] Push token registration failed", error);
+        pushRegisteredRef.current = false;
+      });
+    }, 400);
   }, [isAuthenticated, user?.id]);
 
   // Verificación inicial de autenticación - SOLO UNA VEZ
@@ -230,9 +233,11 @@ export const AuthProvider = ({ children }) => {
         const decodedUser = jwtDecode(token);
         setUser(decodedUser);
         setIsAuthenticated(true);
-        registerDevicePushToken({ force: true }).catch((error) =>
-          console.warn("[Notifications] Post-login push registration failed", error)
-        );
+        pushRegisteredRef.current = false;
+        registerDevicePushToken({ force: true }).catch((error) => {
+          console.warn("[Notifications] Post-login push registration failed", error);
+          pushRegisteredRef.current = false;
+        });
         return { success: true, message: "Login exitoso" };
       }
     } catch (error) {
@@ -284,7 +289,7 @@ export const AuthProvider = ({ children }) => {
     return isTeacher() ? "/(tabs_teacher)/hometeacher" : "/(tabs)/home";
   };
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     isAuthenticated,
     isLoading,
@@ -296,7 +301,7 @@ export const AuthProvider = ({ children }) => {
     isTeacher,
     getHomeRoute,
     checkAuthStatus,
-  };
+  }), [user, isAuthenticated, isLoading]);
 
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
 
