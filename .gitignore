@@ -38,3 +38,5 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+aura-6c2ef-firebase-adminsdk-fbsvc-61a4b40211.json
+google-services.json
