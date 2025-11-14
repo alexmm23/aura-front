@@ -108,6 +108,10 @@ const NotebookPages = () => {
     fetchPages(false);
   };
 
+  const handleGoBack = () => {
+    router.replace("/(tabs)/notebookscreen");
+  };
+
   const renderPage = ({ item }) => {
     const noteId = item.id;
     const pageNumber = item.page_id;
@@ -172,26 +176,32 @@ const NotebookPages = () => {
       edges={["top", "bottom", "left", "right"]}
     >
       <StatusBar
-        barStyle="dark-content"
-        backgroundColor="#F8F9FA"
+        barStyle="light-content"
+        backgroundColor="#CB8D27"
         translucent={false}
       />
+      <View style={styles.topAccent} />
       <View style={styles.container}>
-        <View style={styles.headerContainer}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              router.push("/(tabs)/notebookscreen");
-            }}
-          >
-            <Ionicons name="arrow-back" size={24} color="#CB8D27" />
-          </TouchableOpacity>
-
-          {/* Título centrado (se queda con flex para centrar correctamente) */}
-          <AuraText text="Páginas del Cuaderno" style={styles.header} />
-
-          {/* Botón de recargar eliminado */}
+        <View style={styles.heroWrapper}>
+          <View style={styles.heroCard}>
+            <TouchableOpacity style={styles.heroBack} onPress={handleGoBack}>
+              <Ionicons name="arrow-back" size={22} color="#CB8D27" />
+            </TouchableOpacity>
+            <View style={styles.heroTextGroup}>
+              <AuraText
+                text="Páginas del Cuaderno"
+                style={styles.heroTitle}
+              />
+            </View>
+            <Ionicons
+              name="book-outline"
+              size={42}
+              color="#CB8D27"
+              style={styles.heroIcon}
+            />
+          </View>
         </View>
+
         <FlatList
           data={pages}
           renderItem={renderPage}
@@ -216,39 +226,64 @@ const NotebookPages = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#E6E2D2", // ✅ CAMBIO
+    backgroundColor: "#E6E2D2",
+  },
+  topAccent: {
+    height: Platform.OS === "web" ? 150 : 80,
+    backgroundColor: "#E6E2D2",
   },
   container: {
     flex: 1,
-    backgroundColor: "#E6E2D2", // ✅ CAMBIO
+    marginTop: Platform.OS === "web" ? -110 : -60,
     paddingHorizontal: 16,
+    backgroundColor: "#E6E2D2",
   },
-  headerContainer: {
+  heroWrapper: {
+    paddingBottom: Platform.OS === "web" ? 20 : 12,
+  },
+  heroCard: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
-    marginTop: 8,
-    paddingHorizontal: 4,
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 8,
     backgroundColor: "#fff",
-    elevation: 2,
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: Platform.OS === "web" ? 18 : 14,
+    elevation: 4,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
   },
-  header: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#CB8D27",
+  heroBack: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#F5F0E0",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  heroTextGroup: {
     flex: 1,
-    textAlign: "center",
+  },
+  heroTitle: {
+    fontSize: 38,
+    fontWeight: "700",
+    color: "#CB8D27",
+  },
+  heroSubtitle: {
+    marginTop: 4,
+    fontSize: 14,
+    color: "#8C7A55",
+  },
+  heroIcon: {
+    marginLeft: 16,
+  },
+  headerContainer: {
+    display: "none",
   },
   grid: {
-    paddingBottom: Platform.OS === "android" ? 100 : 32,
+    paddingBottom: Platform.OS === "android" ? 120 : 48,
     paddingHorizontal: 4,
   },
   pageItem: {
