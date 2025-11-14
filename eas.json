@@ -35,7 +35,15 @@
       "android": {
         "env": {
           "APP_ENV": "production",
-          "API_URL": "https://back.aurapp.com.mx/api"
+          "API_URL": "https://back.aurapp.com.mx/api",
+          "GOOGLE_SERVICES_JSON_FILE": "${GOOGLE_SERVICES_JSON}"
+        },
+        "hooks": {
+          "post-install": [
+            {
+              "command": "node ./scripts/prepare-google-services.js"
+            }
+          ]
         }
       },
       "ios": {
