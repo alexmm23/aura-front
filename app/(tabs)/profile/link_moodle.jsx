@@ -228,7 +228,7 @@ export default function LinkMoodle() {
             {/* Campos del formulario */}
             <AuraTextInput
               style={styles.input}
-              placeholder="Correo Electronico"
+              placeholder="Usuario"
               autoCapitalize="none"
               keyboardType="email-address"
               value={email}
